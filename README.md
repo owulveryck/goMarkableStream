@@ -8,10 +8,12 @@ I use this toy project to stream my remarkable 2 (firmware 2.5) on my laptop usi
 
 You need ssh access to your remarkable
 
-Download two files:
+Download two files from the [release page](https://github.com/owulveryck/goMarkableStream/releases):
 
 - the server "`Linux/Armv7`" for your remarkable
 - the client for your laptop according to the couple `OS/arch`
+
+or build it yourself if you have the go toolchain installed on your machine.
 
 ### The server
 
