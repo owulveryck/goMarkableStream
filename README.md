@@ -17,7 +17,7 @@ Copy the server on the remarkable and start it.
 
 ```shell
 scp goMarkableStreamServer.arm remarkable:
-ssh remarkable "./goMarkableStreamServer.arm"
+ssh remarkable './goMarkableStreamServer.arm /proc/$(pidof xochitl)/mem'
 ```
 
 ### The client
