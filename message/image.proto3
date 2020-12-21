@@ -6,5 +6,5 @@ option go_package = "message";
 message image {
     int64 width = 1;
     int64 height = 2;
-    bytes image_data = 3;
+    bytes image_data = 4;
 }

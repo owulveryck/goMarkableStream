@@ -2,7 +2,9 @@ package main
 
 import (
 	"compress/zlib"
+	"context"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -10,37 +12,50 @@ import (
 	"time"
 
 	iop "github.com/gogo/protobuf/io"
-	"github.com/owulveryck/remarkable_screenshot/message"
+	"github.com/owulveryck/goMarkableStream/message"
+	"github.com/sethvargo/go-envconfig"
 )
+
+type configuration struct {
+	BindAddr  string `env:"RK_SERVER_BIND_ADDR,default=:2000"`
+	FbAddress int    `env:"RK_FB_ADDRESS,default=4387048"`
+}
 
 const (
 	screenWidth  = 1872
 	screenHeight = 1404
-	fbAddress    = 4387048
+
+//	fbAddress    = 4387048
 )
 
 func main() {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	var c configuration
+	if err := envconfig.Process(ctx, &c); err != nil {
+		log.Fatal(err)
+	}
 
 	file, err := os.OpenFile(os.Args[1], os.O_RDONLY, os.ModeDevice)
 	if err != nil {
 		log.Fatal("cannot open file: ", err)
 	}
 	defer file.Close()
-	addr, err := getPointer(file, fbAddress)
+	addr, err := getPointer(file, int64(c.FbAddress))
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Address is: ", addr)
+	log.Println("Memory Address is: ", addr)
 	// Listen on TCP port 2000 on all available unicast and
 	// anycast IP addresses of the local system.
-	log.Println("listening on tcp 2000")
-	l, err := net.Listen("udp", ":2000")
+	log.Println("listening on tcp " + c.BindAddr)
+	l, err := net.Listen("tcp", c.BindAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer l.Close()
 	pixels := make([]byte, screenHeight*screenWidth)
-	tick := time.NewTicker(100 * time.Millisecond)
+	tick := time.NewTicker(200 * time.Millisecond)
 	imgP := &message.Image{
 		Width:     screenWidth,
 		Height:    screenHeight,
@@ -54,7 +69,10 @@ func main() {
 				log.Fatal(err)
 			}
 			defer conn.Close()
-			w := zlib.NewWriter(conn)
+			w, err := zlib.NewWriterLevel(conn, zlib.BestSpeed)
+			if err != nil {
+				log.Fatal(err)
+			}
 			pbWriter := iop.NewDelimitedWriter(w)
 			for ; ; <-tick.C {
 				_, err := file.ReadAt(pixels, addr)
@@ -67,7 +85,7 @@ func main() {
 					log.Println(err)
 					return
 				}
-				log.Println(time.Since(now))
+				fmt.Printf("Time to process %v\r", time.Since(now))
 			}
 		}()
 	}
