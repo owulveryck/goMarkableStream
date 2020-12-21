@@ -26,7 +26,7 @@ ssh remarkable './goMarkableStreamServer.arm /proc/$(pidof xochitl)/mem'
 
 ### The client
 
-- Start the client: `RK_SERVER_ADDRESS=ip.of.remarkable:2000 ./goMarkableClient`
+- Start the client: `RK_SERVER_ADDR=ip.of.remarkable:2000 ./goMarkableClient`
 
 - Point your browser to [`http://localhost:8080/video`](http://localhost:8080/video)
 
@@ -46,7 +46,7 @@ It is possible to tweak the configuration via environment variables:
 | Env var             |  Default        |  Descri[ption
 |---------------------|-----------------|---------------
 | RK_CLIENT_BIND_ADDR | :8080           | the TCP listen address
-| RK_SERVER_ADDRESS   | remarkabke:2000 | the address of the remarkable
+| RK_SERVER_ADDR      | remarkabke:2000 | the address of the remarkable
 
 ## How it works?
 
