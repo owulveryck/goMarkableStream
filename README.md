@@ -2,6 +2,8 @@
 
 I use this toy project to stream my remarkable 2 (firmware 2.5) on my laptop using the local wifi.
 
+[video/demo here](https://www.youtube.com/watch?v=c4-hJ6xRzg4)
+
 ## Quick start
 
 You need ssh access to your remarkable
