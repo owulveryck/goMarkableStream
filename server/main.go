@@ -3,6 +3,7 @@ package main
 import (
 	"compress/zlib"
 	"context"
+	"crypto/tls"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -11,7 +12,10 @@ import (
 	"os"
 	"time"
 
+	_ "embed"
+
 	iop "github.com/gogo/protobuf/io"
+	"github.com/owulveryck/goMarkableStream/certs"
 	"github.com/owulveryck/goMarkableStream/message"
 	"github.com/sethvargo/go-envconfig"
 )
@@ -29,6 +33,10 @@ const (
 )
 
 func main() {
+	certs, err := certs.GetCertificateWrapper()
+	if err != nil {
+		log.Fatal(err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	var c configuration
@@ -49,10 +57,11 @@ func main() {
 	// Listen on TCP port 2000 on all available unicast and
 	// anycast IP addresses of the local system.
 	log.Println("listening on tcp " + c.BindAddr)
-	l, err := net.Listen("tcp", c.BindAddr)
+	ln, err := net.Listen("tcp", c.BindAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
+	l := tls.NewListener(ln, certs.ServerTLSConf)
 	defer l.Close()
 	pixels := make([]byte, screenHeight*screenWidth)
 	tick := time.NewTicker(200 * time.Millisecond)
@@ -69,6 +78,13 @@ func main() {
 				log.Fatal(err)
 			}
 			defer conn.Close()
+			if tlsconn, ok := conn.(*tls.Conn); ok {
+				err = tlsconn.Handshake()
+				if err != nil {
+					log.Println(err)
+					return
+				}
+			}
 			w, err := zlib.NewWriterLevel(conn, zlib.BestSpeed)
 			if err != nil {
 				log.Fatal(err)

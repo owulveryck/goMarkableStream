@@ -5,17 +5,18 @@ import (
 	"compress/gzip"
 	"compress/zlib"
 	"context"
+	"crypto/tls"
 	"image"
 	"image/jpeg"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	iop "github.com/gogo/protobuf/io"
 	"github.com/mattn/go-mjpeg"
+	"github.com/owulveryck/goMarkableStream/certs"
 	"github.com/owulveryck/goMarkableStream/message"
 	"github.com/sethvargo/go-envconfig"
 )
@@ -26,7 +27,11 @@ type configuration struct {
 }
 
 func main() {
-	var d net.Dialer
+	cw, err := certs.GetCertificateWrapper()
+	if err != nil {
+		log.Fatal(err)
+	}
+	//var d net.Dialer
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	var c configuration
@@ -36,7 +41,8 @@ func main() {
 
 	stream := mjpeg.NewStream()
 	go func(stream *mjpeg.Stream) {
-		conn, err := d.DialContext(ctx, "tcp", c.ServerAddr)
+		//conn, err := d.DialContext(ctx, "tcp", c.ServerAddr)
+		conn, err := tls.Dial("tcp", c.ServerAddr, cw.ClientTLSConf)
 		//conn, err := d.DialContext(ctx, "udp", "10.11.99.1:2000")
 		if err != nil {
 			log.Fatalf("Failed to dial: %v", err)
@@ -68,7 +74,10 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/video", makeGzipHandler(stream))
 	log.Printf("listening on %v, registered /video", c.BindAddr)
-	http.ListenAndServe(c.BindAddr, mux)
+	err = http.ListenAndServe(c.BindAddr, mux)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 type gzipResponseWriter struct {

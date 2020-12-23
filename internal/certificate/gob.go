@@ -49,7 +49,7 @@ func (c *CertConfigCarrier) GobDecode(b []byte) error {
 }
 
 // GobEncode the config
-func (c *CertConfigCarrier) GobEncode() ([]byte, error) {
+func (c CertConfigCarrier) GobEncode() ([]byte, error) {
 	var b bytes.Buffer
 	enc := gob.NewEncoder(&b)
 	err := enc.Encode(dts{
