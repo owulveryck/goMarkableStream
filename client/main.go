@@ -2,15 +2,12 @@ package main
 
 import (
 	"bytes"
-	"compress/gzip"
 	"compress/zlib"
 	"context"
 	"image"
 	"image/jpeg"
-	"io"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/mattn/go-mjpeg"
@@ -55,34 +52,9 @@ func main() {
 		log.Fatal(err)
 	}
 	defer conn.Close()
-	client := stream.NewStreamClient(conn)
 
 	mjpegStream := mjpeg.NewStream()
-	go func(mjpegStream *mjpeg.Stream) {
-		var err error
-		var response *stream.Image
-
-		var img image.Gray
-		for err == nil {
-			response, err = client.GetImage(context.Background(), &stream.Input{})
-			if err != nil {
-				log.Fatalf("Error when calling GetImage: %s", err)
-			}
-
-			var b bytes.Buffer
-			img.Pix = response.ImageData
-			img.Stride = int(response.Width)
-			img.Rect = image.Rect(0, 0, int(response.Width), int(response.Height))
-			err := jpeg.Encode(&b, &img, nil)
-			if err != nil {
-				log.Fatal(err)
-			}
-			err = mjpegStream.Update(b.Bytes())
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-	}(mjpegStream)
+	go runGrabber(mjpegStream, conn)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/video", makeGzipHandler(mjpegStream))
 	log.Printf("listening on %v, registered /video", c.BindAddr)
@@ -92,29 +64,29 @@ func main() {
 	}
 }
 
-type gzipResponseWriter struct {
-	io.Writer
-	http.ResponseWriter
-}
+func runGrabber(mjpegStream *mjpeg.Stream, conn *grpc.ClientConn) {
+	client := stream.NewStreamClient(conn)
+	var err error
+	var response *stream.Image
 
-func (w gzipResponseWriter) Write(b []byte) (int, error) {
-	if "" == w.Header().Get("Content-Type") {
-		// If no content type, apply sniffing algorithm to un-gzipped body.
-		w.Header().Set("Content-Type", http.DetectContentType(b))
-	}
-	return w.Writer.Write(b)
-}
-
-func makeGzipHandler(fn http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			fn.ServeHTTP(w, r)
-			return
+	var img image.Gray
+	for err == nil {
+		response, err = client.GetImage(context.Background(), &stream.Input{})
+		if err != nil {
+			log.Fatalf("Error when calling GetImage: %s", err)
 		}
-		w.Header().Set("Content-Encoding", "gzip")
-		gz := gzip.NewWriter(w)
-		defer gz.Close()
-		gzr := gzipResponseWriter{Writer: gz, ResponseWriter: w}
-		fn.ServeHTTP(gzr, r)
+
+		var b bytes.Buffer
+		img.Pix = response.ImageData
+		img.Stride = int(response.Width)
+		img.Rect = image.Rect(0, 0, int(response.Width), int(response.Height))
+		err := jpeg.Encode(&b, &img, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = mjpegStream.Update(b.Bytes())
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
