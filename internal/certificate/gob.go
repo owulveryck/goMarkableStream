@@ -33,7 +33,7 @@ func (c *CertConfigCarrier) GobDecode(b []byte) error {
 	if err != nil {
 		return err
 	}
-	err = c.generateClientConf(serverCert)
+	err = c.generateServerConf(serverCert)
 	if err != nil {
 		return err
 	}

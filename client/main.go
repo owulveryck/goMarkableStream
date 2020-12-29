@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"compress/zlib"
 	"context"
 	"image"
 	"image/jpeg"
@@ -18,7 +19,15 @@ import (
 	"github.com/sethvargo/go-envconfig"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	grpcGzip "google.golang.org/grpc/encoding/gzip"
 )
+
+func init() {
+	err := grpcGzip.SetLevel(zlib.BestSpeed)
+	if err != nil {
+		panic(err)
+	}
+}
 
 type configuration struct {
 	ServerAddr string `env:"RK_SERVER_ADDR,default=remarkable:2000"`
@@ -40,7 +49,8 @@ func main() {
 
 	grpcCreds := credentials.NewTLS(cert.ClientTLSConf)
 	// Create a connection with the TLS credentials
-	conn, err := grpc.Dial(c.ServerAddr, grpc.WithTransportCredentials(grpcCreds))
+	conn, err := grpc.Dial(c.ServerAddr, grpc.WithTransportCredentials(grpcCreds), grpc.WithDefaultCallOptions(grpc.UseCompressor("gzip")))
+
 	if err != nil {
 		log.Fatal(err)
 	}

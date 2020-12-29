@@ -68,6 +68,7 @@ func main() {
 	}
 	defer ln.Close()
 	s := stream.NewServer(file, addr)
+	s.Start()
 	grpcServer := grpc.NewServer(grpc.Creds(grpcCreds))
 
 	stream.RegisterStreamServer(grpcServer, s)
