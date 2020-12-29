@@ -10,7 +10,7 @@ builds:
   - env:
       - CGO_ENABLED=0
     id: "Server"
-    main: ./server/main.go
+    main: ./server/.
     binary: goMarkableStreamServer.arm
     goos:
       - linux
@@ -21,7 +21,7 @@ builds:
   - env:
       - CGO_ENABLED=0
     id: "Client"
-    main: ./client/main.go
+    main: ./client/.
     binary: goMarkableClient
     goos:
       - linux
@@ -29,6 +29,7 @@ builds:
       - darwin
     goarch:
       - amd64
+      - arm64
 archives:
   - replacements:
       darwin: Darwin
