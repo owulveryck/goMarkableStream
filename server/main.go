@@ -44,7 +44,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	grpcCreds := credentials.NewTLS(cert.ServerTLSConf)
+	grpcCreds := &callInfoAuthenticator{credentials.NewTLS(cert.ServerTLSConf)}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	var c configuration
