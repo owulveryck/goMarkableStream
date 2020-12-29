@@ -3,3 +3,4 @@ certs/certs.bin
 server/streamServerTLS.arm
 .gitignore
 client/client
+server/server
