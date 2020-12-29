@@ -4,16 +4,20 @@ import (
 	"compress/zlib"
 	"context"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
 	"time"
 
-	iop "github.com/gogo/protobuf/io"
-	"github.com/owulveryck/goMarkableStream/message"
+	_ "embed"
+
+	"github.com/owulveryck/goMarkableStream/certs"
+	"github.com/owulveryck/goMarkableStream/stream"
 	"github.com/sethvargo/go-envconfig"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/encoding/gzip"
 )
 
 type configuration struct {
@@ -28,7 +32,19 @@ const (
 //	fbAddress    = 4387048
 )
 
+func init() {
+	err := gzip.SetLevel(zlib.BestSpeed)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func main() {
+	cert, err := certs.GetCertificateWrapper()
+	if err != nil {
+		log.Fatal(err)
+	}
+	grpcCreds := &callInfoAuthenticator{credentials.NewTLS(cert.ServerTLSConf)}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	var c configuration
@@ -45,51 +61,23 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Memory Address is: ", addr)
-	// Listen on TCP port 2000 on all available unicast and
-	// anycast IP addresses of the local system.
 	log.Println("listening on tcp " + c.BindAddr)
-	l, err := net.Listen("tcp", c.BindAddr)
+	ln, err := net.Listen("tcp", c.BindAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer l.Close()
-	pixels := make([]byte, screenHeight*screenWidth)
-	tick := time.NewTicker(200 * time.Millisecond)
-	imgP := &message.Image{
-		Width:     screenWidth,
-		Height:    screenHeight,
-		ImageData: pixels,
-	}
-	for {
-		// Wait for a connection.
-		func() {
-			conn, err := l.Accept()
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer conn.Close()
-			w, err := zlib.NewWriterLevel(conn, zlib.BestSpeed)
-			if err != nil {
-				log.Fatal(err)
-			}
-			pbWriter := iop.NewDelimitedWriter(w)
-			for ; ; <-tick.C {
-				_, err := file.ReadAt(pixels, addr)
-				if err != nil {
-					log.Fatal(err)
-				}
-				now := time.Now()
-				err = pbWriter.WriteMsg(imgP)
-				if err != nil {
-					log.Println(err)
-					return
-				}
-				fmt.Printf("Time to process %v\r", time.Since(now))
-			}
-		}()
+	defer ln.Close()
+	s := stream.NewServer(file, addr)
+	s.Start()
+	grpcServer := grpc.NewServer(grpc.Creds(grpcCreds))
+
+	stream.RegisterStreamServer(grpcServer, s)
+
+	if err := grpcServer.Serve(ln); err != nil {
+		log.Fatalf("failed to serve: %s", err)
 	}
 }
+
 func getPointer(r io.ReaderAt, offset int64) (int64, error) {
 	pointer := make([]byte, 4)
 	_, err := r.ReadAt(pointer, offset)
