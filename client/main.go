@@ -3,9 +3,7 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
-	"compress/zlib"
 	"context"
-	"crypto/tls"
 	"image"
 	"image/jpeg"
 	"io"
@@ -14,11 +12,12 @@ import (
 	"strings"
 	"time"
 
-	iop "github.com/gogo/protobuf/io"
 	"github.com/mattn/go-mjpeg"
 	"github.com/owulveryck/goMarkableStream/certs"
-	"github.com/owulveryck/goMarkableStream/message"
+	"github.com/owulveryck/goMarkableStream/stream"
 	"github.com/sethvargo/go-envconfig"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 type configuration struct {
@@ -27,7 +26,7 @@ type configuration struct {
 }
 
 func main() {
-	cw, err := certs.GetCertificateWrapper()
+	cert, err := certs.GetCertificateWrapper()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,40 +38,43 @@ func main() {
 		log.Fatal(err)
 	}
 
-	stream := mjpeg.NewStream()
-	go func(stream *mjpeg.Stream) {
-		//conn, err := d.DialContext(ctx, "tcp", c.ServerAddr)
-		conn, err := tls.Dial("tcp", c.ServerAddr, cw.ClientTLSConf)
-		//conn, err := d.DialContext(ctx, "udp", "10.11.99.1:2000")
-		if err != nil {
-			log.Fatalf("Failed to dial: %v", err)
-		}
-		defer conn.Close()
-		r, err := zlib.NewReader(conn)
-		if err != nil {
-			log.Fatalf("Failed to dial: %v", err)
-		}
-		rdr := iop.NewDelimitedReader(r, 1872*1404*2)
+	grpcCreds := credentials.NewTLS(cert.ClientTLSConf)
+	// Create a connection with the TLS credentials
+	conn, err := grpc.Dial(c.ServerAddr, grpc.WithTransportCredentials(grpcCreds))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+	client := stream.NewStreamClient(conn)
+
+	mjpegStream := mjpeg.NewStream()
+	go func(mjpegStream *mjpeg.Stream) {
+		var err error
+		var response *stream.Image
+
 		var img image.Gray
-		var imgP message.Image
-		for rdr.ReadMsg(&imgP); err == nil; err = rdr.ReadMsg(&imgP) {
+		for err == nil {
+			response, err = client.GetImage(context.Background(), &stream.Input{})
+			if err != nil {
+				log.Fatalf("Error when calling GetImage: %s", err)
+			}
 
 			var b bytes.Buffer
-			img.Pix = imgP.ImageData
-			img.Stride = 1872
-			img.Rect = image.Rect(0, 0, 1872, 1404)
+			img.Pix = response.ImageData
+			img.Stride = int(response.Width)
+			img.Rect = image.Rect(0, 0, int(response.Width), int(response.Height))
 			err := jpeg.Encode(&b, &img, nil)
 			if err != nil {
 				log.Fatal(err)
 			}
-			err = stream.Update(b.Bytes())
+			err = mjpegStream.Update(b.Bytes())
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
-	}(stream)
+	}(mjpegStream)
 	mux := http.NewServeMux()
-	mux.HandleFunc("/video", makeGzipHandler(stream))
+	mux.HandleFunc("/video", makeGzipHandler(mjpegStream))
 	log.Printf("listening on %v, registered /video", c.BindAddr)
 	err = http.ListenAndServe(c.BindAddr, mux)
 	if err != nil {
