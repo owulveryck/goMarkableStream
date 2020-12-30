@@ -50,26 +50,43 @@ It is possible to tweak the configuration via environment variables:
 
 ## How it works?
 
-### The server loop 
+### The server loop
 
 - The server gets the address of the framebuffer in the memory space of the `xochitl`
-- Then it opens a TCP connection and waits for a client (a unique client)
-- When it has a connexion, it enters a for loop:
-  - Every 200ms, it copies all the bytes of a frame
-  - then, it serializes the data in a protobuf message
-  - eventually, it sends it in a compressed stream over the wire (zip with the fastest compression)
-
-_Note_ this process is streamed with `io.*` for maximum efficiency.
+- The server launches a "ticketing system" to avoid congestion. The ticketing system is a channel that gets an event every 200ms.
+- Then it exposes a gRPC function (with TLS and mutual authentication).
+- The gRPC function waits for a "ticket" on the channel, and then grabs the data from the framebuffer.
+- It packs the data into an `image` message encoded in protobuf and sends it to the consumer
 
 ### The client loop
 
 - The client creates an `MJPEG` stream and serves it over HTTP on the provided address
-- The client opens a TCP connection to the server and triggers a goroutine
-- It gets the stream and decodes the protobuf message
-- For each message:
-  - it creates an `Image.Gray` object
-  - it encodes it in jpeg
-  - it adds it to the mjpeg stream
+- The client dial server and sends its certificate, and add the compression header.
+- Then it triggers a goroutine to get the `image` in a for loop.
+- The image is then encoded into JPEG format and added to the MJPEG stream.
+
+### Security
+
+The communication is using TLS. The client and the server owns an embedded certificate chain (with the CA). There are performing mutual authentication.
+A new certificate chain is generated per build. Therefore, if you want restrict the access to your server to your client only, you must rebuild the tool yourself.
+
+### Manual build
+
+_Note_: you need go > 1.16beta to build the tool because of the embedding mechanism for the certificate.
+
+To build the tool manually, the easiest way is to use `goreleaser`:
+
+```shell
+goreleaser --snapshot --skip-publish --rm-dist
+```
+
+To build the services manually:
+
+```shell
+go generate ./... # This generates the certificates
+cd server && GOOS=linux GOARCH=arm GOARM=7 go build -o goStreamServer.arm
+cd client && go build -o goStreamClient
+```
 
 ### Inside the remarkable
 
@@ -115,7 +132,7 @@ dd if=/proc/$pid/mem bs=1 count=2628288 skip=$skipbytes > out.data
 
 _Note:_ 1404*1872 =2628288 is the size of the binary data to get
 
-# Acknowledgement
+## Acknowledgement
 
 All the people in the reStream projet and specially
 [@ddvk](https://github.com/ddvk) and [@raisjn](https://github.com/raisjn)
