@@ -18,6 +18,9 @@ jobs:
       with:
         go-version: 1.16
 
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v1
+
     - name: Generate certs
       run: go generate ./...
 
