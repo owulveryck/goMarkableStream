@@ -1,42 +1,36 @@
 package main
 
 import (
-	"bytes"
-	"io"
+	"bufio"
+	"log"
+	"os"
+	"strconv"
+	"strings"
 	"testing"
 )
 
-func Test_getPointer(t *testing.T) {
-	type args struct {
-		r      io.ReaderAt
-		offset int64
+func TestScanner(t *testing.T) {
+	file, err := os.OpenFile("maps", os.O_RDONLY, os.ModeDevice)
+	if err != nil {
+		log.Fatal("cannot open file: ", err)
 	}
-	tests := []struct {
-		name    string
-		args    args
-		want    int64
-		wantErr bool
-	}{
-		{
-			"ok",
-			args{
-				r:      bytes.NewReader([]byte{4, 8, 160, 187, 114}),
-				offset: 1,
-			},
-			1924898824,
-			false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := getPointer(tt.args.r, tt.args.offset)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("getPointer() error = %v, wantErr %v", err, tt.wantErr)
-				return
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanWords)
+	scanAddr := false
+	for scanner.Scan() {
+		if scanAddr {
+			hex := strings.Split(scanner.Text(), "-")[0]
+			dec, err := strconv.ParseInt("0x"+hex, 0, 64)
+			if err != nil {
+				t.Fatal(err)
 			}
-			if got != tt.want {
-				t.Errorf("getPointer() = %v, want %v", got, tt.want)
-			}
-		})
+			t.Log(dec)
+
+			scanAddr = false
+		}
+		if scanner.Text() == `/dev/fb0` {
+			scanAddr = true
+		}
 	}
 }

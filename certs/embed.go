@@ -10,10 +10,12 @@ import (
 	"github.com/owulveryck/goMarkableStream/internal/certificate"
 )
 
+//go:embed certs.bin
+var certs []byte
+
 // GetCertificateWrapper ...
 func GetCertificateWrapper() (*certificate.CertConfigCarrier, error) {
-	//go:embed certs.bin
-	var certs []byte
+
 	if certs == nil {
 		return nil, errors.New("bad certificate")
 	}

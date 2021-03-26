@@ -1,13 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"compress/zlib"
 	"context"
-	"encoding/binary"
-	"io"
 	"log"
 	"net"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	_ "embed"
@@ -21,8 +22,7 @@ import (
 )
 
 type configuration struct {
-	BindAddr  string `env:"RK_SERVER_BIND_ADDR,default=:2000"`
-	FbAddress int    `env:"RK_FB_ADDRESS,default=4387048"`
+	BindAddr string `env:"RK_SERVER_BIND_ADDR,default=:2000"`
 }
 
 const (
@@ -51,13 +51,17 @@ func main() {
 	if err := envconfig.Process(ctx, &c); err != nil {
 		log.Fatal(err)
 	}
+	if len(os.Args) != 2 {
+		log.Fatalf("Usage: %v $(pidof xochitl)", os.Args[0])
+	}
+	pid := os.Args[1]
 
-	file, err := os.OpenFile(os.Args[1], os.O_RDONLY, os.ModeDevice)
+	file, err := os.OpenFile("/proc/"+pid+"/mem", os.O_RDONLY, os.ModeDevice)
 	if err != nil {
 		log.Fatal("cannot open file: ", err)
 	}
 	defer file.Close()
-	addr, err := getPointer(file, int64(c.FbAddress))
+	addr, err := getPointer(pid)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,11 +82,25 @@ func main() {
 	}
 }
 
-func getPointer(r io.ReaderAt, offset int64) (int64, error) {
-	pointer := make([]byte, 4)
-	_, err := r.ReadAt(pointer, offset)
+func getPointer(pid string) (int64, error) {
+	file, err := os.OpenFile("/proc/"+pid+"/maps", os.O_RDONLY, os.ModeDevice)
 	if err != nil {
-		return 0, err
+		log.Fatal("cannot open file: ", err)
 	}
-	return int64(binary.LittleEndian.Uint32(pointer)), nil
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanWords)
+	scanAddr := false
+	var addr int64
+	for scanner.Scan() {
+		if scanAddr {
+			hex := strings.Split(scanner.Text(), "-")[0]
+			addr, err = strconv.ParseInt("0x"+hex, 0, 64)
+			break
+		}
+		if scanner.Text() == `/dev/fb0` {
+			scanAddr = true
+		}
+	}
+	return addr, err
 }
