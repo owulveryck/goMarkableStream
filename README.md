@@ -1,3 +1,5 @@
+[![Go](https://github.com/owulveryck/goMarkableStream/actions/workflows/go.yml/badge.svg)](https://github.com/owulveryck/goMarkableStream/actions/workflows/go.yml)
+
 # goMarkableStream
 
 I use this toy project to stream my remarkable 2 (firmware 2.5) on my laptop using the local wifi.
@@ -21,7 +23,7 @@ Copy the server on the remarkable and start it.
 
 ```shell
 scp goMarkableStreamServer.arm remarkable:
-ssh remarkable './goMarkableStreamServer.arm /proc/$(pidof xochitl)/mem'
+ssh remarkable './goMarkableStreamServer.arm $(pidof xochitl)'
 ```
 
 ### The client
@@ -39,7 +41,6 @@ It is possible to tweak the configuration via environment variables:
 | Env var             |  Default  |  Descri[ption
 |---------------------|-----------|---------------
 | RK_SERVER_BIND_ADDR | :2000     | the TCP listen address
-| RK_FB_ADDRESS       | 4387048   | the location of the pointer to the framebuffer in the `xochitl` process. Default works for firmware 2.5
 
 #### Client
 
