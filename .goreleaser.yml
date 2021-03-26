@@ -5,6 +5,7 @@ before:
     # You may remove this if you don't use go modules.
     - go mod download
     # you may remove this if you don't need go generate
+    - go get github.com/gogo/protobuf/protoc-gen-gofast
     - go generate ./...
 builds:
   - env:
