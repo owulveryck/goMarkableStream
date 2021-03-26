@@ -1,3 +1,5 @@
+[![Go](https://github.com/owulveryck/goMarkableStream/actions/workflows/go.yml/badge.svg)](https://github.com/owulveryck/goMarkableStream/actions/workflows/go.yml)
+
 # goMarkableStream
 
 I use this toy project to stream my remarkable 2 (firmware 2.5) on my laptop using the local wifi.
