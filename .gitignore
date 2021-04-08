@@ -5,3 +5,7 @@ server/streamServerTLS.arm
 client/client
 server/server
 .DS_Store
+utils/genSignature/utils
+.DS_Store
+.gitignore
+.gitignore
