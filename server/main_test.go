@@ -10,7 +10,7 @@ import (
 )
 
 func TestScanner(t *testing.T) {
-	file, err := os.OpenFile("maps", os.O_RDONLY, os.ModeDevice)
+	file, err := os.OpenFile("testdata/maps", os.O_RDONLY, os.ModeDevice)
 	if err != nil {
 		log.Fatal("cannot open file: ", err)
 	}
