@@ -27,9 +27,10 @@ func init() {
 }
 
 type configuration struct {
-	ServerAddr string `env:"RK_SERVER_ADDR,default=remarkable:2000"`
-	BindAddr   string `env:"RK_CLIENT_BIND_ADDR,default=:8080"`
-	AutoRotate bool   `env:"RK_CLIENT_AUTOROTATE,default=true"`
+	ServerAddr     string `env:"RK_SERVER_ADDR,default=remarkable:2000"`
+	BindAddr       string `env:"RK_CLIENT_BIND_ADDR,default=:8080"`
+	AutoRotate     bool   `env:"RK_CLIENT_AUTOROTATE,default=true"`
+	ScreenShotDest string `env:"RK_CLIENT_SCREENSHOT_DEST,default=."`
 }
 
 func main() {
@@ -75,24 +76,50 @@ func runGrabber(c configuration, mjpegStream *mjpeg.Stream, conn *grpc.ClientCon
 		orientation: portrait,
 		isActive:    c.AutoRotate,
 	}
+	screenshotC := make(chan struct{})
+	imageC := make(chan *image.Gray)
+	go screenshotEvent(screenshotC)
+	go imageHandler(c, screenshotC, imageC, mjpegStream)
 	for err == nil {
 		response, err = client.GetImage(context.Background(), &stream.Input{})
 		if err != nil {
 			log.Fatalf("Error when calling GetImage: %s", err)
 		}
 
-		var b bytes.Buffer
 		img.Pix = response.ImageData
 		img.Stride = int(response.Width)
 		img.Rect = image.Rect(0, 0, int(response.Width), int(response.Height))
 		rot.rotate(&img)
-		err := jpeg.Encode(&b, &img, nil)
-		if err != nil {
-			log.Fatal(err)
+		imageC <- &img
+	}
+}
+
+func imageHandler(conf configuration, screenshotC <-chan struct{}, imageC <-chan *image.Gray, mjpegStream *mjpeg.Stream) {
+	for img := range imageC {
+		select {
+		case <-screenshotC:
+			err := savePicture(conf, img)
+			if err != nil {
+				log.Println(err)
+			}
+		default:
 		}
-		err = mjpegStream.Update(b.Bytes())
+		err := displayPicture(img, mjpegStream)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
+}
+
+func displayPicture(img *image.Gray, mjpegStream *mjpeg.Stream) error {
+	var b bytes.Buffer
+	err := jpeg.Encode(&b, img, nil)
+	if err != nil {
+		return err
+	}
+	err = mjpegStream.Update(b.Bytes())
+	if err != nil {
+		return err
+	}
+	return nil
 }
