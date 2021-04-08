@@ -29,6 +29,7 @@ func init() {
 type configuration struct {
 	ServerAddr string `env:"RK_SERVER_ADDR,default=remarkable:2000"`
 	BindAddr   string `env:"RK_CLIENT_BIND_ADDR,default=:8080"`
+	AutoRotate bool   `env:"RK_CLIENT_AUTOROTATE,default=true"`
 }
 
 func main() {
@@ -54,7 +55,7 @@ func main() {
 	defer conn.Close()
 
 	mjpegStream := mjpeg.NewStream()
-	go runGrabber(mjpegStream, conn)
+	go runGrabber(c, mjpegStream, conn)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/video", makeGzipHandler(mjpegStream))
 	log.Printf("listening on %v, registered /video", c.BindAddr)
@@ -64,12 +65,16 @@ func main() {
 	}
 }
 
-func runGrabber(mjpegStream *mjpeg.Stream, conn *grpc.ClientConn) {
+func runGrabber(c configuration, mjpegStream *mjpeg.Stream, conn *grpc.ClientConn) {
 	client := stream.NewStreamClient(conn)
 	var err error
 	var response *stream.Image
 
 	var img image.Gray
+	rot := &rotation{
+		orientation: portrait,
+		isActive:    c.AutoRotate,
+	}
 	for err == nil {
 		response, err = client.GetImage(context.Background(), &stream.Input{})
 		if err != nil {
@@ -80,6 +85,7 @@ func runGrabber(mjpegStream *mjpeg.Stream, conn *grpc.ClientConn) {
 		img.Pix = response.ImageData
 		img.Stride = int(response.Width)
 		img.Rect = image.Rect(0, 0, int(response.Width), int(response.Height))
+		rot.rotate(&img)
 		err := jpeg.Encode(&b, &img, nil)
 		if err != nil {
 			log.Fatal(err)
