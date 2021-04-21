@@ -51,10 +51,10 @@ func main() {
 	if err := envconfig.Process(ctx, &c); err != nil {
 		log.Fatal(err)
 	}
-	if len(os.Args) != 2 {
-		log.Fatalf("Usage: %v $(pidof xochitl)", os.Args[0])
+	pid := findPid()
+	if len(os.Args) == 2 {
+		pid = os.Args[1]
 	}
-	pid := os.Args[1]
 
 	file, err := os.OpenFile("/proc/"+pid+"/mem", os.O_RDONLY, os.ModeDevice)
 	if err != nil {
