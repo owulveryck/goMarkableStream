@@ -32,7 +32,12 @@ builds:
       - amd64
       - arm64
 archives:
-  - replacements:
+  - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    format_overrides:
+    - goos: windows
+      format: zip
+    replacements:
       darwin: Darwin
       linux: Linux
       windows: Windows
