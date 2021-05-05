@@ -50,6 +50,8 @@ It is possible to tweak the configuration via environment variables:
 | RK_SERVER_ADDR            | remarkabke:2000 | the address of the remarkable
 | RK_CLIENT_AUTOROTATE      | true            | activate autorotate (see below)
 | RK_CLIENT_SCREENSHOT_DEST | .               | the destination directory to store the screenshots
+| RK_CLIENT_PAPER_TEXTURE   | null            | a path to a texture
+
 
 ## How it works?
 
@@ -74,6 +76,24 @@ The client tries to locate the location of the top level switch on the picture (
 This experimental behavior can be disabled by env variables in the client.
 
 Note: the browser does not like the switch of the rotation; the reload of the page solves the problem
+
+#### Texture
+
+There is an experimental texture feature that reads a texture file and use is as a background in the output. The texture does
+not apply to the screenshot.
+The texture must have this format:
+
+```shell
+> identify textures/oldpaper.png
+textures/oldpaper.png PNG 1872x1404 1872x1404+0+0 8-bit Gray 256c 886691B 0.010u 0:00.001
+```
+
+Example:
+
+```shell
+RK_CLIENT_PAPER_TEXTURE=./textures/oldpaper.png goMarkableClient
+```
+
 ### Security
 
 The communication is using TLS. The client and the server owns an embedded certificate chain (with the CA). There are performing mutual authentication.

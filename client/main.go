@@ -27,10 +27,13 @@ func init() {
 }
 
 type configuration struct {
-	ServerAddr     string `env:"RK_SERVER_ADDR,default=remarkable:2000"`
-	BindAddr       string `env:"RK_CLIENT_BIND_ADDR,default=:8080"`
-	AutoRotate     bool   `env:"RK_CLIENT_AUTOROTATE,default=true"`
-	ScreenShotDest string `env:"RK_CLIENT_SCREENSHOT_DEST,default=."`
+	ServerAddr            string `env:"RK_SERVER_ADDR,default=remarkable:2000"`
+	BindAddr              string `env:"RK_CLIENT_BIND_ADDR,default=:8080"`
+	AutoRotate            bool   `env:"RK_CLIENT_AUTOROTATE,default=true"`
+	ScreenShotDest        string `env:"RK_CLIENT_SCREENSHOT_DEST,default=."`
+	PaperTexture          string `env:"RK_CLIENT_PAPER_TEXTURE"`
+	paperTextureLandscape *image.Gray
+	paperTexturePortrait  *image.Gray
 }
 
 func main() {
@@ -44,6 +47,10 @@ func main() {
 	var c configuration
 	if err := envconfig.Process(ctx, &c); err != nil {
 		log.Fatal(err)
+	}
+	err = processTexture(&c)
+	if err != nil {
+		log.Println("Cannot process texture, ", err)
 	}
 
 	grpcCreds := credentials.NewTLS(cert.ClientTLSConf)
@@ -89,8 +96,27 @@ func runGrabber(c configuration, mjpegStream *mjpeg.Stream, conn *grpc.ClientCon
 		img.Pix = response.ImageData
 		img.Stride = int(response.Width)
 		img.Rect = image.Rect(0, 0, int(response.Width), int(response.Height))
-		rot.rotate(&img)
-		imageC <- &img
+		if c.paperTextureLandscape != nil {
+			rot.rotate(&img)
+			texture := c.paperTextureLandscape
+			if rot.orientation == portrait {
+				texture = c.paperTexturePortrait
+			}
+			dst := cloneImage(texture)
+			for x := 0; x < img.Rect.Dx(); x++ {
+				for y := 0; y < img.Rect.Dy(); y++ {
+					r, _, _, _ := img.At(x, y).RGBA()
+					if r != 65535 {
+						dst.Set(x, y, img.At(x, y))
+					}
+				}
+			}
+			imageC <- dst
+		} else {
+			rot.rotate(&img)
+			imageC <- &img
+
+		}
 	}
 }
 
