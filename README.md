@@ -55,6 +55,11 @@ It is possible to tweak the configuration via environment variables:
 
 ## How it works?
 
+### Full explanation
+
+I wrote a [blog post](https://blog.owulveryck.info/2021/03/30/streaming-the-remarkable-2.html) that explains all the wiring.
+Otherwise a summary is written here.
+
 ### The server loop
 
 - The server gets the address of the framebuffer in the memory space of the `xochitl`
@@ -116,10 +121,6 @@ go generate ./... # This generates the certificates
 cd server && GOOS=linux GOARCH=arm GOARM=7 go build -o goStreamServer.arm
 cd client && go build -o goStreamClient
 ```
-
-## Full explanation
-
-I wrote a [blog post](https://blog.owulveryck.info/2021/03/30/streaming-the-remarkable-2.html) that explains all the wiring.
 
 # Tipping
 
