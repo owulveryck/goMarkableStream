@@ -121,6 +121,9 @@ cd client && go build -o goStreamClient
 
 I wrote a [blog post](https://blog.owulveryck.info/2021/03/30/streaming-the-remarkable-2.html) that explains all the wiring.
 
+# Tipping
+
+If you plan to buy a reMarkable 2, you can use my [referal program link](https://remarkable.com/referral/PY5B-PH8U). It will provide a discount for you and also for me.
 
 ## Acknowledgement
 
