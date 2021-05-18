@@ -1,15 +1,18 @@
 package main
 
 import (
-	"bufio"
+	"context"
 	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
 	"image/png"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/eiannone/keyboard"
 )
 
 func savePicture(c configuration, img *image.Gray) error {
@@ -43,11 +46,28 @@ func savePicture(c configuration, img *image.Gray) error {
 	return nil
 }
 
-func screenshotEvent(screenshotC chan<- struct{}) {
-	reader := bufio.NewReader(os.Stdin)
+func screenshotEvent(ctx context.Context, screenshotC chan<- struct{}) {
+	keysEvents, err := keyboard.GetKeys(0)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer func() {
+		_ = keyboard.Close()
+	}()
 	for {
-		fmt.Print("press enter to take screenshot -> ")
-		reader.ReadString('\n')
-		screenshotC <- struct{}{}
+		fmt.Print("press enter to take screenshot 📷: ")
+		select {
+		case <-ctx.Done():
+			return
+		case event := <-keysEvents:
+			if event.Err != nil {
+				log.Println(event.Err)
+				return
+			}
+			if event.Key == keyboard.KeyEnter {
+				screenshotC <- struct{}{}
+			}
+		}
 	}
 }
