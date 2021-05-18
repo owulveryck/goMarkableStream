@@ -47,6 +47,7 @@ func main() {
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, index)
 	})
+	mux.HandleFunc("/favicon.ico", faviconHandler)
 	mux.HandleFunc("/screenshot", g.getScreenshot)
 	mux.HandleFunc("/video", makeGzipHandler(mjpegStream))
 	log.Printf("listening on %v", c.BindAddr)
