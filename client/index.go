@@ -4,7 +4,7 @@ const index = `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8"/>
-    <title>Player</title>
+    <title>goMarkableStream</title>
 <style>
 html, body {
   height: 100%;
@@ -31,7 +31,9 @@ html, body {
   </head>
   <body>
     <div class="container center">
+    <a href="/screenshot" download>
       <img src="/video">
+      </a>
     </div>
   </body>
 </html>
