@@ -136,18 +136,19 @@ func init() {
 func init() { proto.RegisterFile("defs.proto3", fileDescriptor_18f170ca17d4606e) }
 
 var fileDescriptor_18f170ca17d4606e = []byte{
-	// 175 bytes of a gzipped FileDescriptorProto
+	// 177 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x4e, 0x49, 0x4d, 0x2b,
 	0xd6, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x37, 0x56, 0x0a, 0xe1, 0x62, 0xcd, 0xcc, 0x4d, 0x4c, 0x4f,
 	0x15, 0x12, 0xe1, 0x62, 0x2d, 0xcf, 0x4c, 0x29, 0xc9, 0x90, 0x60, 0x54, 0x60, 0xd4, 0x60, 0x0e,
 	0x82, 0x70, 0x84, 0xc4, 0xb8, 0xd8, 0x32, 0x52, 0x33, 0xd3, 0x33, 0x4a, 0x24, 0x98, 0xc0, 0xc2,
 	0x50, 0x9e, 0x90, 0x2c, 0x17, 0x17, 0x58, 0x5b, 0x7c, 0x4a, 0x62, 0x49, 0xa2, 0x04, 0x8b, 0x02,
 	0xa3, 0x06, 0x4f, 0x10, 0x27, 0x58, 0xc4, 0x25, 0xb1, 0x24, 0x51, 0x89, 0x9d, 0x8b, 0xd5, 0x33,
-	0xaf, 0xa0, 0xb4, 0xc4, 0x48, 0x8d, 0x8b, 0x2d, 0xb8, 0xa4, 0x28, 0x35, 0x31, 0x57, 0x48, 0x86,
+	0xaf, 0xa0, 0xb4, 0xc4, 0x48, 0x83, 0x8b, 0x2d, 0xb8, 0xa4, 0x28, 0x35, 0x31, 0x57, 0x48, 0x8e,
 	0x8b, 0xc3, 0x3d, 0xb5, 0xc4, 0x13, 0x6c, 0x17, 0x9b, 0x1e, 0x58, 0x56, 0x8a, 0x4d, 0x0f, 0xac,
-	0x45, 0x89, 0xc1, 0x49, 0xea, 0xc4, 0x23, 0x39, 0xc6, 0x0b, 0x8f, 0xe4, 0x18, 0x1f, 0x3c, 0x92,
-	0x63, 0x9c, 0xf1, 0x58, 0x8e, 0x21, 0x8a, 0x43, 0xcf, 0xba, 0x18, 0xac, 0x33, 0x89, 0x0d, 0xe2,
-	0x54, 0x40, 0x00, 0x00, 0x00, 0xff, 0xff, 0x5b, 0x62, 0x81, 0x6a, 0xb8, 0x00, 0x00, 0x00,
+	0x45, 0x89, 0xc1, 0x80, 0xd1, 0x49, 0xea, 0xc4, 0x23, 0x39, 0xc6, 0x0b, 0x8f, 0xe4, 0x18, 0x1f,
+	0x3c, 0x92, 0x63, 0x9c, 0xf1, 0x58, 0x8e, 0x21, 0x8a, 0x43, 0xcf, 0xba, 0x18, 0xac, 0x37, 0x89,
+	0x0d, 0xe2, 0x58, 0x40, 0x00, 0x00, 0x00, 0xff, 0xff, 0xae, 0x9b, 0x15, 0xe8, 0xba, 0x00, 0x00,
+	0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -162,7 +163,7 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type StreamClient interface {
-	GetImage(ctx context.Context, in *Input, opts ...grpc.CallOption) (*Image, error)
+	GetImage(ctx context.Context, in *Input, opts ...grpc.CallOption) (Stream_GetImageClient, error)
 }
 
 type streamClient struct {
@@ -173,60 +174,87 @@ func NewStreamClient(cc *grpc.ClientConn) StreamClient {
 	return &streamClient{cc}
 }
 
-func (c *streamClient) GetImage(ctx context.Context, in *Input, opts ...grpc.CallOption) (*Image, error) {
-	out := new(Image)
-	err := c.cc.Invoke(ctx, "/Stream/GetImage", in, out, opts...)
+func (c *streamClient) GetImage(ctx context.Context, in *Input, opts ...grpc.CallOption) (Stream_GetImageClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_Stream_serviceDesc.Streams[0], "/Stream/GetImage", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &streamGetImageClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Stream_GetImageClient interface {
+	Recv() (*Image, error)
+	grpc.ClientStream
+}
+
+type streamGetImageClient struct {
+	grpc.ClientStream
+}
+
+func (x *streamGetImageClient) Recv() (*Image, error) {
+	m := new(Image)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // StreamServer is the server API for Stream service.
 type StreamServer interface {
-	GetImage(context.Context, *Input) (*Image, error)
+	GetImage(*Input, Stream_GetImageServer) error
 }
 
 // UnimplementedStreamServer can be embedded to have forward compatible implementations.
 type UnimplementedStreamServer struct {
 }
 
-func (*UnimplementedStreamServer) GetImage(ctx context.Context, req *Input) (*Image, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetImage not implemented")
+func (*UnimplementedStreamServer) GetImage(req *Input, srv Stream_GetImageServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetImage not implemented")
 }
 
 func RegisterStreamServer(s *grpc.Server, srv StreamServer) {
 	s.RegisterService(&_Stream_serviceDesc, srv)
 }
 
-func _Stream_GetImage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Input)
-	if err := dec(in); err != nil {
-		return nil, err
+func _Stream_GetImage_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(Input)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(StreamServer).GetImage(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/Stream/GetImage",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StreamServer).GetImage(ctx, req.(*Input))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(StreamServer).GetImage(m, &streamGetImageServer{stream})
+}
+
+type Stream_GetImageServer interface {
+	Send(*Image) error
+	grpc.ServerStream
+}
+
+type streamGetImageServer struct {
+	grpc.ServerStream
+}
+
+func (x *streamGetImageServer) Send(m *Image) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 var _Stream_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "Stream",
 	HandlerType: (*StreamServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "GetImage",
-			Handler:    _Stream_GetImage_Handler,
+			StreamName:    "GetImage",
+			Handler:       _Stream_GetImage_Handler,
+			ServerStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "defs.proto3",
 }
 

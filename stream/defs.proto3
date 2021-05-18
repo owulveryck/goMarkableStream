@@ -12,5 +12,5 @@ message image {
 message Input {}
 
 service Stream {
-  rpc GetImage(Input) returns (image) {}
+  rpc GetImage(Input) returns (stream image) {}
 }

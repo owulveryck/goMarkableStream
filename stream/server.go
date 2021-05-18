@@ -1,7 +1,6 @@
 package stream
 
 import (
-	context "context"
 	"encoding/binary"
 	io "io"
 	"sync"
@@ -45,18 +44,20 @@ func NewServer(r io.ReaderAt, addr int64) *Server {
 }
 
 // GetImage input is nil
-func (s *Server) GetImage(ctx context.Context, in *Input) (*Image, error) {
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-s.runnable:
-		img := s.imagePool.Get().(*Image)
-		_, err := s.r.ReadAt(img.ImageData, s.pointerAddr)
-		if err != nil {
-			s.imagePool.Put(img)
-			return nil, err
+func (s *Server) GetImage(_ *Input, stream Stream_GetImageServer) error {
+	for {
+		select {
+		case <-s.runnable:
+			img := s.imagePool.Get().(*Image)
+			_, err := s.r.ReadAt(img.ImageData, s.pointerAddr)
+			if err != nil {
+				s.imagePool.Put(img)
+				return err
+			}
+			if err := stream.Send(img); err != nil {
+				return err
+			}
 		}
-		return img, nil
 	}
 }
 

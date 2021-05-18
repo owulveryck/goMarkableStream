@@ -1,0 +1,9 @@
+[Unit]
+Description=goMarkableStream
+
+[Service]
+ExecStart=/home/root/goMarkableStreamServer.arm
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

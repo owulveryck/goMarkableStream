@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"compress/zlib"
 	"context"
+	"fmt"
 	"image"
 	"image/jpeg"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/mattn/go-mjpeg"
 	"github.com/owulveryck/goMarkableStream/certs"
@@ -37,90 +37,116 @@ type configuration struct {
 }
 
 func main() {
-	cert, err := certs.GetCertificateWrapper()
-	if err != nil {
-		log.Fatal(err)
-	}
 	//var d net.Dialer
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
+	ctx := context.Background()
 	var c configuration
 	if err := envconfig.Process(ctx, &c); err != nil {
 		log.Fatal(err)
 	}
-	err = processTexture(&c)
+	err := processTexture(&c)
 	if err != nil {
 		log.Println("Cannot process texture, ", err)
 	}
 
-	grpcCreds := credentials.NewTLS(cert.ClientTLSConf)
-	// Create a connection with the TLS credentials
-	conn, err := grpc.Dial(c.ServerAddr, grpc.WithTransportCredentials(grpcCreds), grpc.WithDefaultCallOptions(grpc.UseCompressor("gzip")))
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer conn.Close()
-
 	mjpegStream := mjpeg.NewStream()
-	go runGrabber(c, mjpegStream, conn)
 	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprintf(w, index)
+	})
 	mux.HandleFunc("/video", makeGzipHandler(mjpegStream))
-	log.Printf("listening on %v, registered /video", c.BindAddr)
-	err = http.ListenAndServe(c.BindAddr, mux)
+	log.Printf("listening on %v", c.BindAddr)
+	go func() {
+		err = http.ListenAndServe(c.BindAddr, mux)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+	err = runLoop(ctx, c, mjpegStream)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func runGrabber(c configuration, mjpegStream *mjpeg.Stream, conn *grpc.ClientConn) {
+func runLoop(ctx context.Context, c configuration, mjpegStream *mjpeg.Stream) error {
+	cert, err := certs.GetCertificateWrapper()
+	if err != nil {
+		return err
+	}
+	grpcCreds := credentials.NewTLS(cert.ClientTLSConf)
+	for {
+		// Create a connection with the TLS credentials
+		conn, err := grpc.DialContext(ctx, c.ServerAddr, grpc.WithTransportCredentials(grpcCreds), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.UseCompressor("gzip")))
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		log.Println("Connection established")
+		err = runGrabber(ctx, c, mjpegStream, conn)
+		if err != nil {
+			conn.Close()
+			log.Println("cannot grab picture", err)
+		}
+	}
+	return nil
+}
+
+func runGrabber(ctx context.Context, c configuration, mjpegStream *mjpeg.Stream, conn *grpc.ClientConn) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	client := stream.NewStreamClient(conn)
-	var err error
-	var response *stream.Image
+	getImageClient, err := client.GetImage(ctx, &stream.Input{})
+	if err != nil {
+		return err
+	}
 
 	var img image.Gray
 	rot := &rotation{
 		orientation: portrait,
 		isActive:    c.AutoRotate,
 	}
-	screenshotC := make(chan struct{})
 	imageC := make(chan *image.Gray)
-	go screenshotEvent(screenshotC)
-	go imageHandler(c, screenshotC, imageC, mjpegStream)
-	for err == nil {
-		response, err = client.GetImage(context.Background(), &stream.Input{})
-		if err != nil {
-			log.Fatalf("Error when calling GetImage: %s", err)
-		}
-
-		img.Pix = response.ImageData
-		img.Stride = int(response.Width)
-		img.Rect = image.Rect(0, 0, int(response.Width), int(response.Height))
-		if c.paperTextureLandscape != nil {
-			rot.rotate(&img)
-			texture := c.paperTextureLandscape
-			if rot.orientation == portrait {
-				texture = c.paperTexturePortrait
+	screenshotC := make(chan struct{})
+	go screenshotEvent(ctx, screenshotC)
+	go imageHandler(ctx, c, screenshotC, imageC, mjpegStream)
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			response, err := getImageClient.Recv()
+			if err != nil {
+				cancel()
+				return err
 			}
-			dst := cloneImage(texture)
-			for x := 0; x < img.Rect.Dx(); x++ {
-				for y := 0; y < img.Rect.Dy(); y++ {
-					r, _, _, _ := img.At(x, y).RGBA()
-					if r != 65535 {
-						dst.Set(x, y, img.At(x, y))
+			img.Pix = response.ImageData
+			img.Stride = int(response.Width)
+			img.Rect = image.Rect(0, 0, int(response.Width), int(response.Height))
+			if c.paperTextureLandscape != nil {
+				rot.rotate(&img)
+				texture := c.paperTextureLandscape
+				if rot.orientation == portrait {
+					texture = c.paperTexturePortrait
+				}
+				dst := cloneImage(texture)
+				for x := 0; x < img.Rect.Dx(); x++ {
+					for y := 0; y < img.Rect.Dy(); y++ {
+						r, _, _, _ := img.At(x, y).RGBA()
+						if r != 65535 {
+							dst.Set(x, y, img.At(x, y))
+						}
 					}
 				}
-			}
-			imageC <- dst
-		} else {
-			rot.rotate(&img)
-			imageC <- &img
+				imageC <- dst
+			} else {
+				rot.rotate(&img)
+				imageC <- &img
 
+			}
 		}
 	}
 }
 
-func imageHandler(conf configuration, screenshotC <-chan struct{}, imageC <-chan *image.Gray, mjpegStream *mjpeg.Stream) {
+func imageHandler(ctx context.Context, conf configuration, screenshotC <-chan struct{}, imageC <-chan *image.Gray, mjpegStream *mjpeg.Stream) {
 	for img := range imageC {
 		select {
 		case <-screenshotC:
@@ -128,11 +154,13 @@ func imageHandler(conf configuration, screenshotC <-chan struct{}, imageC <-chan
 			if err != nil {
 				log.Println(err)
 			}
+		case <-ctx.Done():
+			return
 		default:
 		}
 		err := displayPicture(img, mjpegStream)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 	}
 }
