@@ -32,6 +32,17 @@ ssh remarkable './goMarkableStreamServer.arm'
 - Start the client: `RK_SERVER_ADDR=ip.of.remarkable:2000 ./goMarkableClient`
 
 - Point your browser to [`http://localhost:8080/`](http://localhost:8080/)
+- take a screenshot:
+
+There is a `/screenshot` endpoint to grab a picture. 
+
+```shell
+ex: 
+```shell
+❯ curl -o /tmp/screenshot.png http://localhost:8080/screenshot
+❯ file /tmp/screenshot.png
+/tmp/screenshot.png: PNG image data, 1404 x 1872, 8-bit/color RGBA, non-interlaced
+```
 
 ### Configuration
 

@@ -40,7 +40,7 @@ func newGrabber(c configuration, s *mjpeg.Stream) *grabber {
 	}
 }
 
-func (l *grabber) run(ctx context.Context) error {
+func (g *grabber) run(ctx context.Context) error {
 	cert, err := certs.GetCertificateWrapper()
 	if err != nil {
 		return err
@@ -48,17 +48,17 @@ func (l *grabber) run(ctx context.Context) error {
 	grpcCreds := credentials.NewTLS(cert.ClientTLSConf)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	go l.imageHandler(ctx)
-	go l.setWaitingPicture(ctx)
+	go g.imageHandler(ctx)
+	go g.setWaitingPicture(ctx)
 	for {
 		// Create a connection with the TLS credentials
-		conn, err := grpc.DialContext(ctx, l.conf.ServerAddr, grpc.WithTransportCredentials(grpcCreds), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.UseCompressor("gzip")))
+		conn, err := grpc.DialContext(ctx, g.conf.ServerAddr, grpc.WithTransportCredentials(grpcCreds), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.UseCompressor("gzip")))
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 		log.Println("Connection established")
-		err = l.grab(ctx, conn)
+		err = g.grab(ctx, conn)
 		if err != nil {
 			conn.Close()
 			log.Println("cannot grab picture", err)
@@ -66,7 +66,7 @@ func (l *grabber) run(ctx context.Context) error {
 	}
 }
 
-func (l *grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
+func (g *grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
 
 	client := stream.NewStreamClient(conn)
 	getImageClient, err := client.GetImage(ctx, &stream.Input{})
@@ -89,11 +89,11 @@ func (l *grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
 			//img.Pix = response.ImageData
 			img.Stride = int(response.Width)
 			img.Rect = image.Rect(0, 0, int(response.Width), int(response.Height))
-			if l.conf.paperTextureLandscape != nil {
-				l.rot.rotate(&img)
-				texture := l.conf.paperTextureLandscape
-				if l.rot.orientation == portrait {
-					texture = l.conf.paperTexturePortrait
+			if g.conf.paperTextureLandscape != nil {
+				g.rot.rotate(&img)
+				texture := g.conf.paperTextureLandscape
+				if g.rot.orientation == portrait {
+					texture = g.conf.paperTexturePortrait
 				}
 				dst := cloneImage(texture)
 				for x := 0; x < img.Rect.Dx(); x++ {
@@ -104,17 +104,17 @@ func (l *grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
 						}
 					}
 				}
-				l.imageC <- dst
+				g.imageC <- dst
 			} else {
-				l.rot.rotate(&img)
-				l.imageC <- &img
+				g.rot.rotate(&img)
+				g.imageC <- &img
 
 			}
 		}
 	}
 }
 
-func (l *grabber) imageHandler(ctx context.Context) {
+func (g *grabber) imageHandler(ctx context.Context) {
 	idle := 2 * time.Second
 	sleep := false
 	tick := time.NewTicker(idle)
@@ -124,16 +124,16 @@ func (l *grabber) imageHandler(ctx context.Context) {
 			return
 		case <-tick.C:
 			if !sleep {
-				l.sleep <- true
+				g.sleep <- true
 			}
 			sleep = true
-		case img := <-l.imageC:
+		case img := <-g.imageC:
 			if sleep {
-				l.sleep <- false
+				g.sleep <- false
 				sleep = false
 			}
 			tick.Reset(idle)
-			err := displayPicture(img, l.mjpegStream)
+			err := displayPicture(img, g.mjpegStream)
 			if err != nil {
 				log.Println(err)
 			}
@@ -154,10 +154,10 @@ func displayPicture(img *image.Gray, mjpegStream *mjpeg.Stream) error {
 	return nil
 }
 
-func (l *grabber) getScreenshot(w http.ResponseWriter, r *http.Request) {
+func (g *grabber) getScreenshot(w http.ResponseWriter, r *http.Request) {
 	tick := time.Tick(1 * time.Second)
 	select {
-	case img := <-l.imageC:
+	case img := <-g.imageC:
 		mask := image.NewAlpha(img.Bounds())
 		//draw.Draw(m, m.Bounds(), image.Transparent, image.Point{}, draw.Src)
 		for x := 0; x < mask.Rect.Dx(); x++ {

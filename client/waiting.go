@@ -15,18 +15,18 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-func (l *grabber) setWaitingPicture(ctx context.Context) error {
+func (g *grabber) setWaitingPicture(ctx context.Context) error {
 
 	x := 50
 	y := 50
 	var img *image.Gray
-	if l.rot.orientation == portrait {
+	if g.rot.orientation == portrait {
 		img = image.NewGray(image.Rect(0, 0, height, width))
 	} else {
 		img = image.NewGray(image.Rect(0, 0, width, height))
 	}
 	draw.Draw(img, img.Bounds(), image.Black, image.Point{}, draw.Src)
-	label := "Waiting for reMarkable server at " + l.conf.ServerAddr
+	label := "Waiting for reMarkable server at " + g.conf.ServerAddr
 	fnt, err := truetype.Parse(goregular.TTF)
 	if err != nil {
 		return err
@@ -35,7 +35,10 @@ func (l *grabber) setWaitingPicture(ctx context.Context) error {
 		Size: 36,
 	})
 	// img is now an *image.RGBA
-	point := fixed.Point26_6{fixed.Int26_6(x * 64), fixed.Int26_6(y * 64)}
+	point := fixed.Point26_6{
+		X: fixed.Int26_6(x * 64),
+		Y: fixed.Int26_6(y * 64),
+	}
 
 	d := &font.Drawer{
 		Dst:  img,
@@ -55,7 +58,7 @@ func (l *grabber) setWaitingPicture(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return nil
-		case run = <-l.sleep:
+		case run = <-g.sleep:
 		case <-tick:
 			if run {
 				switch col {
@@ -65,7 +68,10 @@ func (l *grabber) setWaitingPicture(ctx context.Context) error {
 					col = color.White
 				}
 				d.Src = image.NewUniform(col)
-				d.Dot = fixed.Point26_6{fixed.Int26_6(height / 2 * 64), fixed.Int26_6(width / 2 * 64)}
+				d.Dot = fixed.Point26_6{
+					X: fixed.Int26_6(height / 2 * 64),
+					Y: fixed.Int26_6(width / 2 * 64),
+				}
 				d.DrawString("X")
 				var b bytes.Buffer
 				err = jpeg.Encode(&b, img, nil)
@@ -73,7 +79,7 @@ func (l *grabber) setWaitingPicture(ctx context.Context) error {
 					return err
 				}
 
-				err = l.mjpegStream.Update(b.Bytes())
+				err = g.mjpegStream.Update(b.Bytes())
 				if err != nil {
 					return err
 				}
