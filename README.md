@@ -4,7 +4,7 @@
 
 I use this toy project to stream my remarkable 2 (firmware 2.5) on my laptop using the local wifi.
 
-[video/demo here](https://www.youtube.com/watch?v=c4-hJ6xRzg4)
+[video that shows some features](https://www.youtube.com/watch?v=PzlQ2hEIdCc)
 
 Note: click on the video to take a screenshot. The screenshot is a png file with transparent background.
 ## Quick start
