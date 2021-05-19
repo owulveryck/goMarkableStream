@@ -6,6 +6,7 @@ I use this toy project to stream my remarkable 2 (firmware 2.5) on my laptop usi
 
 [video/demo here](https://www.youtube.com/watch?v=c4-hJ6xRzg4)
 
+Note: click on the video to take a screenshot. The screenshot is a png file with transparent background.
 ## Quick start
 
 You need ssh access to your remarkable
@@ -23,14 +24,14 @@ Copy the server on the remarkable and start it.
 
 ```shell
 scp goMarkableStreamServer.arm remarkable:
-ssh remarkable './goMarkableStreamServer.arm $(pidof xochitl)'
+ssh remarkable './goMarkableStreamServer.arm'
 ```
 
 ### The client
 
 - Start the client: `RK_SERVER_ADDR=ip.of.remarkable:2000 ./goMarkableClient`
 
-- Point your browser to [`http://localhost:8080/video`](http://localhost:8080/video)
+- Point your browser to [`http://localhost:8080/`](http://localhost:8080/)
 
 ### Configuration
 
