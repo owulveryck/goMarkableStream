@@ -23,6 +23,8 @@ type grabber struct {
 	conf        configuration
 	mjpegStream *mjpeg.Stream
 	imageC      chan *image.Gray
+	rot         *rotation
+	sleep       chan bool
 }
 
 func newGrabber(c configuration, s *mjpeg.Stream) *grabber {
@@ -30,6 +32,11 @@ func newGrabber(c configuration, s *mjpeg.Stream) *grabber {
 		conf:        c,
 		mjpegStream: s,
 		imageC:      make(chan *image.Gray),
+		rot: &rotation{
+			orientation: portrait,
+			isActive:    c.AutoRotate,
+		},
+		sleep: make(chan bool),
 	}
 }
 
@@ -42,6 +49,7 @@ func (l *grabber) run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go l.imageHandler(ctx)
+	go l.setWaitingPicture(ctx)
 	for {
 		// Create a connection with the TLS credentials
 		conn, err := grpc.DialContext(ctx, l.conf.ServerAddr, grpc.WithTransportCredentials(grpcCreds), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.UseCompressor("gzip")))
@@ -66,27 +74,25 @@ func (l *grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
 		return err
 	}
 
-	var img image.Gray
-	rot := &rotation{
-		orientation: portrait,
-		isActive:    l.conf.AutoRotate,
-	}
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
+			var img image.Gray
 			response, err := getImageClient.Recv()
 			if err != nil {
 				return err
 			}
-			img.Pix = response.ImageData
+			img.Pix = make([]uint8, response.Height*response.Width)
+			copy(img.Pix, response.ImageData)
+			//img.Pix = response.ImageData
 			img.Stride = int(response.Width)
 			img.Rect = image.Rect(0, 0, int(response.Width), int(response.Height))
 			if l.conf.paperTextureLandscape != nil {
-				rot.rotate(&img)
+				l.rot.rotate(&img)
 				texture := l.conf.paperTextureLandscape
-				if rot.orientation == portrait {
+				if l.rot.orientation == portrait {
 					texture = l.conf.paperTexturePortrait
 				}
 				dst := cloneImage(texture)
@@ -100,7 +106,7 @@ func (l *grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
 				}
 				l.imageC <- dst
 			} else {
-				rot.rotate(&img)
+				l.rot.rotate(&img)
 				l.imageC <- &img
 
 			}
@@ -109,11 +115,24 @@ func (l *grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
 }
 
 func (l *grabber) imageHandler(ctx context.Context) {
-	for img := range l.imageC {
+	idle := 2 * time.Second
+	sleep := false
+	tick := time.NewTicker(idle)
+	for {
 		select {
 		case <-ctx.Done():
 			return
-		default:
+		case <-tick.C:
+			if !sleep {
+				l.sleep <- true
+			}
+			sleep = true
+		case img := <-l.imageC:
+			if sleep {
+				l.sleep <- false
+				sleep = false
+			}
+			tick.Reset(idle)
 			err := displayPicture(img, l.mjpegStream)
 			if err != nil {
 				log.Println(err)

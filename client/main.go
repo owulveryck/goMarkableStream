@@ -13,6 +13,11 @@ import (
 	grpcGzip "google.golang.org/grpc/encoding/gzip"
 )
 
+const (
+	width  = 1872
+	height = 1404
+)
+
 func init() {
 	err := grpcGzip.SetLevel(zlib.BestSpeed)
 	if err != nil {
@@ -43,6 +48,7 @@ func main() {
 
 	mjpegStream := mjpeg.NewStream()
 	g := newGrabber(c, mjpegStream)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, index)

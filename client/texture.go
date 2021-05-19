@@ -48,7 +48,7 @@ func processTextureFromReader(r io.Reader) (*image.Gray, error) {
 	if imageG, ok = img.(*image.Gray); !ok {
 		return nil, errors.New("texture is not gray")
 	}
-	if imageG.Bounds().Dx() != 1872 || imageG.Bounds().Dy() != 1404 {
+	if imageG.Bounds().Dx() != width || imageG.Bounds().Dy() != height {
 		log.Println(imageG.Bounds())
 		return nil, errors.New("bad dimensions")
 	}
