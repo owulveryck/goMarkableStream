@@ -93,12 +93,9 @@ func (g *grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
 					texture = g.conf.paperTexturePortrait
 				}
 				dst := cloneImage(texture)
-				for x := 0; x < img.Rect.Dx(); x++ {
-					for y := 0; y < img.Rect.Dy(); y++ {
-						r, _, _, _ := img.At(x, y).RGBA()
-						if r != 65535 {
-							dst.Set(x, y, img.At(x, y))
-						}
+				for i := 0; i < len(img.Pix); i++ {
+					if img.Pix[i] != 255 {
+						dst.Pix[i] = img.Pix[i]
 					}
 				}
 				g.imageC <- dst
