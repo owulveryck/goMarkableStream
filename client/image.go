@@ -83,22 +83,16 @@ func colorize(img *image.Gray) *image.RGBA {
 	}
 	// Create mask for highlighting
 	maskHighlight := image.NewAlpha(img.Bounds())
-	//maskBlack := image.NewAlpha(img.Bounds())
-	for y := img.Rect.Min.Y; y < img.Rect.Max.Y; y++ {
-		yp := (y - img.Rect.Min.Y) * img.Stride
-		for x := img.Rect.Min.X; x < img.Rect.Max.X; x++ {
-			r := img.Pix[yp+(x-img.Rect.Min.X)]
-			if r <= 250 && r > 110 {
-				maskHighlight.Pix[yp+(x-img.Rect.Min.X)] = uint8(255 - r)
-			} else {
-				maskHighlight.Pix[yp+(x-img.Rect.Min.X)] = 255
-				//maskBlack.Pix[yp+(x-img.Rect.Min.X)] = uint8(255 - r)
-			}
+	for i := 0; i < len(img.Pix); i++ {
+		r := img.Pix[i]
+		if r <= 250 && r > 110 {
+			maskHighlight.Pix[i] = uint8(255 - r)
+		} else {
+			maskHighlight.Pix[i] = 255
 		}
 	}
 	m := image.NewRGBA(img.Bounds())
 	draw.Draw(m, m.Bounds(), image.NewUniform(yellow), image.Point{}, draw.Src)
-
 	draw.DrawMask(m, img.Bounds(), img, image.Point{}, maskHighlight, image.Point{}, draw.Over)
 	return m
 }
