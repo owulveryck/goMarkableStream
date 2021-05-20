@@ -32,18 +32,6 @@ ssh remarkable './goMarkableStreamServer.arm'
 - Start the client: `RK_SERVER_ADDR=ip.of.remarkable:2000 ./goMarkableClient`
 
 - Point your browser to [`http://localhost:8080/`](http://localhost:8080/)
-- take a screenshot:
-
-There is a `/screenshot` endpoint to grab a picture. 
-
-```shell
-ex: 
-```shell
-❯ curl -o /tmp/screenshot.png http://localhost:8080/screenshot
-❯ file /tmp/screenshot.png
-/tmp/screenshot.png: PNG image data, 1404 x 1872, 8-bit/color RGBA, non-interlaced
-```
-
 ### Configuration
 
 It is possible to tweak the configuration via environment variables:
@@ -61,8 +49,56 @@ It is possible to tweak the configuration via environment variables:
 | RK_CLIENT_BIND_ADDR       | :8080           | the TCP listen address
 | RK_SERVER_ADDR            | remarkabke:2000 | the address of the remarkable
 | RK_CLIENT_AUTOROTATE      | true            | activate autorotate (see below)
-| RK_CLIENT_SCREENSHOT_DEST | .               | the destination directory to store the screenshots
 | RK_CLIENT_PAPER_TEXTURE   | null            | a path to a texture
+| RK_CLIENT_COLORIZE        | false           | try to colorize the highliter
+## Features
+
+### Auto-rotate
+
+The client tries to locate the location of the top level switch on the picture (the round one) and rotate the picture accordingly.
+This experimental behavior can be disabled by env variables in the client.
+
+Note: the browser does not like the switch of the rotation; the reload of the page solves the problem
+
+### Texture
+
+There is an experimental texture feature that reads a texture file and use is as a background in the output. The texture does
+not apply to the screenshot.
+The texture must have this format:
+
+```shell
+> identify textures/oldpaper.png
+textures/oldpaper.png PNG 1872x1404 1872x1404+0+0 8-bit Gray 256c 886691B 0.010u 0:00.001
+```
+
+Example:
+
+```shell
+RK_CLIENT_PAPER_TEXTURE=./textures/oldpaper.png goMarkableClient
+```
+
+![exemple](docs/textures.png)
+
+
+### Colorize
+
+This option can be activated with the `RK_CLIENT_COLORIZE=true` env variable. This tries to set the highlighter in yellow in the video stream. 
+
+**Caution** This is CPU intensive.
+
+![exemple](docs/colorize.png)
+
+### Screenshot
+
+The server is exposing a screenshot endpoint. You can grab a screenshot by clicking on the video stream, or by using tools such as curl:
+
+ex: 
+```shell
+❯ curl -o /tmp/screenshot.png http://localhost:8080/screenshot
+❯ file /tmp/screenshot.png
+/tmp/screenshot.png: PNG image data, 1404 x 1872, 8-bit/color RGBA, non-interlaced
+```
+
 
 
 ## How it works?
@@ -87,31 +123,8 @@ Otherwise a summary is written here.
 - Then it triggers a goroutine to get the `image` in a for loop.
 - The image is then encoded into JPEG format and added to the MJPEG stream.
 
-#### Auto-rotate
 
-The client tries to locate the location of the top level switch on the picture (the round one) and rotate the picture accordingly.
-This experimental behavior can be disabled by env variables in the client.
-
-Note: the browser does not like the switch of the rotation; the reload of the page solves the problem
-
-#### Texture
-
-There is an experimental texture feature that reads a texture file and use is as a background in the output. The texture does
-not apply to the screenshot.
-The texture must have this format:
-
-```shell
-> identify textures/oldpaper.png
-textures/oldpaper.png PNG 1872x1404 1872x1404+0+0 8-bit Gray 256c 886691B 0.010u 0:00.001
-```
-
-Example:
-
-```shell
-RK_CLIENT_PAPER_TEXTURE=./textures/oldpaper.png goMarkableClient
-```
-
-### Security
+## Security
 
 The communication is using TLS. The client and the server owns an embedded certificate chain (with the CA). There are performing mutual authentication.
 A new certificate chain is generated per build. Therefore, if you want restrict the access to your server to your client only, you must rebuild the tool yourself.
