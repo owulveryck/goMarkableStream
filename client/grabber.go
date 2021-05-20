@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/gob"
 	"image"
-	"image/draw"
 	"image/png"
 	"log"
 	"net/http"
@@ -143,21 +142,4 @@ func (g *grabber) getScreenshot(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no content", http.StatusNoContent)
 		return
 	}
-}
-
-func createTransparentImage(img *image.Gray) *image.RGBA {
-	mask := image.NewAlpha(img.Bounds())
-	//Direct pixel access for performance
-	for y := img.Rect.Min.Y; y < img.Rect.Max.Y; y++ {
-		yp := (y - img.Rect.Min.Y) * img.Stride
-		for x := img.Rect.Min.X; x < img.Rect.Max.X; x++ {
-			r := img.Pix[yp+(x-img.Rect.Min.X)]
-			mask.Pix[yp+(x-img.Rect.Min.X)] = uint8(255 - r)
-		}
-	}
-	m := image.NewRGBA(img.Bounds())
-	draw.Draw(m, m.Bounds(), image.Transparent, image.Point{}, draw.Src)
-
-	draw.DrawMask(m, img.Bounds(), img, image.Point{}, mask, image.Point{}, draw.Over)
-	return m
 }
