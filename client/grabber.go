@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"context"
+	"encoding/gob"
 	"image"
-	"image/color"
 	"image/draw"
-	"image/jpeg"
 	"image/png"
 	"log"
 	"net/http"
@@ -114,66 +112,28 @@ func (g *grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
 	}
 }
 
-func (g *grabber) imageHandler(ctx context.Context) {
-	idle := 2 * time.Second
-	sleep := false
-	tick := time.NewTicker(idle)
-	for {
-		select {
-		case <-ctx.Done():
+func (g *grabber) getGob(w http.ResponseWriter, r *http.Request) {
+	tick := time.Tick(1 * time.Second)
+	select {
+	case img := <-g.imageC:
+		w.Header().Add("Content-Type", "application/octet-stream")
+		enc := gob.NewEncoder(w)
+		err := enc.Encode(img)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
-		case <-tick.C:
-			if !sleep {
-				g.sleep <- true
-			}
-			sleep = true
-		case img := <-g.imageC:
-			if sleep {
-				g.sleep <- false
-				sleep = false
-			}
-			tick.Reset(idle)
-			err := displayPicture(img, g.mjpegStream)
-			if err != nil {
-				log.Println(err)
-			}
 		}
+	case <-tick:
+		http.Error(w, "no content", http.StatusNoContent)
+		return
 	}
-}
-
-func displayPicture(img *image.Gray, mjpegStream *mjpeg.Stream) error {
-	var b bytes.Buffer
-	err := jpeg.Encode(&b, img, nil)
-	if err != nil {
-		return err
-	}
-	err = mjpegStream.Update(b.Bytes())
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (g *grabber) getScreenshot(w http.ResponseWriter, r *http.Request) {
 	tick := time.Tick(1 * time.Second)
 	select {
 	case img := <-g.imageC:
-		mask := image.NewAlpha(img.Bounds())
-		//draw.Draw(m, m.Bounds(), image.Transparent, image.Point{}, draw.Src)
-		for x := 0; x < mask.Rect.Dx(); x++ {
-			for y := 0; y < mask.Rect.Dy(); y++ {
-				//get one of r, g, b on the mask image ...
-				r, _, _, _ := img.At(x, y).RGBA()
-				//... and set it as the alpha value on the mask.
-				mask.SetAlpha(x, y, color.Alpha{uint8(255 - r)}) //Assuming that white is your transparency, subtract it from 255
-			}
-		}
-		m := image.NewRGBA(img.Bounds())
-		draw.Draw(m, m.Bounds(), image.Transparent, image.Point{}, draw.Src)
-
-		draw.DrawMask(m, img.Bounds(), img, image.Point{}, mask, image.Point{}, draw.Over)
-
-		//if err := png.Encode(f, img); err != nil {
+		m := createTransparentImage(img)
 		w.Header().Add("Content-Type", "image/png")
 		if err := png.Encode(w, m); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -183,4 +143,21 @@ func (g *grabber) getScreenshot(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no content", http.StatusNoContent)
 		return
 	}
+}
+
+func createTransparentImage(img *image.Gray) *image.RGBA {
+	mask := image.NewAlpha(img.Bounds())
+	//Direct pixel access for performance
+	for y := img.Rect.Min.Y; y < img.Rect.Max.Y; y++ {
+		yp := (y - img.Rect.Min.Y) * img.Stride
+		for x := img.Rect.Min.X; x < img.Rect.Max.X; x++ {
+			r := img.Pix[yp+(x-img.Rect.Min.X)]
+			mask.Pix[yp+(x-img.Rect.Min.X)] = uint8(255 - r)
+		}
+	}
+	m := image.NewRGBA(img.Bounds())
+	draw.Draw(m, m.Bounds(), image.Transparent, image.Point{}, draw.Src)
+
+	draw.DrawMask(m, img.Bounds(), img, image.Point{}, mask, image.Point{}, draw.Over)
+	return m
 }
