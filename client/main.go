@@ -57,6 +57,7 @@ func main() {
 	mux.HandleFunc("/favicon.ico", faviconHandler)
 	mux.HandleFunc("/screenshot", g.getScreenshot)
 	mux.HandleFunc("/gob", g.getGob)
+	mux.HandleFunc("/raw", g.getRaw)
 	mux.HandleFunc("/video", makeGzipHandler(mjpegStream))
 	log.Printf("listening on %v", c.BindAddr)
 	go func() {

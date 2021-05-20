@@ -7,6 +7,7 @@ I use this toy project to stream my remarkable 2 (firmware 2.5) on my laptop usi
 [video that shows some features](https://www.youtube.com/watch?v=PzlQ2hEIdCc)
 
 Note: click on the video to take a screenshot. The screenshot is a png file with transparent background.
+
 ## Quick start
 
 You need ssh access to your remarkable
@@ -26,6 +27,9 @@ Copy the server on the remarkable and start it.
 scp goMarkableStreamServer.arm remarkable:
 ssh remarkable './goMarkableStreamServer.arm'
 ```
+
+Note: The processus is fault tolerant and should resume automatically on sleep/wakup or network failure; therefore, you can, normally, launch the processus in background (with `nohup`)
+
 
 ### The client
 
@@ -51,6 +55,7 @@ It is possible to tweak the configuration via environment variables:
 | RK_CLIENT_AUTOROTATE      | true            | activate autorotate (see below)
 | RK_CLIENT_PAPER_TEXTURE   | null            | a path to a texture
 | RK_CLIENT_COLORIZE        | false           | try to colorize the highliter
+
 ## Features
 
 ### Auto-rotate
@@ -99,7 +104,14 @@ ex:
 /tmp/screenshot.png: PNG image data, 1404 x 1872, 8-bit/color RGBA, non-interlaced
 ```
 
+### Raw picture
 
+the `/raw` endpoind exposes the raw picture without any treatment. It is possible to pipe the result into a thrid party tool such as imageMagick for example.
+
+This generates a pdf from the screen
+```shell
+curl http://localhost:8080/raw | convert -depth 8 -size 1404x1872+0 gray:- shot.pdf
+```
 
 ## How it works?
 
