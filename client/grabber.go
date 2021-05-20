@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/gob"
 	"image"
 	"image/png"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -135,6 +137,18 @@ func (g *grabber) getScreenshot(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	case <-tick:
+		http.Error(w, "no content", http.StatusNoContent)
+		return
+	}
+}
+
+func (g *grabber) getRaw(w http.ResponseWriter, r *http.Request) {
+	tick := time.Tick(1 * time.Second)
+	select {
+	case img := <-g.imageC:
+		w.Header().Add("Cntent-Type", "application/octet-stream")
+		io.Copy(w, bytes.NewReader(img.Pix))
 	case <-tick:
 		http.Error(w, "no content", http.StatusNoContent)
 		return
