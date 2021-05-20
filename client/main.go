@@ -31,6 +31,7 @@ type configuration struct {
 	AutoRotate            bool   `env:"RK_CLIENT_AUTOROTATE,default=true"`
 	ScreenShotDest        string `env:"RK_CLIENT_SCREENSHOT_DEST,default=."`
 	PaperTexture          string `env:"RK_CLIENT_PAPER_TEXTURE"`
+	Colorize              bool   `env:"RK_CLIENT_COLORIZE,default=false"`
 	paperTextureLandscape *image.Gray
 	paperTexturePortrait  *image.Gray
 }
