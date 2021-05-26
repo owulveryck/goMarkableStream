@@ -36,6 +36,9 @@ Note: The processus is fault tolerant and should resume automatically on sleep/w
 - Start the client: `RK_SERVER_ADDR=ip.of.remarkable:2000 ./goMarkableClient`
 
 - Point your browser to [`http://localhost:8080/`](http://localhost:8080/)
+
+_Note_: there is also an experimental (and ugly) [/conf`](http://localhost:8080/conf) endpoint to activate some features on the fly.
+
 ### Configuration
 
 It is possible to tweak the configuration via environment variables:
