@@ -1,10 +1,14 @@
-package main
+package client
 
 import (
+	"bytes"
+	"context"
 	"encoding/gob"
 	"image"
 	"image/color"
 	"image/draw"
+	"image/jpeg"
+	"io/ioutil"
 	"os"
 	"testing"
 )
@@ -54,4 +58,28 @@ func BenchmarkCreateTransparentImageLegacy(b *testing.B) {
 		draw.DrawMask(m, img.Bounds(), &img, image.Point{}, mask, image.Point{}, draw.Over)
 
 	}
+}
+
+type voidJpegDisplayer struct{}
+
+func (v *voidJpegDisplayer) Display(img *image.Gray) error {
+	var b bytes.Buffer
+	return jpeg.Encode(&b, colorize(img), nil)
+}
+
+func BenchmarkImageHandler(b *testing.B) {
+	content, err := ioutil.ReadFile("testdata/screenshot.raw")
+	if err != nil {
+		b.Fatal(err)
+	}
+	g := NewGrabber(&Configuration{}, &voidJpegDisplayer{})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go g.imageHandler(ctx)
+	for i := 0; i < b.N; i++ {
+		img := image.NewGray(image.Rect(0, 0, Height, Width))
+		copy(img.Pix, content)
+		g.imageC <- img
+	}
+
 }

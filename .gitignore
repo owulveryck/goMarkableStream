@@ -10,3 +10,8 @@ utils/genSignature/utils
 .gitignore
 .gitignore
 .DS_Store
+misc/findIP/findIP
+.gitignore
+internal/client/client.test
+internal/client/memprofile.out
+internal/client/profile.out

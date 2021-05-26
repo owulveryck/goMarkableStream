@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"bytes"
@@ -9,9 +9,11 @@ import (
 	"image/jpeg"
 	"log"
 	"time"
+
+	"github.com/mattn/go-mjpeg"
 )
 
-func (g *grabber) imageHandler(ctx context.Context) {
+func (g *Grabber) imageHandler(ctx context.Context) {
 	idle := 2 * time.Second
 	sleep := false
 	tick := time.NewTicker(idle)
@@ -30,7 +32,8 @@ func (g *grabber) imageHandler(ctx context.Context) {
 				sleep = false
 			}
 			tick.Reset(idle)
-			err := g.displayPicture(img)
+			err := g.displayer.Display(img)
+			//err := g.displayPicture(img)
 			if err != nil {
 				log.Println(err)
 			}
@@ -38,11 +41,23 @@ func (g *grabber) imageHandler(ctx context.Context) {
 	}
 }
 
-func (g *grabber) displayPicture(img *image.Gray) error {
+type MJPEGDisplayer struct {
+	conf        *Configuration
+	mjpegStream *mjpeg.Stream
+}
+
+func NewMJPEGDisplayer(c *Configuration, stream *mjpeg.Stream) *MJPEGDisplayer {
+	return &MJPEGDisplayer{
+		conf:        c,
+		mjpegStream: stream,
+	}
+}
+
+func (m *MJPEGDisplayer) Display(img *image.Gray) error {
 	var b bytes.Buffer
 
 	var err error
-	if g.conf.Colorize {
+	if m.conf.Colorize {
 		err = jpeg.Encode(&b, colorize(img), nil)
 	} else {
 		err = jpeg.Encode(&b, img, nil)
@@ -50,7 +65,7 @@ func (g *grabber) displayPicture(img *image.Gray) error {
 	if err != nil {
 		return err
 	}
-	err = g.mjpegStream.Update(b.Bytes())
+	err = m.mjpegStream.Update(b.Bytes())
 	if err != nil {
 		return err
 	}

@@ -4,18 +4,13 @@ import (
 	"compress/zlib"
 	"context"
 	"fmt"
-	"image"
 	"log"
 	"net/http"
 
 	"github.com/mattn/go-mjpeg"
+	"github.com/owulveryck/goMarkableStream/internal/client"
 	"github.com/sethvargo/go-envconfig"
 	grpcGzip "google.golang.org/grpc/encoding/gzip"
-)
-
-const (
-	width  = 1872
-	height = 1404
 )
 
 func init() {
@@ -25,39 +20,30 @@ func init() {
 	}
 }
 
-type configuration struct {
-	ServerAddr            string `env:"RK_SERVER_ADDR,default=remarkable:2000"`
-	BindAddr              string `env:"RK_CLIENT_BIND_ADDR,default=:8080"`
-	AutoRotate            bool   `env:"RK_CLIENT_AUTOROTATE,default=true"`
-	ScreenShotDest        string `env:"RK_CLIENT_SCREENSHOT_DEST,default=."`
-	PaperTexture          string `env:"RK_CLIENT_PAPER_TEXTURE"`
-	Colorize              bool   `env:"RK_CLIENT_COLORIZE,default=false"`
-	paperTextureLandscape *image.Gray
-	paperTexturePortrait  *image.Gray
-}
-
 func main() {
 	ctx := context.Background()
-	var c configuration
+	var c client.Configuration
 	if err := envconfig.Process(ctx, &c); err != nil {
 		log.Fatal(err)
 	}
-	err := processTexture(&c)
+	err := client.ProcessTexture(&c)
 	if err != nil {
 		log.Println("Cannot process texture, ", err)
 	}
 
 	mjpegStream := mjpeg.NewStream()
-	g := newGrabber(c, mjpegStream)
+	displayer := client.NewMJPEGDisplayer(&c, mjpegStream)
+	g := client.NewGrabber(&c, displayer)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, index)
 	})
 	mux.HandleFunc("/favicon.ico", faviconHandler)
-	mux.HandleFunc("/screenshot", g.getScreenshot)
-	mux.HandleFunc("/gob", g.getGob)
-	mux.HandleFunc("/raw", g.getRaw)
+	mux.HandleFunc("/screenshot", g.GetScreenshot)
+	mux.Handle("/conf", &c)
+	mux.HandleFunc("/gob", g.GetGob)
+	mux.HandleFunc("/raw", g.GetRaw)
 	mux.HandleFunc("/video", makeGzipHandler(mjpegStream))
 	log.Printf("listening on %v", c.BindAddr)
 	go func() {
@@ -66,7 +52,7 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
-	err = g.run(ctx)
+	err = g.Run(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}

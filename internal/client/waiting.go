@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"bytes"
@@ -15,15 +15,15 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-func (g *grabber) setWaitingPicture(ctx context.Context) error {
+func (g *Grabber) setWaitingPicture(ctx context.Context) error {
 
 	x := 50
 	y := 50
 	var img *image.Gray
 	if g.rot.orientation == portrait {
-		img = image.NewGray(image.Rect(0, 0, height, width))
+		img = image.NewGray(image.Rect(0, 0, Height, Width))
 	} else {
-		img = image.NewGray(image.Rect(0, 0, width, height))
+		img = image.NewGray(image.Rect(0, 0, Width, Height))
 	}
 	draw.Draw(img, img.Bounds(), image.Black, image.Point{}, draw.Src)
 	label := "Waiting for reMarkable server at " + g.conf.ServerAddr
@@ -48,7 +48,7 @@ func (g *grabber) setWaitingPicture(ctx context.Context) error {
 	}
 	d.DrawString(label)
 	var run bool
-	tick := time.Tick(500 * time.Millisecond)
+	tick := time.NewTicker(500 * time.Millisecond)
 	col := color.White
 	d.Face = truetype.NewFace(fnt, &truetype.Options{
 		Size: 64,
@@ -59,7 +59,7 @@ func (g *grabber) setWaitingPicture(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case run = <-g.sleep:
-		case <-tick:
+		case <-tick.C:
 			if run {
 				switch col {
 				case color.White:
@@ -69,8 +69,8 @@ func (g *grabber) setWaitingPicture(ctx context.Context) error {
 				}
 				d.Src = image.NewUniform(col)
 				d.Dot = fixed.Point26_6{
-					X: fixed.Int26_6(height / 2 * 64),
-					Y: fixed.Int26_6(width / 2 * 64),
+					X: fixed.Int26_6(Height / 2 * 64),
+					Y: fixed.Int26_6(Width / 2 * 64),
 				}
 				d.DrawString("X")
 				var b bytes.Buffer
@@ -78,12 +78,15 @@ func (g *grabber) setWaitingPicture(ctx context.Context) error {
 				if err != nil {
 					return err
 				}
-
-				err = g.mjpegStream.Update(b.Bytes())
+				err := g.displayer.Display(img)
 				if err != nil {
 					return err
 				}
 			}
 		}
 	}
+}
+
+type Renderer interface {
+	Update([]byte) error
 }

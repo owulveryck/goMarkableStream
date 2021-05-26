@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"errors"
@@ -9,7 +9,12 @@ import (
 	"os"
 )
 
-func processTexture(c *configuration) error {
+const (
+	Width  = 1872
+	Height = 1404
+)
+
+func ProcessTexture(c *Configuration) error {
 	if c.PaperTexture == "" {
 		return nil
 	}
@@ -48,7 +53,7 @@ func processTextureFromReader(r io.Reader) (*image.Gray, error) {
 	if imageG, ok = img.(*image.Gray); !ok {
 		return nil, errors.New("texture is not gray")
 	}
-	if imageG.Bounds().Dx() != width || imageG.Bounds().Dy() != height {
+	if imageG.Bounds().Dx() != Width || imageG.Bounds().Dy() != Height {
 		log.Println(imageG.Bounds())
 		return nil, errors.New("bad dimensions")
 	}

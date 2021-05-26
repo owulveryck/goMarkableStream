@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ const (
 )
 
 func BenchmarkJPEGEncodingCMYK(b *testing.B) {
-	img := image.NewCMYK(image.Rect(0, 0, h, w))
+	img := image.NewYCbCr(image.Rect(0, 0, h, w), image.YCbCrSubsampleRatio422)
 	var buf bytes.Buffer
 	for i := 0; i < b.N; i++ {
 		err := jpeg.Encode(&buf, img, nil)

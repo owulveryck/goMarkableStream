@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"bytes"
@@ -11,26 +11,30 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mattn/go-mjpeg"
 	"github.com/owulveryck/goMarkableStream/certs"
 	"github.com/owulveryck/goMarkableStream/stream"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
-type grabber struct {
-	conf        configuration
-	mjpegStream *mjpeg.Stream
-	imageC      chan *image.Gray
-	rot         *rotation
-	sleep       chan bool
+type Displayer interface {
+	Display(*image.Gray) error
 }
 
-func newGrabber(c configuration, s *mjpeg.Stream) *grabber {
-	return &grabber{
-		conf:        c,
-		mjpegStream: s,
-		imageC:      make(chan *image.Gray),
+// Grabber is the main object
+type Grabber struct {
+	conf      *Configuration
+	displayer Displayer
+	imageC    chan *image.Gray
+	rot       *rotation
+	sleep     chan bool
+}
+
+func NewGrabber(c *Configuration, d Displayer) *Grabber {
+	return &Grabber{
+		conf:      c,
+		displayer: d,
+		imageC:    make(chan *image.Gray),
 		rot: &rotation{
 			orientation: portrait,
 			isActive:    c.AutoRotate,
@@ -39,7 +43,8 @@ func newGrabber(c configuration, s *mjpeg.Stream) *grabber {
 	}
 }
 
-func (g *grabber) run(ctx context.Context) error {
+// Run the grabber
+func (g *Grabber) Run(ctx context.Context) error {
 	cert, err := certs.GetCertificateWrapper()
 	if err != nil {
 		return err
@@ -65,7 +70,7 @@ func (g *grabber) run(ctx context.Context) error {
 	}
 }
 
-func (g *grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
+func (g *Grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
 
 	client := stream.NewStreamClient(conn)
 	getImageClient, err := client.GetImage(ctx, &stream.Input{})
@@ -110,8 +115,8 @@ func (g *grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
 	}
 }
 
-func (g *grabber) getGob(w http.ResponseWriter, r *http.Request) {
-	tick := time.Tick(1 * time.Second)
+func (g *Grabber) GetGob(w http.ResponseWriter, r *http.Request) {
+	tick := time.NewTicker(1 * time.Second)
 	select {
 	case img := <-g.imageC:
 		w.Header().Add("Content-Type", "application/octet-stream")
@@ -121,14 +126,14 @@ func (g *grabber) getGob(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	case <-tick:
+	case <-tick.C:
 		http.Error(w, "no content", http.StatusNoContent)
 		return
 	}
 }
 
-func (g *grabber) getScreenshot(w http.ResponseWriter, r *http.Request) {
-	tick := time.Tick(1 * time.Second)
+func (g *Grabber) GetScreenshot(w http.ResponseWriter, r *http.Request) {
+	tick := time.NewTicker(1 * time.Second)
 	select {
 	case img := <-g.imageC:
 		m := createTransparentImage(img)
@@ -137,19 +142,19 @@ func (g *grabber) getScreenshot(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	case <-tick:
+	case <-tick.C:
 		http.Error(w, "no content", http.StatusNoContent)
 		return
 	}
 }
 
-func (g *grabber) getRaw(w http.ResponseWriter, r *http.Request) {
-	tick := time.Tick(1 * time.Second)
+func (g *Grabber) GetRaw(w http.ResponseWriter, r *http.Request) {
+	tick := time.NewTicker(1 * time.Second)
 	select {
 	case img := <-g.imageC:
 		w.Header().Add("Cntent-Type", "application/octet-stream")
 		io.Copy(w, bytes.NewReader(img.Pix))
-	case <-tick:
+	case <-tick.C:
 		http.Error(w, "no content", http.StatusNoContent)
 		return
 	}
