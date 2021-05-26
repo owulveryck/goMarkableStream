@@ -23,11 +23,12 @@ type Displayer interface {
 
 // Grabber is the main object
 type Grabber struct {
-	conf      *Configuration
-	displayer Displayer
-	imageC    chan *image.Gray
-	rot       *rotation
-	sleep     chan bool
+	conf              *Configuration
+	displayer         Displayer
+	imageC            chan *image.Gray
+	rot               *rotation
+	sleep             chan bool
+	maxPictureGrabbed int // usefull for benchmarking
 }
 
 func NewGrabber(c *Configuration, d Displayer) *Grabber {
@@ -78,23 +79,22 @@ func (g *Grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
 		return err
 	}
 
-	for {
+	for i := 0; i < g.maxPictureGrabbed || g.maxPictureGrabbed == 0; i++ {
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
-			var img image.Gray
+			img := grayPool.Get().(*image.Gray)
 			response, err := getImageClient.Recv()
 			if err != nil {
 				return err
 			}
-			img.Pix = make([]uint8, response.Height*response.Width)
 			copy(img.Pix, response.ImageData)
 			//img.Pix = response.ImageData
 			img.Stride = int(response.Width)
 			img.Rect = image.Rect(0, 0, int(response.Width), int(response.Height))
 			if g.conf.paperTextureLandscape != nil {
-				g.rot.rotate(&img)
+				g.rot.rotate(img)
 				texture := g.conf.paperTextureLandscape
 				if g.rot.orientation == portrait {
 					texture = g.conf.paperTexturePortrait
@@ -107,12 +107,13 @@ func (g *Grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
 				}
 				g.imageC <- dst
 			} else {
-				g.rot.rotate(&img)
-				g.imageC <- &img
+				g.rot.rotate(img)
+				g.imageC <- img
 
 			}
 		}
 	}
+	return nil
 }
 
 func (g *Grabber) GetGob(w http.ResponseWriter, r *http.Request) {
