@@ -2,12 +2,15 @@
 
 # goMarkableStream
 
-I use this toy project to stream my remarkable 2 (firmware 2.5) on my laptop using the local wifi.
+I use this  project to stream my remarkable 2 (firmware 2.5+) on my laptop using the local wifi.
+This project does not need any hack installed on the remarkable (only the server which should not void the warranty).
+This project does not rely on any exterrnal dependencies and should run on Linux, Windows and. MacOS.
 
 [video that shows some features](https://www.youtube.com/watch?v=PzlQ2hEIdCc)
 
-Note: click on the video to take a screenshot. The screenshot is a png file with transparent background.
+And [another one](https://youtu.be/0PCyUn_-x6Y) that shows the experimental colorize featur
 
+\
 ## Quick start
 
 You need ssh access to your remarkable
@@ -36,6 +39,8 @@ Note: The processus is fault tolerant and should resume automatically on sleep/w
 - Start the client: `RK_SERVER_ADDR=ip.of.remarkable:2000 ./goMarkableClient`
 
 - Point your browser to [`http://localhost:8080/`](http://localhost:8080/)
+
+Note: click on the video to take a screenshot. The screenshot is a png file with transparent background.
 
 _Note_: there is also an experimental (and ugly) [/conf`](http://localhost:8080/conf) endpoint to activate some features on the fly.
 
