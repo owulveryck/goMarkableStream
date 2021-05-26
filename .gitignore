@@ -15,3 +15,5 @@ misc/findIP/findIP
 internal/client/client.test
 internal/client/memprofile.out
 internal/client/profile.out
+internal/client/benchs/**
+client/imageH4.bench
