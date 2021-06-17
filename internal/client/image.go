@@ -64,15 +64,18 @@ func colorize(img *image.Gray) *image.RGBA {
 			A: 255,
 		}
 	*/
-	var m *image.RGBA
-	switch {
-	case img.Rect.Dx() == Width && img.Rect.Dy() == Height:
-		m = rgbaPoolWH.Get().(*image.RGBA)
-	case img.Rect.Dx() == Height && img.Rect.Dy() == Width:
-		m = rgbaPoolHW.Get().(*image.RGBA)
-	default:
-		m = image.NewRGBA(img.Bounds())
-	}
+	/*
+		var m *image.RGBA
+		switch {
+		case img.Rect.Dx() == Width && img.Rect.Dy() == Height:
+			m = rgbaPoolWH.Get().(*image.RGBA)
+		case img.Rect.Dx() == Height && img.Rect.Dy() == Width:
+			m = rgbaPoolHW.Get().(*image.RGBA)
+		default:
+			m = image.NewRGBA(img.Bounds())
+		}
+	*/
+	m := image.NewRGBA(img.Bounds())
 	// Create mask for highlighting
 	maskHighlight := image.NewAlpha(img.Bounds())
 	for i := 0; i < len(img.Pix); i++ {
