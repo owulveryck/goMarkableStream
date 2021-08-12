@@ -10,7 +10,6 @@ This project does not rely on any exterrnal dependencies and should run on Linux
 
 And [another one](https://youtu.be/0PCyUn_-x6Y) that shows the experimental colorize featur
 
-\
 ## Quick start
 
 You need ssh access to your remarkable
