@@ -37,21 +37,32 @@ func (g *Grabber) imageHandler(ctx context.Context) {
 	}
 }
 
-func createTransparentImage(img *image.Gray) *image.RGBA {
+func createTransparentImage(img image.Image) *image.RGBA {
 	mask := image.NewAlpha(img.Bounds())
 	//Direct pixel access for performance
-	for y := img.Rect.Min.Y; y < img.Rect.Max.Y; y++ {
-		yp := (y - img.Rect.Min.Y) * img.Stride
-		for x := img.Rect.Min.X; x < img.Rect.Max.X; x++ {
-			r := img.Pix[yp+(x-img.Rect.Min.X)]
-			mask.Pix[yp+(x-img.Rect.Min.X)] = uint8(255 - r)
-		}
-	}
-	m := image.NewRGBA(img.Bounds())
-	draw.Draw(m, m.Bounds(), image.Transparent, image.Point{}, draw.Src)
 
-	draw.DrawMask(m, img.Bounds(), img, image.Point{}, mask, image.Point{}, draw.Over)
-	return m
+	m := image.NewRGBA(img.Bounds())
+	switch img := img.(type) {
+	case *image.Gray:
+		for i := 0; i < len(img.Pix); i++ {
+			mask.Pix[i] = uint8(255 - img.Pix[i])
+		}
+		draw.Draw(m, m.Bounds(), image.Transparent, image.Point{}, draw.Src)
+		draw.DrawMask(m, img.Bounds(), img, image.Point{}, mask, image.Point{}, draw.Over)
+		return m
+	case *image.RGBA:
+		for i := 0; i < len(img.Pix)/4; i++ {
+			if img.Pix[i*4] == 255 &&
+				img.Pix[i*4+1] == 255 &&
+				img.Pix[i*4+2] == 255 &&
+				img.Pix[i*4+3] == 255 {
+				img.Pix[i*4+3] = 0
+			}
+		}
+		return img
+	default:
+		panic("unhandled image")
+	}
 }
 
 func colorize(img *image.Gray) *image.RGBA {

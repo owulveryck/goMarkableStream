@@ -146,7 +146,12 @@ func (g *Grabber) GetScreenshot(w http.ResponseWriter, r *http.Request) {
 	tick := time.NewTicker(1 * time.Second)
 	select {
 	case img := <-g.imageC:
-		m := createTransparentImage(img)
+		var m *image.RGBA
+		if g.conf.Colorize {
+			m = createTransparentImage(colorize(img))
+		} else {
+			m = createTransparentImage(img)
+		}
 		w.Header().Add("Content-Type", "image/png")
 		if err := png.Encode(w, m); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
