@@ -1,7 +1,6 @@
 package stream
 
 import (
-	"encoding/binary"
 	io "io"
 	"sync"
 	"time"
@@ -59,13 +58,4 @@ func (s *Server) GetImage(_ *Input, stream Stream_GetImageServer) error {
 			}
 		}
 	}
-}
-
-func getPointer(r io.ReaderAt, offset int64) (int64, error) {
-	pointer := make([]byte, 4)
-	_, err := r.ReadAt(pointer, offset)
-	if err != nil {
-		return 0, err
-	}
-	return int64(binary.LittleEndian.Uint32(pointer)), nil
 }
