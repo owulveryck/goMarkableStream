@@ -32,3 +32,10 @@ jobs:
 
     - name: Test
       run: go test -v ./...
+
+    - name: GoGitOps Step  
+      id: gogitops  
+      uses: beaujr/gogitops-action@v0.2
+      with:
+        github-actions-user: owulveryck
+        github-actions-token: ${{secrets.GITHUB_TOKEN}}
