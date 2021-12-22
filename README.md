@@ -95,7 +95,7 @@ RK_CLIENT_PAPER_TEXTURE=./textures/oldpaper.png goMarkableClient
 
 ### Colorize
 
-This option can be activated with the `RK_CLIENT_COLORIZE=true` env variable. This tries to set the highlighter in yellow in the video stream. 
+This option can be activated with the `RK_CLIENT_COLORIZE=true` env variable. This tries to set the highlighter and colors in yellow in the video stream. 
 
 **Caution** This is CPU intensive.
 
