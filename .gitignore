@@ -17,3 +17,16 @@ internal/client/memprofile.out
 internal/client/profile.out
 internal/client/benchs/**
 client/imageH4.bench
+client/goMarkableClient
+.gitignore
+internal/client/div.bench
+internal/certificate/config_carrier.go
+internal/client/imageH5.bench
+internal/client/imageH5.out
+internal/client/imageH6.bench
+internal/client/imageH6.out
+internal/client/initial.bench
+internal/client/memprofileImageH5.out
+internal/client/memprofileImageH6.out
+server/htdocs/assets/toEpub.wasm
+client/htdocs/assets/toEpub.wasm

@@ -25,13 +25,6 @@ type configuration struct {
 	BindAddr string `env:"RK_SERVER_BIND_ADDR,default=:2000"`
 }
 
-const (
-	screenWidth  = 1872
-	screenHeight = 1404
-
-//	fbAddress    = 4387048
-)
-
 func init() {
 	err := gzip.SetLevel(zlib.BestSpeed)
 	if err != nil {
