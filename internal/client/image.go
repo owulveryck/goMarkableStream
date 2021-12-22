@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"errors"
 	"image"
 	"image/draw"
 	"log"
@@ -111,13 +110,9 @@ const m = 1<<16 - 1
 
 // this is a form of the drawRGBA specialised for image.Gray and image.Alpha made for performance reasons
 func drawRGBAOver(dst *image.RGBA, r image.Rectangle, src *image.Gray, sp image.Point, mask *image.Alpha, mp image.Point) error {
-	if mask == nil {
-		return errors.New("mask cannot be nil")
-	}
-
 	x0, x1, dx := r.Min.X, r.Max.X, 1
 	y0, y1, dy := r.Min.Y, r.Max.Y, 1
-	if image.Image(dst) == src && r.Overlaps(r.Add(sp.Sub(r.Min))) {
+	if r.Overlaps(r.Add(sp.Sub(r.Min))) {
 		if sp.Y < r.Min.Y || sp.Y == r.Min.Y && sp.X < r.Min.X {
 			x0, x1, dx = x1-1, x0-1, -1
 			y0, y1, dy = y1-1, y0-1, -1
@@ -131,20 +126,16 @@ func drawRGBAOver(dst *image.RGBA, r image.Rectangle, src *image.Gray, sp image.
 	sx1 := sx0 + (x1 - x0)
 	i0 := dst.PixOffset(x0, y0)
 	di := dx * 4
-	s := uint32(m)
-	ma := uint32(m)
-	sa := uint32(0xffff)
-
 	for y := y0; y != y1; y, sy, my = y+dy, sy+dy, my+dy {
 		for i, sx, mx := i0, sx0, mx0; sx != sx1; i, sx, mx = i+di, sx+dx, mx+dx {
-			// If the mask is an alpha image bypass the color conversion for performances
-			off := mask.PixOffset(mx, my)
-			ma = uint32(mask.Pix[off])
+			mi := mask.PixOffset(mx, my)
+			ma := uint32(mask.Pix[mi])
 			ma |= ma << 8
+			si := src.PixOffset(sx, sy)
+			sy := uint32(src.Pix[si])
+			sy |= sy << 8
+			sa := uint32(0xffff)
 
-			off = src.PixOffset(mx, my)
-			s = uint32(src.Pix[off])
-			s |= s << 8
 			d := dst.Pix[i : i+4 : i+4] // Small cap improves performance, see https://golang.org/issue/27857
 			dr := uint32(d[0])
 			dg := uint32(d[1])
@@ -159,11 +150,10 @@ func drawRGBAOver(dst *image.RGBA, r image.Rectangle, src *image.Gray, sp image.
 			// This yields the same result, but is fewer arithmetic operations.
 			a := (m - (sa * ma / m)) * 0x101
 
-			d[0] = uint8((dr*a + s*ma) / m >> 8)
-			d[1] = uint8((dg*a + s*ma) / m >> 8)
-			d[2] = uint8((db*a + s*ma) / m >> 8)
+			d[0] = uint8((dr*a + sy*ma) / m >> 8)
+			d[1] = uint8((dg*a + sy*ma) / m >> 8)
+			d[2] = uint8((db*a + sy*ma) / m >> 8)
 			d[3] = uint8((da*a + sa*ma) / m >> 8)
-
 		}
 		i0 += dy * dst.Stride
 	}
