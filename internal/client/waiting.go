@@ -89,6 +89,7 @@ func (g *Grabber) setWaitingPicture(ctx context.Context) error {
 	}
 }
 
+// Renderer ...
 type Renderer interface {
 	Update([]byte) error
 }

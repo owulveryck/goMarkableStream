@@ -99,14 +99,17 @@ func highlight(img *image.Gray) *image.RGBA {
 			maskHighlight.Pix[i] = 255
 		}
 	}
-	drawRGBAOver(m, img.Bounds(), img, image.Point{}, maskHighlight, image.Point{})
+	err := drawRGBAOver(m, img.Bounds(), img, image.Point{}, maskHighlight, image.Point{})
+	if err != nil {
+		log.Fatal(err)
+	}
 	return m
 }
 
 // m is the maximum color value returned by image.Color.RGBA.
 const m = 1<<16 - 1
 
-// this is a form of the drawRGBA specialised for image.Gray and image.Alpha made for perfomance reasons
+// this is a form of the drawRGBA specialised for image.Gray and image.Alpha made for performance reasons
 func drawRGBAOver(dst *image.RGBA, r image.Rectangle, src *image.Gray, sp image.Point, mask *image.Alpha, mp image.Point) error {
 	if mask == nil {
 		return errors.New("mask cannot be nil")

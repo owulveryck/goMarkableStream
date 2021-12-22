@@ -10,10 +10,13 @@ import (
 )
 
 const (
-	Width  = 1872
+	// Width of the remarkable 2' screen
+	Width = 1872
+	// Height of the remarkable 2' screen
 	Height = 1404
 )
 
+// ProcessTexture prepares the texture referenced in the configuration c
 func ProcessTexture(c *Configuration) error {
 	if c.PaperTexture == "" {
 		return nil
