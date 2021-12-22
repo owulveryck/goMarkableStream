@@ -64,7 +64,7 @@ type voidJpegDisplayer struct{}
 
 func (v *voidJpegDisplayer) Display(img *image.Gray) error {
 	var b bytes.Buffer
-	return jpeg.Encode(&b, colorize(img), nil)
+	return jpeg.Encode(&b, highlight(img), nil)
 }
 
 func BenchmarkImageHandler(b *testing.B) {
