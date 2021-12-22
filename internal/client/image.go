@@ -56,25 +56,33 @@ func createTransparentImage(img *image.Gray) *image.RGBA {
 }
 
 func colorize(img *image.Gray) *image.RGBA {
-	/*
-		yellow := color.RGBA{
-			R: 255,
-			G: 253,
-			B: 84,
-			A: 255,
-		}
-	*/
-	/*
-		var m *image.RGBA
-		switch {
-		case img.Rect.Dx() == Width && img.Rect.Dy() == Height:
-			m = rgbaPoolWH.Get().(*image.RGBA)
-		case img.Rect.Dx() == Height && img.Rect.Dy() == Width:
-			m = rgbaPoolHW.Get().(*image.RGBA)
+	m := image.NewRGBA(img.Bounds())
+	// Create mask for highlighting
+	// 85 = red / 153 = blue
+	for i := 0; i < len(img.Pix); i++ {
+		r := img.Pix[i]
+		switch r {
+		case 85:
+			m.Pix[i*4] = 255
+			m.Pix[i*4+1] = 0
+			m.Pix[i*4+2] = 0
+			m.Pix[i*4+3] = 255
+		case 153:
+			m.Pix[i*4] = 0
+			m.Pix[i*4+1] = 0
+			m.Pix[i*4+2] = 255
+			m.Pix[i*4+3] = 255
 		default:
-			m = image.NewRGBA(img.Bounds())
+			m.Pix[i*4] = r
+			m.Pix[i*4+1] = r
+			m.Pix[i*4+2] = r
+			m.Pix[i*4+3] = 255
 		}
-	*/
+	}
+	return m
+}
+
+func highlight(img *image.Gray) *image.RGBA {
 	m := image.NewRGBA(img.Bounds())
 	// Create mask for highlighting
 	maskHighlight := image.NewAlpha(img.Bounds())
@@ -91,8 +99,6 @@ func colorize(img *image.Gray) *image.RGBA {
 			maskHighlight.Pix[i] = 255
 		}
 	}
-	//draw.Draw(m, m.Bounds(), image.NewUniform(yellow), image.Point{}, draw.Src)
-	//draw.DrawMask(m, img.Bounds(), img, image.Point{}, maskHighlight, image.Point{}, draw.Over)
 	drawRGBAOver(m, img.Bounds(), img, image.Point{}, maskHighlight, image.Point{})
 	return m
 }

@@ -26,11 +26,16 @@ func (m *MJPEGDisplayer) Display(img *image.Gray) error {
 	defer bufPool.Put(b)
 
 	var err error
-	if m.conf.Colorize {
+	switch {
+	case m.conf.Colorize:
 		colored := colorize(img)
 		err = jpeg.Encode(b, colored, nil)
 		defer releaseRGBA(colored)
-	} else {
+	case m.conf.Highlight:
+		colored := highlight(img)
+		err = jpeg.Encode(b, colored, nil)
+		defer releaseRGBA(colored)
+	default:
 		err = jpeg.Encode(b, img, nil)
 	}
 	if err != nil {

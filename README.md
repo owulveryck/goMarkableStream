@@ -61,7 +61,8 @@ It is possible to tweak the configuration via environment variables:
 | RK_SERVER_ADDR            | remarkabke:2000 | the address of the remarkable
 | RK_CLIENT_AUTOROTATE      | true            | activate autorotate (see below)
 | RK_CLIENT_PAPER_TEXTURE   | null            | a path to a texture
-| RK_CLIENT_COLORIZE        | false           | try to colorize the highliter
+| RK_CLIENT_COLORIZE        | true           | colorize function
+| RK_CLIENT_HIGHLIGHT        | false           | highlight function (cannot work with colorize)
 
 ## Features
 
