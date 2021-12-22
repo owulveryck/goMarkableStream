@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+// Displayer can display a gray image
 type Displayer interface {
 	Display(*image.Gray) error
 }
@@ -28,9 +29,10 @@ type Grabber struct {
 	imageC            chan *image.Gray
 	rot               *rotation
 	sleep             chan bool
-	maxPictureGrabbed int // usefull for benchmarking
+	maxPictureGrabbed int // useful for benchmarking
 }
 
+// NewGrabber from configuration
 func NewGrabber(c *Configuration, d Displayer) *Grabber {
 	return &Grabber{
 		conf:      c,
@@ -116,6 +118,7 @@ func (g *Grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
 	return nil
 }
 
+// GetGob sends a gob encoded version of the image
 func (g *Grabber) GetGob(w http.ResponseWriter, r *http.Request) {
 	tick := time.NewTicker(1 * time.Second)
 	select {
@@ -133,6 +136,7 @@ func (g *Grabber) GetGob(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetScreenshot sends a png encoded version of the image currently in the grabber
 func (g *Grabber) GetScreenshot(w http.ResponseWriter, r *http.Request) {
 	tick := time.NewTicker(1 * time.Second)
 	select {
@@ -149,12 +153,17 @@ func (g *Grabber) GetScreenshot(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetRaw representation of the bitmap image
 func (g *Grabber) GetRaw(w http.ResponseWriter, r *http.Request) {
 	tick := time.NewTicker(1 * time.Second)
 	select {
 	case img := <-g.imageC:
 		w.Header().Add("Cntent-Type", "application/octet-stream")
-		io.Copy(w, bytes.NewReader(img.Pix))
+		_, err := io.Copy(w, bytes.NewReader(img.Pix))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	case <-tick.C:
 		http.Error(w, "no content", http.StatusNoContent)
 		return

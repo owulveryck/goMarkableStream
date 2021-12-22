@@ -52,15 +52,21 @@ func generateKeyPair(randrdr io.Reader, ca *x509.Certificate, caPrivKey interfac
 	}
 
 	certPEMBuf := new(bytes.Buffer)
-	pem.Encode(certPEMBuf, &pem.Block{
+	err = pem.Encode(certPEMBuf, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
 	})
+	if err != nil {
+		return nil, nil, err
+	}
 
 	certPrivKeyPEMBuf := new(bytes.Buffer)
-	pem.Encode(certPrivKeyPEMBuf, &pem.Block{
+	err = pem.Encode(certPrivKeyPEMBuf, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
 	})
+	if err != nil {
+		return nil, nil, err
+	}
 	return certPEMBuf.Bytes(), certPrivKeyPEMBuf.Bytes(), nil
 }

@@ -115,12 +115,15 @@ func displayCodeChecking(name string, content []byte, g [2]int) {
 		End   int
 	}
 	var b bytes.Buffer
-	t.Execute(&b, data{
+	err := t.Execute(&b, data{
 		Name:  strings.Title(strings.ToLower(name)),
 		Sig:   strings.Replace(strings.Trim(fmt.Sprint(md5.Sum(content[g[0]:g[1]])), "[]"), " ", ",", -1),
 		Start: g[0],
 		End:   g[1],
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 	out, err := format.Source(b.Bytes())
 	if err != nil {
 		log.Fatal(err)

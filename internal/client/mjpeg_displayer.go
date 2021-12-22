@@ -8,11 +8,13 @@ import (
 	"github.com/mattn/go-mjpeg"
 )
 
+// MJPEGDisplayer implements the Displayer interface
 type MJPEGDisplayer struct {
 	conf        *Configuration
 	mjpegStream *mjpeg.Stream
 }
 
+// NewMJPEGDisplayer from a configuration adds images to stream
 func NewMJPEGDisplayer(c *Configuration, stream *mjpeg.Stream) *MJPEGDisplayer {
 	return &MJPEGDisplayer{
 		conf:        c,
@@ -20,6 +22,7 @@ func NewMJPEGDisplayer(c *Configuration, stream *mjpeg.Stream) *MJPEGDisplayer {
 	}
 }
 
+// Display adds the image to the stream
 func (m *MJPEGDisplayer) Display(img *image.Gray) error {
 	b := bufPool.Get().(*bytes.Buffer)
 	b.Reset()

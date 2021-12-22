@@ -7,6 +7,7 @@ import (
 	"net/http"
 )
 
+// Configuration of the client
 type Configuration struct {
 	ServerAddr            string `env:"RK_SERVER_ADDR,default=remarkable:2000"`
 	BindAddr              string `env:"RK_CLIENT_BIND_ADDR,default=:8080"`
