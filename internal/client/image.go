@@ -71,6 +71,18 @@ func colorize(img *image.Gray) *image.RGBA {
 			m.Pix[i*4+1] = 0
 			m.Pix[i*4+2] = 255
 			m.Pix[i*4+3] = 255
+		// Yellow
+		case 221:
+			m.Pix[i*4] = 255
+			m.Pix[i*4+1] = 253
+			m.Pix[i*4+2] = 84
+			m.Pix[i*4+3] = 255
+		// Green
+		case 187:
+			m.Pix[i*4] = 125
+			m.Pix[i*4+1] = 184
+			m.Pix[i*4+2] = 86
+			m.Pix[i*4+3] = 255
 		default:
 			m.Pix[i*4] = r
 			m.Pix[i*4+1] = r
