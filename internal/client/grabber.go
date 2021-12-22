@@ -56,7 +56,12 @@ func (g *Grabber) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go g.imageHandler(ctx)
-	go g.setWaitingPicture(ctx)
+	go func() {
+		err := g.setWaitingPicture(ctx)
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 	for {
 		// Create a connection with the TLS credentials
 		conn, err := grpc.DialContext(ctx, g.conf.ServerAddr, grpc.WithTransportCredentials(grpcCreds), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.UseCompressor("gzip")))
