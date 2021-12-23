@@ -141,6 +141,26 @@ func (g *Grabber) GetGob(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Rotate the picture
+func (g *Grabber) Rotate(w http.ResponseWriter, r *http.Request) {
+	orientations, ok := r.URL.Query()["orientation"]
+	if !ok || len(orientations[0]) < 1 {
+		http.Error(w, "Url Param 'orientation' is missing", http.StatusBadRequest)
+		return
+	}
+	orientation := orientations[0]
+	switch orientation {
+	case "landscape":
+		g.rot.orientation = landscape
+	case "portrait":
+		g.rot.orientation = portrait
+	default:
+		http.Error(w, "Unknown orientation "+orientation, http.StatusBadRequest)
+		return
+
+	}
+}
+
 // GetScreenshot sends a png encoded version of the image currently in the grabber
 func (g *Grabber) GetScreenshot(w http.ResponseWriter, r *http.Request) {
 	tick := time.NewTicker(1 * time.Second)
