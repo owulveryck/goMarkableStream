@@ -41,6 +41,7 @@ func main() {
 	})
 	mux.HandleFunc("/favicon.ico", faviconHandler)
 	mux.HandleFunc("/screenshot", g.GetScreenshot)
+	mux.HandleFunc("/orientation", g.Rotate)
 	mux.Handle("/conf", &c)
 	mux.HandleFunc("/gob", g.GetGob)
 	mux.HandleFunc("/raw", g.GetRaw)
