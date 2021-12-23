@@ -39,9 +39,15 @@ Note: The processus is fault tolerant and should resume automatically on sleep/w
 
 - Point your browser to [`http://localhost:8080/`](http://localhost:8080/)
 
-Note: click on the video to take a screenshot. The screenshot is a png file with transparent background.
+The client exposes those endpoints:
 
-_Note_: there is also an experimental (and ugly) [/conf`](http://localhost:8080/conf) endpoint to activate some features on the fly.
+- `/screenshot` takes a screenshot in png
+- `/orientation?orientation=[landscape|portrait]` to change the orientation
+- `/conf` ugly and incomplete configuration panel
+- `/gob` to get a gob encoded picture (for development purpose)
+- `/raw` to get a raw picture (a gray bitmap image)
+
+_Note_: click on the video to take a screenshot. The screenshot is a png file with transparent background.
 
 ### Configuration
 
