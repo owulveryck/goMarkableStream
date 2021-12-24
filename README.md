@@ -27,7 +27,7 @@ Copy the server on the remarkable and start it.
 
 ```shell
 scp goMarkableStreamServer.arm remarkable:
-ssh remarkable './goMarkableStreamServer.arm'
+ssh remarkable 'chmod +x goMarkableStreamServer.arm ; ./goMarkableStreamServer.arm'
 ```
 
 Note: The processus is fault tolerant and should resume automatically on sleep/wakup or network failure; therefore, you can, normally, launch the processus in background (with `nohup`)
