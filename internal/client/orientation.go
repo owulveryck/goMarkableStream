@@ -24,21 +24,22 @@ func compareSig(src []byte, sig [16]byte) bool {
 
 func isPortraitLeft(content []byte) bool {
 	sig := []byte{83, 234, 230, 173, 67, 108, 25, 219, 155, 106, 67, 4, 203, 188, 104, 255}
-	return compareSig(sig, md5.Sum(content[2517769:2517807]))
+	return compareSig(sig, md5.Sum(content[2519641:2519679]))
 }
 
 func isLandscapeLeft(content []byte) bool {
-	sig := []byte{27, 40, 215, 193, 32, 81, 169, 131, 14, 179, 31, 13, 229, 70, 130, 21}
-	return compareSig(sig, md5.Sum(content[115992:116029]))
+	sig := []byte{55, 233, 72, 197, 15, 178, 181, 248, 108, 134, 188, 68, 38, 181, 70, 238}
+	return compareSig(sig, md5.Sum(content[114121:114158]))
 }
 
 func isPortraitRight(content []byte) bool {
-	sig := []byte{5, 185, 165, 108, 82, 71, 18, 100, 38, 92, 191, 135, 173, 171, 224, 97}
-	return compareSig(sig, md5.Sum(content[115993:116030]))
+	sig := []byte{41, 84, 59, 72, 139, 237, 134, 28, 71, 156, 27, 161, 150, 96, 231, 125}
+	return compareSig(sig, md5.Sum(content[112250:112287]))
 }
+
 func isLandscapeRight(content []byte) bool {
-	sig := []byte{218, 169, 170, 11, 85, 65, 69, 163, 162, 252, 246, 118, 194, 76, 176, 41}
-	return compareSig(sig, md5.Sum(content[114241:114279]))
+	sig := []byte{49, 255, 140, 250, 121, 227, 110, 1, 57, 124, 166, 197, 52, 4, 134, 253}
+	return compareSig(sig, md5.Sum(content[112369:112407]))
 }
 
 type rotation struct {
