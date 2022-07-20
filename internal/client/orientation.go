@@ -48,14 +48,13 @@ type rotation struct {
 }
 
 func (r *rotation) rotate(img *image.Gray) {
-	if !r.isActive {
-		return
-	}
-	switch {
-	case (isPortraitLeft(img.Pix) || isPortraitRight(img.Pix)) && r.orientation != portrait:
-		r.orientation = portrait
-	case (isLandscapeLeft(img.Pix) || isLandscapeRight(img.Pix)) && r.orientation != landscape:
-		r.orientation = landscape
+	if r.isActive {
+		switch {
+		case (isPortraitLeft(img.Pix) || isPortraitRight(img.Pix)) && r.orientation != portrait:
+			r.orientation = portrait
+		case (isLandscapeLeft(img.Pix) || isLandscapeRight(img.Pix)) && r.orientation != landscape:
+			r.orientation = landscape
+		}
 	}
 	if r.orientation == portrait {
 		rotate(img)
