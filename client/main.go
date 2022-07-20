@@ -2,8 +2,8 @@ package main
 
 import (
 	"compress/zlib"
+	"html/template"
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -37,7 +37,12 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
-		fmt.Fprint(w, index)
+		t := template.Must(template.New("index").Parse(index))
+		err := t.Execute(w, c)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	})
 	mux.HandleFunc("/favicon.ico", faviconHandler)
 	mux.HandleFunc("/screenshot", g.GetScreenshot)
