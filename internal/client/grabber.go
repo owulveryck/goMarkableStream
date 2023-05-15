@@ -98,10 +98,12 @@ func (g *Grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
 			if err != nil {
 				return err
 			}
-			copy(img.Pix, response.ImageData)
+			//			copy(img.Pix, response.ImageData)
 			// Divide each element in the array
+			// to convert the uint4 in uint8
+			// Firwmare 3.3
 			for i := 0; i < len(img.Pix); i++ {
-				img.Pix[i] *= 17
+				img.Pix[i] = response.ImageData[i] * 17
 			}
 			//img.Pix = response.ImageData
 			img.Stride = int(response.Width)
