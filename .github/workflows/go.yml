@@ -22,7 +22,7 @@ jobs:
       uses: arduino/setup-protoc@v1
 
     - name: Install the protoc-gen-gofast binary
-      run: go get github.com/gogo/protobuf/protoc-gen-gofast
+      run: go get github.com/gogo/protobuf/protoc-gen-gofast && go install  github.com/gogo/protobuf/protoc-gen-gofast 
 
     - name: Generate certs
       run: go generate ./...
