@@ -6,6 +6,7 @@ before:
     - go mod download
     # you may remove this if you don't need go generate
     - go get github.com/gogo/protobuf/protoc-gen-gofast
+    - go install github.com/gogo/protobuf/protoc-gen-gofast
     - go generate ./...
 builds:
   - env:
