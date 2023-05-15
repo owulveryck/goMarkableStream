@@ -11,10 +11,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/owulveryck/goMarkableStream/certs"
-	"github.com/owulveryck/goMarkableStream/stream"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	"github.com/owulveryck/goMarkableStream/certs"
+	"github.com/owulveryck/goMarkableStream/stream"
 )
 
 // Displayer can display a gray image
@@ -64,6 +65,7 @@ func (g *Grabber) Run(ctx context.Context) error {
 	}()
 	for {
 		// Create a connection with the TLS credentials
+		log.Println("Dialing", g.conf.ServerAddr)
 		conn, err := grpc.DialContext(ctx, g.conf.ServerAddr, grpc.WithTransportCredentials(grpcCreds), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.UseCompressor("gzip")))
 		if err != nil {
 			log.Println(err)
@@ -97,6 +99,10 @@ func (g *Grabber) grab(ctx context.Context, conn *grpc.ClientConn) error {
 				return err
 			}
 			copy(img.Pix, response.ImageData)
+			// Divide each element in the array
+			for i := 0; i < len(img.Pix); i++ {
+				img.Pix[i] *= 17
+			}
 			//img.Pix = response.ImageData
 			img.Stride = int(response.Width)
 			img.Rect = image.Rect(0, 0, int(response.Width), int(response.Height))
