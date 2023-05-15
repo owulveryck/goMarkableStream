@@ -1,17 +1,23 @@
 module github.com/owulveryck/goMarkableStream
 
-go 1.16
+go 1.20
 
 require (
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
-	github.com/golang/protobuf v1.5.1
-	github.com/llgcode/draw2d v0.0.0-20210313082411-577c1ead272a // indirect
+	github.com/golang/protobuf v1.5.3
 	github.com/markfarnan/go-canvas v0.0.0-20200722235510-6971ccd00770
-	github.com/mattn/go-mjpeg v0.0.1
-	github.com/sethvargo/go-envconfig v0.3.2
-	golang.org/x/image v0.0.0-20210504121937-7319ad40d33e
-	golang.org/x/net v0.0.0-20210326060303-6b1517762897
-	golang.org/x/sys v0.0.0-20210514084401-e8d321eab015 // indirect
-	google.golang.org/genproto v0.0.0-20210325224202-eed09b1b5210 // indirect
-	google.golang.org/grpc v1.36.1
+	github.com/mattn/go-mjpeg v0.0.3
+	github.com/sethvargo/go-envconfig v0.9.0
+	golang.org/x/image v0.7.0
+	golang.org/x/net v0.10.0
+	google.golang.org/grpc v1.55.0
+)
+
+require (
+	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/llgcode/draw2d v0.0.0-20210313082411-577c1ead272a // indirect
+	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/text v0.9.0 // indirect
+	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
+	google.golang.org/protobuf v1.30.0 // indirect
 )
