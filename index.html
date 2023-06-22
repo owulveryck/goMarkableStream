@@ -159,8 +159,7 @@ body, html {
 			// Initial call to resize the canvas
 			//resizeCanvas();
 
-			/*
-				var socket = new WebSocket("ws://" + window.location.host + "/ws");
+			var socket = new WebSocket("ws://" + window.location.host + "/ws");
 
 
 
@@ -181,18 +180,37 @@ body, html {
 				reader.readAsArrayBuffer(blob);
 			};
 			function processBinaryData(data) {
-
-				// Assuming each pixel is represented by 4 bytes (RGBA)
-				var pixels = new Uint8Array(data);
 				// Create an ImageData object with the byte array length
 				var imageData = fixedContext.createImageData(fixedCanvas.width, fixedCanvas.height);
+
+				// Assuming each pixel is represented by 4 bytes (RGBA)
+				var uint8Array = new Uint8Array(data);
+				const pixels = [];
+
+				for (let i = 0; i < uint8Array.length; i++) {
+					const packedValue = uint8Array[i];
+					const value1 = packedValue >> 4; // Shift right by 4 positions to get the first 4-bit value
+					const value2 = packedValue & 0x0F; // Use bitwise AND with 0x0F (binary 00001111) to get the second 4-bit value
+					imageData.data[i*8] = value1 * 17;
+					imageData.data[i*8+1] = value1 * 17;
+					imageData.data[i*8+2] = value1 * 17;
+					imageData.data[i*8+3] = 255;
+					imageData.data[i*8+4] = value2 * 17;
+					imageData.data[i*8+5] = value2 * 17;
+					imageData.data[i*8+6] = value2 * 17;
+					imageData.data[i*8+7] = 255;
+
+					//pixels.push(value1, value2);
+				}
 				// Assign the byte array values to the ImageData data property
+				/*
 				for (var i = 0; i < pixels.length; i++) {
 					imageData.data[i*4] = pixels[i] * 17;
 					imageData.data[i*4+1] = pixels[i] * 17;
 					imageData.data[i*4+2] = pixels[i] * 17;
 					imageData.data[i*4+3] = 255;
 				}
+				*/
 
 				// Display the ImageData on the canvas
 				fixedContext.putImageData(imageData, 0, 0);
@@ -208,7 +226,6 @@ body, html {
 				console.log("WebSocket connection closed with code: " + event.code);
 				console.log("WebSocket connection closed with code: " + event);
 			};
-			*/
 		</script>
 	</body>
 </html>

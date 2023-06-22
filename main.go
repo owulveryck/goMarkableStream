@@ -107,13 +107,20 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Simulated pixel data
 
 	imageData := make([]byte, ScreenWidth*ScreenHeight)
+	// the informations are int4, therefore store it in a uint8array to reduce data transfer
+	uint8Array := make([]uint8, len(imageData)/2)
+
 	for {
 		_, err := file.ReadAt(imageData, pointerAddr)
 		if err != nil {
 			log.Fatal(err)
 		}
+		for i := 0; i < len(imageData); i += 2 {
+			packedValue := (uint8(imageData[i]) << 4) | uint8(imageData[i+1])
+			uint8Array[i/2] = packedValue
+		}
 
-		err = conn.Write(r.Context(), websocket.MessageBinary, imageData)
+		err = conn.Write(r.Context(), websocket.MessageBinary, uint8Array)
 		if err != nil {
 			log.Println("Error sending pixel data:", err)
 			return
