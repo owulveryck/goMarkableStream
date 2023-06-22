@@ -23,13 +23,13 @@ func compareSig(src []byte, sig [16]byte) bool {
 }
 
 func isPortraitLeft(content []byte) bool {
-	sig := []byte{83, 234, 230, 173, 67, 108, 25, 219, 155, 106, 67, 4, 203, 188, 104, 255}
-	return compareSig(sig, md5.Sum(content[2519641:2519679]))
+	sig := []byte{38, 160, 183, 30, 165, 133, 54, 72, 139, 239, 22, 180, 218, 95, 156, 243}
+	return compareSig(sig, md5.Sum(content[65918:65955]))
 }
 
 func isLandscapeLeft(content []byte) bool {
-	sig := []byte{55, 233, 72, 197, 15, 178, 181, 248, 108, 134, 188, 68, 38, 181, 70, 238}
-	return compareSig(sig, md5.Sum(content[114121:114158]))
+	sig := []byte{90, 104, 132, 14, 226, 71, 59, 66, 227, 24, 212, 48, 168, 124, 130, 116}
+	return compareSig(sig, md5.Sum(content[60405:60442]))
 }
 
 func isPortraitRight(content []byte) bool {

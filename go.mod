@@ -15,9 +15,11 @@ require (
 
 require (
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/klauspost/compress v1.10.3 // indirect
 	github.com/llgcode/draw2d v0.0.0-20210313082411-577c1ead272a // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
+	nhooyr.io/websocket v1.8.7 // indirect
 )

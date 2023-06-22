@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option go_package = ".;stream";
+
+
+message image {
+    int64 width = 1;
+    int64 height = 2;
+    bytes image_data = 4;
+}
+
+message Input {}
+
+service Stream {
+  rpc GetImage(Input) returns (stream image) {}
+}

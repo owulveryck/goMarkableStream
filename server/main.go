@@ -2,10 +2,11 @@ package main
 
 import (
 	"bufio"
-	"compress/zlib"
+	"bytes"
 	"context"
+	"io"
 	"log"
-	"net"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -13,31 +14,30 @@ import (
 
 	_ "embed"
 
-	"github.com/owulveryck/goMarkableStream/certs"
-	"github.com/owulveryck/goMarkableStream/stream"
 	"github.com/sethvargo/go-envconfig"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/encoding/gzip"
+	"nhooyr.io/websocket"
 )
 
 type configuration struct {
-	BindAddr string `env:"RK_SERVER_BIND_ADDR,default=:2000"`
+	BindAddr string `env:"RK_SERVER_BIND_ADDR,default=:2001"`
 }
 
-func init() {
-	err := gzip.SetLevel(zlib.BestSpeed)
-	if err != nil {
-		panic(err)
-	}
-}
+const (
+	// ScreenWidth of the remarkable 2
+	ScreenWidth = 1872
+	// ScreenHeight of the remarkable 2
+	ScreenHeight = 1404
+)
+
+var (
+	pointerAddr int64
+	file        io.ReaderAt
+)
+
+//go:embed index.html
+var index []byte
 
 func main() {
-	cert, err := certs.GetCertificateWrapper()
-	if err != nil {
-		log.Fatal(err)
-	}
-	grpcCreds := &callInfoAuthenticator{credentials.NewTLS(cert.ServerTLSConf)}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	var c configuration
@@ -49,30 +49,24 @@ func main() {
 		pid = os.Args[1]
 	}
 
-	file, err := os.OpenFile("/proc/"+pid+"/mem", os.O_RDONLY, os.ModeDevice)
+	var err error
+	file, err = os.OpenFile("/proc/"+pid+"/mem", os.O_RDONLY, os.ModeDevice)
 	if err != nil {
 		log.Fatal("cannot open file: ", err)
 	}
-	defer file.Close()
-	addr, err := getPointer(pid)
+	pointerAddr, err = getPointer(pid)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("listening on tcp " + c.BindAddr)
-	ln, err := net.Listen("tcp", c.BindAddr)
+	http.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
+		io.Copy(w, bytes.NewReader(index))
+	})
+	http.HandleFunc("/ws", handleWebSocket)
+	err = http.ListenAndServe(c.BindAddr, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error starting server:", err)
 	}
-	defer ln.Close()
-	s := stream.NewServer(file, addr)
-	s.Start()
-	grpcServer := grpc.NewServer(grpc.Creds(grpcCreds))
 
-	stream.RegisterStreamServer(grpcServer, s)
-
-	if err := grpcServer.Serve(ln); err != nil {
-		log.Fatalf("failed to serve: %s", err)
-	}
 }
 
 func getPointer(pid string) (int64, error) {
@@ -96,4 +90,34 @@ func getPointer(pid string) (int64, error) {
 		}
 	}
 	return addr, err
+}
+
+func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		CompressionMode: websocket.CompressionContextTakeover,
+	})
+	//conn, err := websocket.Accept(w, r, nil)
+	if err != nil {
+		log.Println("WebSocket upgrade error:", err)
+		return
+	}
+	defer conn.Close(websocket.StatusInternalError, "Internal Server Error")
+
+	// Simulated pixel data
+
+	imageData := make([]byte, ScreenWidth*ScreenHeight)
+	for {
+		_, err := file.ReadAt(imageData, pointerAddr)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = conn.Write(r.Context(), websocket.MessageBinary, imageData)
+		if err != nil {
+			log.Println("Error sending pixel data:", err)
+			return
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
 }
