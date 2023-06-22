@@ -28,20 +28,93 @@ body, html {
 	canvas.hidden {
 		display: none;
 	}
+	.sidebar {
+		width: 150px;
+		height: 100vh;
+		background-color: #f1f1f1;
+		position: fixed;
+		top: 0;
+		left: -140px;
+		transition: left 0.3s;
+		z-index: 2;
+
+	}
+
+	.sidebar.active {
+		left: 0;
+	}
+
+	.menu {
+		list-style: none;
+		padding: 0;
+	}
+
+	.menu li {
+		padding: 10px;
+	}
+
+	.menu li a {
+		text-decoration: none;
+		color: #000;
+	}
+
+	.menu li a:hover {
+		color: #ff0000;
+	}
+	.my-button {
+		background-color: #4CAF50;
+		border: none;
+		color: white;
+		padding: 10px 20px;
+		text-align: center;
+		text-decoration: none;
+		display: inline-block;
+		font-size: 16px;
+		cursor: pointer;
+		border-radius: 4px;
+	}
+
+
 		</style>
 	</head>
 	<body>
+		<div id="menuContainer">
+
+			<div class="sidebar" id="sidebar">
+				<ul class="menu">
+					<li><button class="my-button">Rotate</button></li>
+					<li><button class="my-button">Screenshot</button></li>
+				</ul>
+			</div>
+		</div>
 		<canvas id="fixedCanvas" width="1872" height="1404" class="hidden"></canvas>
 		<div id="container">
 			<canvas id="canvas" width="1872" height="1404"></canvas>
 		</div>
 
 		<script>
+			const sidebar = document.querySelector('.sidebar');
+
+			sidebar.addEventListener('mouseover', function() {
+				sidebar.classList.add('active');
+			});
+
+			sidebar.addEventListener('mouseout', function() {
+				sidebar.classList.remove('active');
+			});
+
+
 			// Use the fixed-size canvas context to draw on the canvas
 			var fixedCanvas = document.getElementById("fixedCanvas");
 			var fixedContext = fixedCanvas.getContext("2d");
 			var resizableCanvas = document.getElementById("canvas");
 			var resizableContext = resizableCanvas.getContext("2d");
+			// Set the fill color
+			resizableContext.fillStyle = '#666666'; 
+
+			// Fill the canvas with the specified color
+			resizableContext.fillRect(0, 0, resizableCanvas.width, resizableCanvas.height);
+
 			function copyCanvasContent() {
 				resizableContext.drawImage(fixedCanvas, 0, 0, resizableCanvas.width, resizableCanvas.height);
 			}
@@ -85,7 +158,9 @@ body, html {
 
 			// Initial call to resize the canvas
 			//resizeCanvas();
-			var socket = new WebSocket("ws://" + window.location.host + "/ws");
+
+			/*
+				var socket = new WebSocket("ws://" + window.location.host + "/ws");
 
 
 
@@ -133,7 +208,7 @@ body, html {
 				console.log("WebSocket connection closed with code: " + event.code);
 				console.log("WebSocket connection closed with code: " + event);
 			};
-
+			*/
 		</script>
 	</body>
 </html>
