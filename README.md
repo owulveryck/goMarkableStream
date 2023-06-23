@@ -13,7 +13,21 @@ Its primary goal is to enable users to stream their reMarkable tablet screen to 
 - No client-side installation: Users can access the screen streaming feature directly through their web browser without the need to install any additional software or plugins.
 - Color support
 
+## Quick Start
+
+```text
+ssh root#remarkable
+curl -O https://github.com/owulveryck/goMarkableStream/releases/download/v0.8.0/goMarkableStream
+chmod+x goMarkableStream
+./goMarkableStream
+```
+
+then go to [https://remarkable:2000](https://remarkable:2000)
+
+_note_: replace _remarkable_ by the IP address if needed.
+
 ## Technical Details
+
 ### Data Retrieval from reMarkable Memory
 
 The reMarkable Screen Streaming Tool leverages a combination of techniques to capture the screen data from the reMarkable tablet's memory. 
