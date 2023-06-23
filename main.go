@@ -1,18 +1,14 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/tls"
 	"embed"
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	_ "embed"
@@ -132,41 +128,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(c.BindAddr, BasicAuthMiddleware(mux)))
 
 }
-
-func getPointer(pid string) (int64, error) {
-	file, err := os.OpenFile("/proc/"+pid+"/maps", os.O_RDONLY, os.ModeDevice)
-	if err != nil {
-		log.Fatal("cannot open file: ", err)
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	scanner.Split(bufio.ScanWords)
-	scanAddr := false
-	var addr int64
-	for scanner.Scan() {
-		if scanAddr {
-			hex := strings.Split(scanner.Text(), "-")[0]
-			addr, err = strconv.ParseInt("0x"+hex, 0, 64)
-			break
-		}
-		if scanner.Text() == `/dev/fb0` {
-			scanAddr = true
-		}
-	}
-	return addr, err
-}
-
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	// Check if the request is authenticated
-	user, pass, ok := r.BasicAuth()
-	if !ok || user != c.Username || pass != c.Password {
-		// Authentication failed, send a 401 Unauthorized response
-		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprintln(w, "Unauthorized")
-		return
-	}
-
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		CompressionMode: websocket.CompressionContextTakeover,
 	})
@@ -200,29 +162,4 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
-}
-
-// BasicAuthMiddleware is a middleware function that adds basic authentication to a handler
-func BasicAuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Check if the request is authenticated
-		user, pass, ok := r.BasicAuth()
-		if !ok || !checkCredentials(user, pass) {
-			// Authentication failed, send a 401 Unauthorized response
-			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-			w.WriteHeader(http.StatusUnauthorized)
-			fmt.Fprintln(w, "Unauthorized")
-			return
-		}
-
-		// Authentication succeeded, call the next handler
-		next.ServeHTTP(w, r)
-	})
-}
-
-// checkCredentials is a dummy function to validate the username and password
-func checkCredentials(username, password string) bool {
-	// Add your custom logic here to validate the credentials against your storage (e.g., database, file)
-	// This is a basic example, so we're using hard-coded credentials for demonstration purposes.
-	return username == "admin" && password == "password"
 }
