@@ -22,7 +22,7 @@ chmod+x goMarkableStream
 ./goMarkableStream
 ```
 
-then go to [https://remarkable:2000](https://remarkable:2000)
+then go to [https://remarkable:2001](https://remarkable:2001) and login with `admin`/`password` (can be changed through environment variables)
 
 _note_: replace _remarkable_ by the IP address if needed.
 
