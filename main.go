@@ -43,6 +43,8 @@ var (
 	// Define the username and password for authentication
 	c configuration
 
+	//go:embed favicon.ico
+	favicon []byte
 	//go:embed index.html
 	index []byte
 	//go:embed cert.pem key.pem
@@ -85,6 +87,9 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, _ *http.Request) {
+		io.Copy(w, bytes.NewReader(favicon))
+	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		io.Copy(w, bytes.NewReader(index))
 	})
