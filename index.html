@@ -159,7 +159,9 @@ body, html {
 			// Initial call to resize the canvas
 			//resizeCanvas();
 
-			var socket = new WebSocket("ws://" + window.location.host + "/ws");
+			var protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+			var socketURL = protocol + window.location.host + '/ws';
+			var socket = new WebSocket(socketURL);
 
 
 
