@@ -83,7 +83,7 @@ body, html {
 
 			<div class="sidebar" id="sidebar">
 				<ul class="menu">
-					<li><button class="my-button">Rotate</button></li>
+					<li><button id="rotate" class="my-button">Rotate</button></li>
 					<li><button class="my-button">Screenshot</button></li>
 				</ul>
 			</div>
@@ -94,6 +94,11 @@ body, html {
 		</div>
 
 		<script>
+			let rotate = false;  // start with a false boolean
+			document.getElementById('rotate').addEventListener('click', function() {
+				rotate  = !rotate;  // toggle the boolean
+			});
+
 			const sidebar = document.querySelector('.sidebar');
 
 			sidebar.addEventListener('mouseover', function() {
@@ -117,18 +122,26 @@ body, html {
 			resizableContext.fillRect(0, 0, resizableCanvas.width, resizableCanvas.height);
 
 			function copyCanvasContent() {
+				if (rotate) {
+					// clear the canvas
+					resizableContext.clearRect(0, 0, resizableCanvas.width, resizableCanvas.height);
+					resizableContext.save(); // Save the current state
+
+					// Move the rotation point to the center of the rectangle
+					resizableContext.translate(resizableCanvas.width / 2, resizableCanvas.height / 2);
+
+					// Rotate the canvas
+					resizableContext.rotate(Math.PI / 180 * 270); // Rotate 45 degrees
+
+					// Draw the image on the second canvas
+					resizableContext.drawImage(fixedCanvas, -fixedCanvas.width / 2, -fixedCanvas.height / 2);
+
+					resizableContext.restore(); // Restore the state
+					return;
+				}
+
 				resizableContext.drawImage(fixedCanvas, 0, 0, resizableCanvas.width, resizableCanvas.height);
 			}
-
-			// Set the rotation angle in degrees
-			//const rotationAngle = 270;
-
-			// Translate the canvas to the center point
-			//resizableContext.translate(resizableCanvas.width / 2, resizableCanvas.height / 2);
-
-			// Rotate the canvas by the specified angle
-			//resizableContext.rotate((rotationAngle * Math.PI) / 180);
-
 
 			// JavaScript code for working with the canvas element
 			function resizeCanvas() {
