@@ -31,3 +31,4 @@ internal/client/memprofileImageH6.out
 server/htdocs/assets/toEpub.wasm
 client/htdocs/assets/toEpub.wasm
 goMarkableStream
+testServer.arm
