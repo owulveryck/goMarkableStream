@@ -1,183 +1,93 @@
 [![Go](https://github.com/owulveryck/goMarkableStream/actions/workflows/go.yml/badge.svg)](https://github.com/owulveryck/goMarkableStream/actions/workflows/go.yml)
 
 # goMarkableStream
+## Overview
 
-I use this  project to stream my remarkable 2 (firmware 2.5+) on my laptop using the local wifi.
-This project does not need any hack installed on the remarkable (only the server which should not void the warranty).
-This project does not rely on any exterrnal dependencies and should run on Linux, Windows and. MacOS.
-
-[video that shows some features](https://www.youtube.com/watch?v=PzlQ2hEIdCc)
-
-And [another one](https://youtu.be/0PCyUn_-x6Y) that shows the experimental colorize featur
-
-## Quick start
-
-You need ssh access to your remarkable
-
-Download two files from the [release page](https://github.com/owulveryck/goMarkableStream/releases):
-
-- the server "`Linux/Armv7`" for your remarkable
-- the client for your laptop according to the couple `OS/arch`
-
-or build it yourself if you have the go toolchain installed on your machine.
-
-### The server
-
-Copy the server on the remarkable and start it.
-
-```shell
-scp goMarkableStreamServer.arm remarkable:
-ssh remarkable 'chmod +x goMarkableStreamServer.arm ; ./goMarkableStreamServer.arm'
-```
-
-Note: The processus is fault tolerant and should resume automatically on sleep/wakup or network failure; therefore, you can, normally, launch the processus in background (with `nohup`)
-
-
-### The client
-
-- Start the client: `RK_SERVER_ADDR=ip.of.remarkable:2000 ./goMarkableClient`
-
-- Point your browser to [`http://localhost:8080/`](http://localhost:8080/)
-
-The client exposes those endpoints:
-
-- `/screenshot` takes a screenshot in png
-- `/orientation?orientation=[landscape|portrait]` to change the orientation
-- `/conf` ugly and incomplete configuration panel
-- `/gob` to get a gob encoded picture (for development purpose)
-- `/raw` to get a raw picture (a gray bitmap image)
-
-_Note_: click on the video to take a screenshot. The screenshot is a png file with transparent background.
-
-### Configuration
-
-It is possible to tweak the configuration via environment variables:
-
-#### Server
-
-| Env var             |  Default  |  Descri[ption
-|---------------------|-----------|---------------
-| RK_SERVER_BIND_ADDR | :2000     | the TCP listen address
-
-#### Client
-
-| Env var                   |  Default        |  Descri[ption
-|---------------------------|-----------------|---------------
-| RK_CLIENT_BIND_ADDR       | :8080           | the TCP listen address
-| RK_SERVER_ADDR            | remarkabke:2000 | the address of the remarkable
-| RK_CLIENT_AUTOROTATE      | true            | activate autorotate (see below)
-| RK_CLIENT_PAPER_TEXTURE   | null            | a path to a texture
-| RK_CLIENT_COLORIZE        | true           | colorize function
-| RK_CLIENT_HIGHLIGHT        | false           | highlight function (cannot work with colorize)
+The goMarkableStream is a lightweight and user-friendly application designed specifically for the reMarkable tablet. 
+Its primary goal is to enable users to stream their reMarkable tablet screen to a web browser without the need for any hacks or modifications that could void the warranty.
 
 ## Features
 
-### Auto-rotate
+- No hacks or warranty voiding: The tool operates within the boundaries of the reMarkable tablet's intended functionality and does not require any unauthorized modifications.
+- No subscription required: Unlike other screen streaming solutions, this tool does not impose any subscription fees or recurring charges. It is completely free to use.
+- No client-side installation: Users can access the screen streaming feature directly through their web browser without the need to install any additional software or plugins.
+- Color support
 
-The client tries to locate the location of the top level switch on the picture (the round one) and rotate the picture accordingly.
-This experimental behavior can be disabled by env variables in the client.
+## Quick Start
 
-Note: the browser does not like the switch of the rotation; the reload of the page solves the problem
-
-### Texture
-
-There is an experimental texture feature that reads a texture file and use is as a background in the output. The texture does
-not apply to the screenshot.
-The texture must have this format:
-
-```shell
-> identify textures/oldpaper.png
-textures/oldpaper.png PNG 1872x1404 1872x1404+0+0 8-bit Gray 256c 886691B 0.010u 0:00.001
+```text
+ssh root#remarkable
+curl -O https://github.com/owulveryck/goMarkableStream/releases/download/v0.8.0/goMarkableStream
+chmod+x goMarkableStream
+./goMarkableStream
 ```
 
-Example:
+then go to [https://remarkable:2001](https://remarkable:2001) and login with `admin`/`password` (can be changed through environment variables)
 
-```shell
-RK_CLIENT_PAPER_TEXTURE=./textures/oldpaper.png goMarkableClient
+_note_: replace _remarkable_ by the IP address if needed.
+
+## Technical Details
+
+### Data Retrieval from reMarkable Memory
+
+The reMarkable Screen Streaming Tool leverages a combination of techniques to capture the screen data from the reMarkable tablet's memory. 
+It utilizes low-level access provided by the device's operating system to retrieve the necessary data. 
+This approach ensures that the tool does not require any unauthorized modifications to the reMarkable tablet.
+
+### Data Transmission via WebSocket
+
+Once the screen data is obtained from the reMarkable tablet's memory, the tool serves it to clients via a WebSocket connection. 
+A WebSocket is a communication protocol that provides full-duplex communication channels over a single TCP connection, making it ideal for real-time data streaming. 
+The WebSocket connection ensures that the screen data is transmitted efficiently and promptly to connected clients.
+
+### Client-Side Rendering with HTML Canvas
+
+On the client side, the reMarkable Screen Streaming Tool fetches the transmitted screen data and renders it using an HTML canvas element. 
+The HTML canvas provides a powerful and flexible platform for displaying graphics and images on web pages. 
+By leveraging the capabilities of the HTML canvas, the tool ensures a performant and lossless streaming experience for users.
+
+## Getting Started
+
+To use the reMarkable Screen Streaming Tool, follow these steps:
+
+### Installation
+
+1. Ensure that you have a reMarkable tablet and a computer or device with an ssh client.
+2. Get a compiled version from the release or compile it yourself
+3. copy the utility on the tablet
+
+### Run
+
+1. launch the utility by conencting via ssh and launch `./goMarkableStream &`
+2. go to https://IP-OF-REMARKABLE:2001 (you need to accept the self-signed certificate)
+
+The application is configured via environment variables:
+
+```text
+This application is configured via the environment. The following environment
+variables can be used:
+
+KEY                    TYPE             DEFAULT     REQUIRED    DESCRIPTION
+RK_SERVER_BIND_ADDR    String           :2001       true        
+RK_SERVER_DEV          True or False    false                   
+RK_SERVER_USERNAME     String           admin                   
+RK_SERVER_PASSWORD     String           password                
+RK_HTTPS               True or False    true
 ```
 
-![exemple](docs/textures.png)
+### Compilation
 
+`GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build .`
 
-### Colorize
+## Contributing
 
-This option can be activated with the `RK_CLIENT_COLORIZE=true` env variable. This tries to set the highlighter and colors in yellow in the video stream. 
+I welcome contributions from the community to improve and enhance the reMarkable Screen Streaming Tool. If you have any ideas, bug reports, or feature requests, please submit them through the GitHub repository's issue tracker.
 
-**Caution** This is CPU intensive.
+## License
 
-![exemple](docs/colorize.png)
+The reMarkable Screen Streaming Tool is released under the [MIT License](https://opensource.org/licenses/MIT) . Feel free to modify, distribute, and use the tool in accordance with the terms of the license.
 
-### Screenshot
-
-The server is exposing a screenshot endpoint. You can grab a screenshot by clicking on the video stream, or by using tools such as curl:
-
-ex: 
-```shell
-❯ curl -o /tmp/screenshot.png http://localhost:8080/screenshot
-❯ file /tmp/screenshot.png
-/tmp/screenshot.png: PNG image data, 1404 x 1872, 8-bit/color RGBA, non-interlaced
-```
-
-### Raw picture
-
-the `/raw` endpoind exposes the raw picture without any treatment. It is possible to pipe the result into a thrid party tool such as imageMagick for example.
-
-This generates a pdf from the screen
-```shell
-curl http://localhost:8080/raw | convert -depth 8 -size 1404x1872+0 gray:- shot.pdf
-```
-
-## How it works?
-
-### Full explanation
-
-I wrote a [blog post](https://blog.owulveryck.info/2021/03/30/streaming-the-remarkable-2.html) that explains all the wiring.
-Otherwise a summary is written here.
-
-### The server loop
-
-- The server gets the address of the framebuffer in the memory space of the `xochitl`
-- The server launches a "ticketing system" to avoid congestion. The ticketing system is a channel that gets an event every 200ms.
-- Then it exposes a gRPC function (with TLS and mutual authentication).
-- The gRPC function waits for a "ticket" on the channel, and then grabs the data from the framebuffer.
-- It packs the data into an `image` message encoded in protobuf and sends it to the consumer
-
-### The client loop
-
-- The client creates an `MJPEG` stream and serves it over HTTP on the provided address
-- The client dial server and sends its certificate, and add the compression header.
-- Then it triggers a goroutine to get the `image` in a for loop.
-- The image is then encoded into JPEG format and added to the MJPEG stream.
-
-
-## Security
-
-The communication is using TLS. The client and the server owns an embedded certificate chain (with the CA). There are performing mutual authentication.
-A new certificate chain is generated per build. Therefore, if you want restrict the access to your server to your client only, you must rebuild the tool yourself.
-
-### Manual build
-
-_Note_: you need go > 1.16beta to build the tool because of the embedding mechanism for the certificate.
-
-To build the tool manually, the easiest way is to use `goreleaser`:
-
-```shell
-goreleaser --snapshot --skip-publish --rm-dist
-```
-
-To build the services manually:
-
-```shell
-go generate ./... # This generates the certificates
-cd server && GOOS=linux GOARCH=arm GOARM=7 go build -o goStreamServer.arm
-cd client && go build -o goStreamClient
-```
-
-# Tipping
+## Tipping
 
 If you plan to buy a reMarkable 2, you can use my [referal program link](https://remarkable.com/referral/PY5B-PH8U). It will provide a discount for you and also for me.
 
-## Acknowledgement
-
-All the people in the reStream projet and specially
-[@ddvk](https://github.com/ddvk) and [@raisjn](https://github.com/raisjn)

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>goMarkableStream</title>
+		<link rel="icon" type="image/x-icon" href="favicon.ico">
+		<style>
+/* CSS styles for the layout */
+body, html {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+}
+
+	#container {
+		position: relative;
+		width: 100%;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		overflow: hidden;
+	}
+
+	#canvas {
+		max-width: 100%;
+		max-height: 100%;
+	}
+
+	canvas.hidden {
+		display: none;
+	}
+	.sidebar {
+		width: 150px;
+		height: 100vh;
+		background-color: #f1f1f1;
+		position: fixed;
+		top: 0;
+		left: -140px;
+		transition: left 0.3s;
+		z-index: 2;
+
+	}
+
+	.sidebar.active {
+		left: 0;
+	}
+
+	.menu {
+		list-style: none;
+		padding: 0;
+	}
+
+	.menu li {
+		padding: 10px;
+	}
+
+	.menu li a {
+		text-decoration: none;
+		color: #000;
+	}
+
+	.menu li a:hover {
+		color: #ff0000;
+	}
+	.my-button {
+		background-color: #4CAF50;
+		border: none;
+		color: white;
+		padding: 10px 20px;
+		text-align: center;
+		text-decoration: none;
+		display: inline-block;
+		font-size: 16px;
+		cursor: pointer;
+		border-radius: 4px;
+	}
+
+
+		</style>
+	</head>
+	<body>
+		<div id="menuContainer">
+
+			<div class="sidebar" id="sidebar">
+				<ul class="menu">
+					<li><button id="rotate" class="my-button">Rotate</button></li>
+					<li><button id="screenshotButton" class="my-button">Screenshot</button><a id="screenshot"></a></li>
+				</ul>
+			</div>
+		</div>
+		<canvas id="fixedCanvas" width="1872" height="1404" class="hidden"></canvas>
+		<div id="container">
+			<canvas id="canvas" width="1872" height="1404"></canvas>
+		</div>
+
+		<script>
+			let rotate = false;  // start with a false boolean
+			document.getElementById('rotate').addEventListener('click', function() {
+				rotate  = !rotate;  // toggle the boolean
+			});
+
+			const sidebar = document.querySelector('.sidebar');
+
+			sidebar.addEventListener('mouseover', function() {
+				sidebar.classList.add('active');
+			});
+
+			sidebar.addEventListener('mouseout', function() {
+				sidebar.classList.remove('active');
+			});
+
+
+			// Use the fixed-size canvas context to draw on the canvas
+			var fixedCanvas = document.getElementById("fixedCanvas");
+			var fixedContext = fixedCanvas.getContext("2d");
+			var resizableCanvas = document.getElementById("canvas");
+			var resizableContext = resizableCanvas.getContext("2d");
+			// Set the fill color
+			resizableContext.fillStyle = '#666666'; 
+
+			// Fill the canvas with the specified color
+			resizableContext.fillRect(0, 0, resizableCanvas.width, resizableCanvas.height);
+			waiting();
+
+			function copyCanvasContent() {
+				if (rotate) {
+					// clear the canvas
+					resizableContext.clearRect(0, 0, resizableCanvas.width, resizableCanvas.height);
+					resizableContext.save(); // Save the current state
+					// Calculate the destination coordinates for drawing the rotated image
+					var destX = (resizableCanvas.width - fixedCanvas.height) / 2;
+					var destY = (resizableCanvas.height - fixedCanvas.width) / 2;
+					var destWidth = fixedCanvas.height;
+					var destHeight = fixedCanvas.width;
+
+					// Move the rotation point to the center of the rectangle
+					resizableContext.translate(resizableCanvas.width / 2, resizableCanvas.height / 2);
+
+					// Rotate the canvas
+					resizableContext.rotate(Math.PI / 180 * 270); // Rotate 45 degrees
+
+					resizableContext.translate(-resizableCanvas.width / 2, -resizableCanvas.height / 2);
+
+					// Draw the image on the second canvas
+					//resizableContext.drawImage(fixedCanvas, -fixedCanvas.width / 2, -fixedCanvas.height / 2);
+					//					resizableContext.drawImage(fixedCanvas, 0,0, resizableCanvas.width, resizableCanvas.height);
+					resizableContext.drawImage(fixedCanvas, 0, 0, fixedCanvas.width, fixedCanvas.height, destX, destY, destWidth, destHeight);
+
+					resizableContext.restore(); // Restore the state
+					resizeCanvas();
+					return;
+
+				}
+				resizableContext.drawImage(fixedCanvas, 0, 0, resizableCanvas.width, resizableCanvas.height);
+				// Draw the image from the first canvas onto the second canvas
+			}
+
+			// JavaScript code for working with the canvas element
+			function resizeCanvas() {
+				var canvas = document.getElementById("canvas");
+				var container = document.getElementById("container");
+
+				if (rotate) {
+					var aspectRatio = 1404 / 1872;
+				} else {
+					var aspectRatio = 1872 / 1404;
+				}
+
+				var containerWidth = container.offsetWidth;
+				var containerHeight = container.offsetHeight;
+
+				var containerAspectRatio = containerWidth / containerHeight;
+
+				if (containerAspectRatio > aspectRatio) {
+					canvas.style.width = containerHeight * aspectRatio + "px";
+					canvas.style.height = containerHeight + "px";
+				} else {
+					canvas.style.width = containerWidth + "px";
+					canvas.style.height = containerWidth / aspectRatio + "px";
+				}
+			}
+
+			function resizeAndCopy() {
+				resizeCanvas();
+				copyCanvasContent();
+			}
+
+			// Resize the canvas whenever the window is resized
+			window.addEventListener("resize", resizeAndCopy);
+
+			var protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+			var socketURL = protocol + window.location.host + '/ws';
+
+			function connectWebSocket() {
+				var socket = new WebSocket(socketURL);
+
+				socket.onopen = function() {
+					console.log("WebSocket connection established.");
+				};
+
+				socket.onmessage = function(event) {
+					var blob = event.data; // Received binary data as a Blob
+
+					var reader = new FileReader();
+					reader.onload = function() {
+						var arrayBuffer = reader.result; // ArrayBuffer representation of the Blob data
+
+						// Process the received binary data
+						processBinaryData(arrayBuffer);
+					};
+					reader.readAsArrayBuffer(blob);
+				};
+				socket.onerror = function(event) {
+					console.log(event);
+					// Try to reconnect after a specified interval
+					waiting();
+				}
+				socket.onclose = function(event) {
+					console.log("WebSocket connection closed with code: " + event.code);
+					// Try to reconnect after a specified interval
+					waiting();
+					// Retry the connection with exponential backoff
+					retryWebSocket(1000); // Start with a 1-second delay
+				};
+			}
+
+			function retryWebSocket(delay) {
+				// Exponential backoff: double the delay for each retry
+				delay *= 2;
+
+				// Limit the maximum delay to avoid excessive retries
+				if (delay > 60000) {
+					delay = 60000; // Set a maximum delay of 1 minute
+				}
+
+				console.log("Retrying WebSocket connection in " + delay + " milliseconds");
+
+				setTimeout(function() {
+					connectWebSocket();
+				}, delay);
+			}
+
+			connectWebSocket();
+			function processBinaryData(data) {
+				// Create an ImageData object with the byte array length
+				var imageData = fixedContext.createImageData(fixedCanvas.width, fixedCanvas.height);
+
+				// Assuming each pixel is represented by 4 bytes (RGBA)
+				var uint8Array = new Uint8Array(data);
+				const pixels = [];
+
+				for (let i = 0; i < uint8Array.length; i++) {
+					const packedValue = uint8Array[i];
+					const value1 = packedValue >> 4; // Shift right by 4 positions to get the first 4-bit value
+					const value2 = packedValue & 0x0F; // Use bitwise AND with 0x0F (binary 00001111) to get the second 4-bit value
+					switch (value1) {
+						case 5:
+							imageData.data[i*8] = 255;
+							imageData.data[i*8+1] = 0;
+							imageData.data[i*8+2] = 0;
+							imageData.data[i*8+3] = 255;
+							break;
+						case 9:
+							imageData.data[i*8] = 0;
+							imageData.data[i*8+1] = 0;
+							imageData.data[i*8+2] = 255;
+							imageData.data[i*8+3] = 255;
+							break;
+						case 11:
+							imageData.data[i*8] = 125;
+							imageData.data[i*8+1] = 184;
+							imageData.data[i*8+2] = 86;
+							imageData.data[i*8+3] = 255;
+							break;
+						case 13:
+							imageData.data[i*8] = 255;
+							imageData.data[i*8+1] = 253;
+							imageData.data[i*8+2] = 84;
+							imageData.data[i*8+3] = 255;
+							break;
+						default:
+							imageData.data[i*8] = value1 * 17;
+							imageData.data[i*8+1] = value1 * 17;
+							imageData.data[i*8+2] = value1 * 17;
+							imageData.data[i*8+3] = 255;
+							break;
+					}
+					switch (value2) {
+						case 5:
+							imageData.data[i*8+4] = 255;
+							imageData.data[i*8+5] = 0;
+							imageData.data[i*8+6] = 0;
+							imageData.data[i*8+7] = 255;
+							break;
+						case 9:
+							imageData.data[i*8+4] = 0;
+							imageData.data[i*8+5] = 0;
+							imageData.data[i*8+6] = 255;
+							imageData.data[i*8+7] = 255;
+							break;
+						case 11:
+							imageData.data[i*8+4] = 125;
+							imageData.data[i*8+5] = 184;
+							imageData.data[i*8+6] = 86;
+							imageData.data[i*8+7] = 255;
+							break;
+						case 13:
+							imageData.data[i*8+4] = 255;
+							imageData.data[i*8+5] = 253;
+							imageData.data[i*8+6] = 84;
+							imageData.data[i*8+7] = 255;
+							break;
+						default:
+							imageData.data[i*8+4] = value2 * 17;
+							imageData.data[i*8+5] = value2 * 17;
+							imageData.data[i*8+6] = value2 * 17;
+							imageData.data[i*8+7] = 255;
+							break;
+					}
+				}
+				// Display the ImageData on the canvas
+				fixedContext.putImageData(imageData, 0, 0);
+
+				copyCanvasContent();
+			}
+			function waiting() {
+				// Set the text properties
+				var message = "Waiting for reMarkable";
+				var fontSize = 48;
+				var fontFamily = "Arial";
+				var textColor = "black";
+
+				// Calculate the text dimensions
+				resizableContext.font = fontSize + "px " + fontFamily;
+				var textWidth = resizableContext.measureText(message).width;
+				var textHeight = fontSize;
+
+				// Calculate the center position
+				var centerX = canvas.width / 2;
+				var centerY = canvas.height / 2;
+
+				// Set the fill style and align the text in the center
+				resizableContext.fillStyle = textColor;
+				resizableContext.textAlign = "center";
+				resizableContext.textBaseline = "middle";
+
+				// Draw the text at the center
+				resizableContext.fillText(message, centerX, centerY);
+			}
+			screenshotButton.addEventListener("click", function() {
+				var screenshotDataUrl = fixedCanvas.toDataURL("image/png");
+				downloadScreenshot(screenshotDataUrl);
+			});
+
+			function downloadScreenshot(dataUrl) {
+				var link = document.getElementById("screenshot");
+				//var link = document.createElement("a");
+				link.href = dataUrl;
+				link.download = "reMarkable.png";
+				link.click();
+			}
+
+		</script>
+	</body>
+</html>
