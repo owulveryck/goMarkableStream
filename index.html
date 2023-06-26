@@ -120,6 +120,7 @@ body, html {
 
 			// Fill the canvas with the specified color
 			resizableContext.fillRect(0, 0, resizableCanvas.width, resizableCanvas.height);
+			waiting();
 
 			function copyCanvasContent() {
 				if (rotate) {
@@ -137,9 +138,8 @@ body, html {
 					resizableContext.drawImage(fixedCanvas, -fixedCanvas.width / 2, -fixedCanvas.height / 2);
 
 					resizableContext.restore(); // Restore the state
-					return;
-				}
 
+				}
 				resizableContext.drawImage(fixedCanvas, 0, 0, resizableCanvas.width, resizableCanvas.height);
 			}
 
@@ -148,7 +148,11 @@ body, html {
 				var canvas = document.getElementById("canvas");
 				var container = document.getElementById("container");
 
-				var aspectRatio = 1872 / 1404;
+				if (rotate) {
+					var aspectRatio = 1404 / 1872;
+				} else {
+					var aspectRatio = 1872 / 1404;
+				}
 
 				var containerWidth = container.offsetWidth;
 				var containerHeight = container.offsetHeight;
@@ -170,31 +174,44 @@ body, html {
 			// Resize the canvas whenever the window is resized
 			window.addEventListener("resize", resizeCanvas);
 
-			// Initial call to resize the canvas
-			//resizeCanvas();
-
 			var protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
 			var socketURL = protocol + window.location.host + '/ws';
-			var socket = new WebSocket(socketURL);
+			var reconnectInterval = 2000; // Reconnection interval in milliseconds
 
+			function connectWebSocket() {
+				var socket = new WebSocket(socketURL);
 
-
-			socket.onopen = function() {
-				console.log("WebSocket connection established.");
-			};
-
-			socket.onmessage = function(event) {
-				var blob = event.data; // Received binary data as a Blob
-
-				var reader = new FileReader();
-				reader.onload = function() {
-					var arrayBuffer = reader.result; // ArrayBuffer representation of the Blob data
-
-					// Process the received binary data
-					processBinaryData(arrayBuffer);
+				socket.onopen = function() {
+					console.log("WebSocket connection established.");
 				};
-				reader.readAsArrayBuffer(blob);
-			};
+
+				socket.onmessage = function(event) {
+					var blob = event.data; // Received binary data as a Blob
+
+					var reader = new FileReader();
+					reader.onload = function() {
+						var arrayBuffer = reader.result; // ArrayBuffer representation of the Blob data
+
+						// Process the received binary data
+						processBinaryData(arrayBuffer);
+					};
+					reader.readAsArrayBuffer(blob);
+				};
+				socket.onerror = function(event) {
+					console.log(event);
+					// Try to reconnect after a specified interval
+					waiting();
+					setTimeout(connectWebSocket, reconnectInterval);
+				}
+				socket.onclose = function(event) {
+					console.log("WebSocket connection closed with code: " + event.code);
+					console.log("WebSocket connection closed with code: " + event);
+					// Try to reconnect after a specified interval
+					waiting();
+					setTimeout(connectWebSocket, reconnectInterval);
+				};
+			}
+			connectWebSocket();
 			function processBinaryData(data) {
 				// Create an ImageData object with the byte array length
 				var imageData = fixedContext.createImageData(fixedCanvas.width, fixedCanvas.height);
@@ -272,21 +289,36 @@ body, html {
 							break;
 					}
 				}
-
 				// Display the ImageData on the canvas
 				fixedContext.putImageData(imageData, 0, 0);
 
-
 				copyCanvasContent();
-			};
-
-			socket.onerror = function(event) {
-				console.log(event);
 			}
-			socket.onclose = function(event) {
-				console.log("WebSocket connection closed with code: " + event.code);
-				console.log("WebSocket connection closed with code: " + event);
-			};
+			function waiting() {
+				// Set the text properties
+				var message = "Waiting for reMarkable";
+				var fontSize = 48;
+				var fontFamily = "Arial";
+				var textColor = "black";
+
+				// Calculate the text dimensions
+				resizableContext.font = fontSize + "px " + fontFamily;
+				var textWidth = resizableContext.measureText(message).width;
+				var textHeight = fontSize;
+
+				// Calculate the center position
+				var centerX = canvas.width / 2;
+				var centerY = canvas.height / 2;
+
+				// Set the fill style and align the text in the center
+				resizableContext.fillStyle = textColor;
+				resizableContext.textAlign = "center";
+				resizableContext.textBaseline = "middle";
+
+				// Draw the text at the center
+				resizableContext.fillText(message, centerX, centerY);
+			}
+
 		</script>
 	</body>
 </html>

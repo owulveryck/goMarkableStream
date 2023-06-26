@@ -48,6 +48,7 @@ var (
 )
 
 func main() {
+	ifaces()
 	help := flag.Bool("h", false, "print usage")
 	flag.Parse()
 	if *help {
