@@ -84,7 +84,7 @@ body, html {
 			<div class="sidebar" id="sidebar">
 				<ul class="menu">
 					<li><button id="rotate" class="my-button">Rotate</button></li>
-					<li><button class="my-button">Screenshot</button></li>
+					<li><button id="screenshotButton" class="my-button">Screenshot</button><a id="screenshot"></a></li>
 				</ul>
 			</div>
 		</div>
@@ -336,6 +336,18 @@ body, html {
 
 				// Draw the text at the center
 				resizableContext.fillText(message, centerX, centerY);
+			}
+			screenshotButton.addEventListener("click", function() {
+				var screenshotDataUrl = fixedCanvas.toDataURL("image/png");
+				downloadScreenshot(screenshotDataUrl);
+			});
+
+			function downloadScreenshot(dataUrl) {
+				var link = document.getElementById("screenshot");
+				//var link = document.createElement("a");
+				link.href = dataUrl;
+				link.download = "reMarkable.png";
+				link.click();
 			}
 
 		</script>
