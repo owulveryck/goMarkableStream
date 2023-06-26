@@ -31,6 +31,7 @@ const (
 	ScreenWidth = 1872
 	// ScreenHeight of the remarkable 2
 	ScreenHeight = 1404
+	// ConfigPRefix for environment variable based configuration
 	ConfigPrefix = "RK"
 )
 
