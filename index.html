@@ -178,9 +178,6 @@ body, html {
 					canvas.style.width = containerWidth + "px";
 					canvas.style.height = containerWidth / aspectRatio + "px";
 				}
-
-				// Use the canvas context to draw on the canvas
-				copyCanvasContent();
 			}
 
 			function resizeAndCopy() {
@@ -193,7 +190,6 @@ body, html {
 
 			var protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
 			var socketURL = protocol + window.location.host + '/ws';
-			var reconnectInterval = 2000; // Reconnection interval in milliseconds
 
 			function connectWebSocket() {
 				var socket = new WebSocket(socketURL);
@@ -218,18 +214,32 @@ body, html {
 					console.log(event);
 					// Try to reconnect after a specified interval
 					waiting();
-					setTimeout(connectWebSocket, reconnectInterval);
 				}
 				socket.onclose = function(event) {
 					console.log("WebSocket connection closed with code: " + event.code);
-					console.log("WebSocket connection closed with code: " + event);
 					// Try to reconnect after a specified interval
 					waiting();
-					if (event.code != 1006) {
-						setTimeout(connectWebSocket, reconnectInterval);
-					};
+					// Retry the connection with exponential backoff
+					retryWebSocket(1000); // Start with a 1-second delay
 				};
 			}
+
+			function retryWebSocket(delay) {
+				// Exponential backoff: double the delay for each retry
+				delay *= 2;
+
+				// Limit the maximum delay to avoid excessive retries
+				if (delay > 60000) {
+					delay = 60000; // Set a maximum delay of 1 minute
+				}
+
+				console.log("Retrying WebSocket connection in " + delay + " milliseconds");
+
+				setTimeout(function() {
+					connectWebSocket();
+				}, delay);
+			}
+
 			connectWebSocket();
 			function processBinaryData(data) {
 				// Create an ImageData object with the byte array length

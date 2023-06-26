@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"embed"
 	"flag"
@@ -130,6 +131,12 @@ func main() {
 
 }
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	tick := time.Tick(200 * time.Millisecond) // Create a tick channel that emits a value every 200 milliseconds
+
+	// Create a context with a cancellation function
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel() // Ensure cancellation function is called at the end
+
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		CompressionMode: websocket.CompressionContextTakeover,
 	})
@@ -147,20 +154,24 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	uint8Array := make([]uint8, len(imageData)/2)
 
 	for {
-		_, err := file.ReadAt(imageData, pointerAddr)
-		if err != nil {
-			log.Fatal(err)
-		}
-		for i := 0; i < len(imageData); i += 2 {
-			packedValue := (uint8(imageData[i]) << 4) | uint8(imageData[i+1])
-			uint8Array[i/2] = packedValue
-		}
-
-		err = conn.Write(r.Context(), websocket.MessageBinary, uint8Array)
-		if err != nil {
-			log.Println("Error sending pixel data:", err)
+		select {
+		case <-ctx.Done():
 			return
+		case <-tick:
+			_, err := file.ReadAt(imageData, pointerAddr)
+			if err != nil {
+				log.Fatal(err)
+			}
+			for i := 0; i < len(imageData); i += 2 {
+				packedValue := (uint8(imageData[i]) << 4) | uint8(imageData[i+1])
+				uint8Array[i/2] = packedValue
+			}
+
+			err = conn.Write(r.Context(), websocket.MessageBinary, uint8Array)
+			if err != nil {
+				log.Println("Error sending pixel data:", err)
+				return
+			}
 		}
-		time.Sleep(200 * time.Millisecond)
 	}
 }
