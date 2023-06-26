@@ -12,8 +12,6 @@ import (
 	"os"
 	"time"
 
-	_ "embed"
-
 	"github.com/kelseyhightower/envconfig"
 	"nhooyr.io/websocket"
 )
@@ -52,6 +50,7 @@ var (
 func main() {
 	ifaces()
 	help := flag.Bool("h", false, "print usage")
+	unsafe := flag.Bool("unsafe", false, "disable authentication")
 	flag.Parse()
 	if *help {
 		envconfig.Usage(ConfigPrefix, &c)
@@ -71,9 +70,6 @@ func main() {
 		pointerAddr = 0
 	} else {
 		pid := findPid()
-		if len(os.Args) == 2 {
-			pid = os.Args[1]
-		}
 		file, err = os.OpenFile("/proc/"+pid+"/mem", os.O_RDONLY, os.ModeDevice)
 		if err != nil {
 			log.Fatal("cannot open file: ", err)
@@ -93,6 +89,10 @@ func main() {
 		io.Copy(w, bytes.NewReader(index))
 	})
 	mux.HandleFunc("/ws", handleWebSocket)
+	handler := BasicAuthMiddleware(mux)
+	if *unsafe {
+		handler = mux
+	}
 	if c.TLS {
 		// Load the certificate and key from embedded files
 		cert, err := tlsAssets.ReadFile("cert.pem")
@@ -118,8 +118,7 @@ func main() {
 		server := &http.Server{
 			Addr:      c.BindAddr,
 			TLSConfig: config,
-			Handler:   BasicAuthMiddleware(mux), // Set the router as the handler
-
+			Handler:   handler,
 		}
 
 		// Start the server
@@ -128,7 +127,7 @@ func main() {
 			log.Fatal("HTTP server error:", err)
 		}
 	}
-	log.Fatal(http.ListenAndServe(c.BindAddr, BasicAuthMiddleware(mux)))
+	log.Fatal(http.ListenAndServe(c.BindAddr, handler))
 
 }
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
@@ -138,9 +137,12 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel() // Ensure cancellation function is called at the end
 
-	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		CompressionMode: websocket.CompressionContextTakeover,
-	})
+	conn, err := websocket.Accept(w, r, nil)
+	/*
+		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+			CompressionMode: websocket.CompressionContextTakeover,
+		})
+	*/
 	//conn, err := websocket.Accept(w, r, nil)
 	if err != nil {
 		log.Println("WebSocket upgrade error:", err)
