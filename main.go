@@ -6,11 +6,14 @@ import (
 	"crypto/tls"
 	"embed"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	_ "net/http/pprof"
 
 	"github.com/kelseyhightower/envconfig"
 	"nhooyr.io/websocket"
@@ -44,10 +47,16 @@ var (
 	//go:embed index.html
 	index []byte
 	//go:embed cert.pem key.pem
-	tlsAssets embed.FS
+	tlsAssets    embed.FS
+	waitingQueue = make(chan struct{}, 1)
 )
 
 func main() {
+	go func() {
+		// Start a separate goroutine to serve the pprof endpoints
+		fmt.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+
 	ifaces()
 	help := flag.Bool("h", false, "print usage")
 	unsafe := flag.Bool("unsafe", false, "disable authentication")
@@ -131,50 +140,57 @@ func main() {
 
 }
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	tick := time.Tick(200 * time.Millisecond) // Create a tick channel that emits a value every 200 milliseconds
+	select {
+	case waitingQueue <- struct{}{}:
+		defer func() {
+			<-waitingQueue
+		}()
+		// Generate a random integer between 0 and 100
+		tick := time.Tick(200 * time.Millisecond) // Create a tick channel that emits a value every 200 milliseconds
 
-	// Create a context with a cancellation function
-	ctx, cancel := context.WithCancel(r.Context())
-	defer cancel() // Ensure cancellation function is called at the end
+		// Create a context with a cancellation function
 
-	conn, err := websocket.Accept(w, r, nil)
-	/*
 		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 			CompressionMode: websocket.CompressionContextTakeover,
 		})
-	*/
-	//conn, err := websocket.Accept(w, r, nil)
-	if err != nil {
-		log.Println("WebSocket upgrade error:", err)
-		return
-	}
-	defer conn.Close(websocket.StatusInternalError, "Internal Server Error")
-
-	// Simulated pixel data
-
-	imageData := make([]byte, ScreenWidth*ScreenHeight)
-	// the informations are int4, therefore store it in a uint8array to reduce data transfer
-	uint8Array := make([]uint8, len(imageData)/2)
-
-	for {
-		select {
-		case <-ctx.Done():
+		//conn, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			log.Println("WebSocket upgrade error:", err)
 			return
-		case <-tick:
-			_, err := file.ReadAt(imageData, pointerAddr)
-			if err != nil {
-				log.Fatal(err)
-			}
-			for i := 0; i < len(imageData); i += 2 {
-				packedValue := (uint8(imageData[i]) << 4) | uint8(imageData[i+1])
-				uint8Array[i/2] = packedValue
-			}
+		}
+		defer conn.Close(websocket.StatusInternalError, "Internal Server Error")
 
-			err = conn.Write(r.Context(), websocket.MessageBinary, uint8Array)
-			if err != nil {
-				log.Println("Error sending pixel data:", err)
+		// Simulated pixel data
+
+		imageData := make([]byte, ScreenWidth*ScreenHeight)
+		// the informations are int4, therefore store it in a uint8array to reduce data transfer
+		uint8Array := make([]uint8, len(imageData)/2)
+
+		for {
+			select {
+			case <-r.Context().Done():
 				return
+			case <-tick:
+				ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+				defer cancel()
+				_, err := file.ReadAt(imageData, pointerAddr)
+				if err != nil {
+					log.Fatal(err)
+				}
+				for i := 0; i < len(imageData); i += 2 {
+					packedValue := (uint8(imageData[i]) << 4) | uint8(imageData[i+1])
+					uint8Array[i/2] = packedValue
+				}
+
+				err = conn.Write(ctx, websocket.MessageBinary, uint8Array)
+				if err != nil {
+					log.Println(err)
+					return
+				}
 			}
 		}
+	default:
+		http.Error(w, "too many requests", http.StatusTooManyRequests)
+		return
 	}
 }
