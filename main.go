@@ -6,14 +6,11 @@ import (
 	"crypto/tls"
 	"embed"
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"time"
-
-	_ "net/http/pprof"
 
 	"github.com/kelseyhightower/envconfig"
 	"nhooyr.io/websocket"
@@ -52,10 +49,6 @@ var (
 )
 
 func main() {
-	go func() {
-		// Start a separate goroutine to serve the pprof endpoints
-		fmt.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
 
 	ifaces()
 	help := flag.Bool("h", false, "print usage")
