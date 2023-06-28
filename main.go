@@ -48,7 +48,7 @@ var (
 	index []byte
 	//go:embed cert.pem key.pem
 	tlsAssets    embed.FS
-	waitingQueue = make(chan struct{}, 1)
+	waitingQueue = make(chan struct{}, 2)
 )
 
 func main() {
@@ -95,7 +95,16 @@ func main() {
 		io.Copy(w, bytes.NewReader(favicon))
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
-		io.Copy(w, bytes.NewReader(index))
+		select {
+		case waitingQueue <- struct{}{}:
+			defer func() {
+				<-waitingQueue
+			}()
+			io.Copy(w, bytes.NewReader(index))
+		default:
+			http.Error(w, "too many requests", http.StatusTooManyRequests)
+			return
+		}
 	})
 	mux.HandleFunc("/ws", handleWebSocket)
 	handler := BasicAuthMiddleware(mux)
@@ -120,7 +129,8 @@ func main() {
 		}
 
 		config := &tls.Config{
-			Certificates: []tls.Certificate{certPair},
+			Certificates:       []tls.Certificate{certPair},
+			InsecureSkipVerify: true,
 		}
 
 		// Create the server
@@ -184,7 +194,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 				err = conn.Write(ctx, websocket.MessageBinary, uint8Array)
 				if err != nil {
-					log.Println(err)
+					//					log.Println(err)
 					return
 				}
 			}
