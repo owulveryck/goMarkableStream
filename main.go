@@ -43,7 +43,7 @@ var (
 	favicon []byte
 	//go:embed index.html
 	index []byte
-	//go:embed cert.pem key.pem
+	//go:embed remarkable.crt remarkable.key
 	tlsAssets    embed.FS
 	waitingQueue = make(chan struct{}, 2)
 )
@@ -106,12 +106,12 @@ func main() {
 	}
 	if c.TLS {
 		// Load the certificate and key from embedded files
-		cert, err := tlsAssets.ReadFile("cert.pem")
+		cert, err := tlsAssets.ReadFile("remarkable.crt")
 		if err != nil {
 			log.Fatal("Error reading embedded certificate:", err)
 		}
 
-		key, err := tlsAssets.ReadFile("key.pem")
+		key, err := tlsAssets.ReadFile("remarkable.key")
 		if err != nil {
 			log.Fatal("Error reading embedded key:", err)
 		}
