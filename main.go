@@ -157,6 +157,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}()
 		// Generate a random integer between 0 and 100
 		tick := time.Tick(200 * time.Millisecond) // Create a tick channel that emits a value every 200 milliseconds
+		timeout := time.Tick(1 * time.Hour)
 
 		// Create a context with a cancellation function
 
@@ -178,6 +179,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 		for {
 			select {
+			case <-timeout:
+				conn.Close(websocket.StatusNormalClosure, "timeout")
+				return
 			case <-r.Context().Done():
 				return
 			case <-tick:
