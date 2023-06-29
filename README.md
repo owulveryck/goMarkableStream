@@ -16,7 +16,7 @@ Its primary goal is to enable users to stream their reMarkable tablet screen to 
 ## Quick Start
 
 ```bash
-localhost> ssh root#remarkable
+localhost> ssh root@remarkable
 reMarkable: ~/ export GORKVERSION=$(curl -s https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
 reMarkable: ~/ curl -L -s https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/goMarkableStream_${GORKVERSION//v}_linux_arm.tar.gz | tar xzvf - -O goMarkableStream_${GORKVERSION//v}_linux_arm/goMarkableStream > goMarkableStream
 reMarkable: ~/ chmod+x goMarkableStream
