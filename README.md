@@ -15,16 +15,18 @@ Its primary goal is to enable users to stream their reMarkable tablet screen to 
 
 ## Quick Start
 
-```text
-ssh root#remarkable
-curl -O https://github.com/owulveryck/goMarkableStream/releases/download/v0.8.0/goMarkableStream
-chmod+x goMarkableStream
-./goMarkableStream
+```bash
+localhost> ssh root#remarkable
+reMarkable: ~/ export GORKVERSION=$(curl -s https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
+reMarkable: ~/ curl -L -s https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/goMarkableStream_${GORKVERSION//v}_linux_arm.tar.gz | tar xzvf - -O goMarkableStream_${GORKVERSION//v}_linux_arm/goMarkableStream > goMarkableStream
+reMarkable: ~/ chmod+x goMarkableStream
+reMarkable: ~/ ./goMarkableStream
 ```
 
 then go to [https://remarkable:2001](https://remarkable:2001) and login with `admin`/`password` (can be changed through environment variables)
 
 _note_: replace _remarkable_ by the IP address if needed.
+_note 2_: you can use this to update to a new version (ensure that you killed the previous version before with `kill $(pidof goMarkableStream)`)
 
 ## Technical Details
 
