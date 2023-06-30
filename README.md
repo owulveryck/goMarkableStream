@@ -23,10 +23,20 @@ reMarkable: ~/ chmod+x goMarkableStream
 reMarkable: ~/ ./goMarkableStream
 ```
 
-then go to [https://remarkable:2001](https://remarkable:2001) and login with `admin`/`password` (can be changed through environment variables)
+then go to [https://remarkable:2001](https://remarkable:2001) and login with `admin`/`password` (can be changed through environment variables or disable authentication with `-unsafe`)
 
 _note_: replace _remarkable_ by the IP address if needed.
+
 _note 2_: you can use this to update to a new version (ensure that you killed the previous version before with `kill $(pidof goMarkableStream)`)
+
+### Safari
+
+Safari does not handle the compression mechanism properly.
+To use Safari (or an iOS device), remove the compression:
+
+```bash
+reMarkable: ~/ RK_COMPRESSION=false ./goMarkableStream
+```
 
 ## Technical Details
 
