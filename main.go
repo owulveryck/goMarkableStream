@@ -162,7 +162,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				CompressionMode: websocket.CompressionContextTakeover,
 			}
 		}
-		log.Println(options)
 
 		conn, err := websocket.Accept(w, r, options)
 		//conn, err := websocket.Accept(w, r, nil)
