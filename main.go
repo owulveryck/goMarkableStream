@@ -17,11 +17,12 @@ import (
 )
 
 type configuration struct {
-	BindAddr string `envconfig:"SERVER_BIND_ADDR" default:":2001" required:"true" description:"The server bind address"`
-	Dev      bool   `envconfig:"SERVER_DEV" default:"false" description:"Development mode: serves a local picture"`
-	Username string `envconfig:"SERVER_USERNAME" default:"admin"`
-	Password string `envconfig:"SERVER_PASSWORD" default:"password"`
-	TLS      bool   `envconfig:"HTTPS" default:"true"`
+	BindAddr    string `envconfig:"SERVER_BIND_ADDR" default:":2001" required:"true" description:"The server bind address"`
+	Dev         bool   `envconfig:"SERVER_DEV" default:"false" description:"Development mode: serves a local picture"`
+	Username    string `envconfig:"SERVER_USERNAME" default:"admin"`
+	Password    string `envconfig:"SERVER_PASSWORD" default:"password"`
+	TLS         bool   `envconfig:"HTTPS" default:"true"`
+	Compression bool   `envconfig:"COMPRESSION" default:"false"`
 }
 
 const (
@@ -153,10 +154,17 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		timeout := time.Tick(1 * time.Hour)
 
 		// Create a context with a cancellation function
+		options := &websocket.AcceptOptions{
+			CompressionMode: websocket.CompressionDisabled,
+		}
+		if c.Compression {
+			options = &websocket.AcceptOptions{
+				CompressionMode: websocket.CompressionContextTakeover,
+			}
+		}
+		log.Println(options)
 
-		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-			CompressionMode: websocket.CompressionContextTakeover,
-		})
+		conn, err := websocket.Accept(w, r, options)
 		//conn, err := websocket.Accept(w, r, nil)
 		if err != nil {
 			log.Println("WebSocket upgrade error:", err)
