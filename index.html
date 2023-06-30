@@ -94,7 +94,7 @@ body, html {
 		</div>
 
 		<script>
-			let rotate = false;  // start with a false boolean
+			let rotate = true;  // start with a false boolean
 			document.getElementById('rotate').addEventListener('click', function() {
 				rotate  = !rotate;  // toggle the boolean
 			});
@@ -254,7 +254,6 @@ body, html {
 
 				// Assuming each pixel is represented by 4 bytes (RGBA)
 				var uint8Array = new Uint8Array(data);
-				const pixels = [];
 
 				var offset = 0;
 				for (let i = 0; i < uint8Array.length; i++) {
@@ -262,34 +261,34 @@ body, html {
 					for (let c=0;c<count;c++) {
 						switch (value) {
 							case 5:
-								imageData.data[offset+c] = 255;
-								imageData.data[offset+c+1] = 0;
-								imageData.data[offset+c+2] = 0;
-								imageData.data[offset+c+3] = 255;
+								imageData.data[offset+c*4] = 255;
+								imageData.data[offset+c*4+1] = 0;
+								imageData.data[offset+c*4+2] = 0;
+								imageData.data[offset+c*4+3] = 255;
 								break;
 							case 9:
-								imageData.data[offset+c] = 0;
-								imageData.data[offset+c+1] = 0;
-								imageData.data[offset+c+2] = 255;
-								imageData.data[offset+c+3] = 255;
+								imageData.data[offset+c*4] = 0;
+								imageData.data[offset+c*4+1] = 0;
+								imageData.data[offset+c*4+2] = 255;
+								imageData.data[offset+c*4+3] = 255;
 								break;
 							case 11:
-								imageData.data[offset+c] = 125;
-								imageData.data[offset+c+1] = 184;
-								imageData.data[offset+c+2] = 86;
-								imageData.data[offset+c+3] = 255;
+								imageData.data[offset+c*4] = 125;
+								imageData.data[offset+c*4+1] = 184;
+								imageData.data[offset+c*4+2] = 86;
+								imageData.data[offset+c*4+3] = 255;
 								break;
 							case 13:
-								imageData.data[offset+c] = 255;
-								imageData.data[offset+c+1] = 253;
-								imageData.data[offset+c+2] = 84;
-								imageData.data[offset+c+3] = 255;
+								imageData.data[offset+c*4] = 255;
+								imageData.data[offset+c*4+1] = 253;
+								imageData.data[offset+c*4+2] = 84;
+								imageData.data[offset+c*4+3] = 255;
 								break;
 							default:
-								imageData.data[offset+c] = value * 17;
-								imageData.data[offset+c+1] = value * 17;
-								imageData.data[offset+c+2] = value * 17;
-								imageData.data[offset+c+3] = 255;
+								imageData.data[offset+c*4] = value * 17;
+								imageData.data[offset+c*4+1] = value * 17;
+								imageData.data[offset+c*4+2] = value * 17;
+								imageData.data[offset+c*4+3] = 255;
 								break;
 						}
 					}
