@@ -138,5 +138,4 @@ func main() {
 		}
 	}
 	log.Fatal(http.ListenAndServe(c.BindAddr, handler))
-
 }
