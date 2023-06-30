@@ -94,7 +94,7 @@ body, html {
 		</div>
 
 		<script>
-			let rotate = false;  // start with a false boolean
+			let rotate = true;  // start with a false boolean
 			document.getElementById('rotate').addEventListener('click', function() {
 				rotate  = !rotate;  // toggle the boolean
 			});
@@ -211,9 +211,6 @@ body, html {
 					reader.readAsArrayBuffer(blob);
 				};
 				socket.onerror = function(event) {
-					console.log(event);
-					// Try to reconnect after a specified interval
-					waiting("Error, please refresh");
 				}
 				socket.onclose = function(event) {
 					console.log("WebSocket connection closed with code: " + event.code);
@@ -221,8 +218,6 @@ body, html {
 						waiting("reMarkable has closed the connexion probably due to timeout");
 						return;
 					}
-					// Try to reconnect after a specified interval
-					waiting("Waiting for reMarkable");
 					// Retry the connection with exponential backoff
 					retryWebSocket(1000); // Start with a 1-second delay
 				};
@@ -236,8 +231,7 @@ body, html {
 				if (delay > 60000) {
 					delay = 60000; // Set a maximum delay of 1 minute
 				}
-
-				console.log("Retrying WebSocket connection in " + delay + " milliseconds");
+				waiting("Trying to connect to reMarkable");
 
 				setTimeout(function() {
 					connectWebSocket();
@@ -245,82 +239,60 @@ body, html {
 			}
 
 			connectWebSocket();
+			function unpackValues(packedValue) {
+				// Extract the upper 4 bits as the first value
+				const value1 = (packedValue >> 4) & 0x0F;
+
+				// Extract the lower 4 bits as the second value
+				const value2 = packedValue & 0x0F;
+
+				return [value1+1, value2];
+			}
 			function processBinaryData(data) {
 				// Create an ImageData object with the byte array length
 				var imageData = fixedContext.createImageData(fixedCanvas.width, fixedCanvas.height);
 
 				// Assuming each pixel is represented by 4 bytes (RGBA)
 				var uint8Array = new Uint8Array(data);
-				const pixels = [];
 
+				var offset = 0;
 				for (let i = 0; i < uint8Array.length; i++) {
-					const packedValue = uint8Array[i];
-					const value1 = packedValue >> 4; // Shift right by 4 positions to get the first 4-bit value
-					const value2 = packedValue & 0x0F; // Use bitwise AND with 0x0F (binary 00001111) to get the second 4-bit value
-					switch (value1) {
-						case 5:
-							imageData.data[i*8] = 255;
-							imageData.data[i*8+1] = 0;
-							imageData.data[i*8+2] = 0;
-							imageData.data[i*8+3] = 255;
-							break;
-						case 9:
-							imageData.data[i*8] = 0;
-							imageData.data[i*8+1] = 0;
-							imageData.data[i*8+2] = 255;
-							imageData.data[i*8+3] = 255;
-							break;
-						case 11:
-							imageData.data[i*8] = 125;
-							imageData.data[i*8+1] = 184;
-							imageData.data[i*8+2] = 86;
-							imageData.data[i*8+3] = 255;
-							break;
-						case 13:
-							imageData.data[i*8] = 255;
-							imageData.data[i*8+1] = 253;
-							imageData.data[i*8+2] = 84;
-							imageData.data[i*8+3] = 255;
-							break;
-						default:
-							imageData.data[i*8] = value1 * 17;
-							imageData.data[i*8+1] = value1 * 17;
-							imageData.data[i*8+2] = value1 * 17;
-							imageData.data[i*8+3] = 255;
-							break;
+					const [count, value] = unpackValues(uint8Array[i]);
+					for (let c=0;c<count;c++) {
+						switch (value) {
+							case 5:
+								imageData.data[offset+c*4] = 255;
+								imageData.data[offset+c*4+1] = 0;
+								imageData.data[offset+c*4+2] = 0;
+								imageData.data[offset+c*4+3] = 255;
+								break;
+							case 9:
+								imageData.data[offset+c*4] = 0;
+								imageData.data[offset+c*4+1] = 0;
+								imageData.data[offset+c*4+2] = 255;
+								imageData.data[offset+c*4+3] = 255;
+								break;
+							case 11:
+								imageData.data[offset+c*4] = 125;
+								imageData.data[offset+c*4+1] = 184;
+								imageData.data[offset+c*4+2] = 86;
+								imageData.data[offset+c*4+3] = 255;
+								break;
+							case 13:
+								imageData.data[offset+c*4] = 255;
+								imageData.data[offset+c*4+1] = 253;
+								imageData.data[offset+c*4+2] = 84;
+								imageData.data[offset+c*4+3] = 255;
+								break;
+							default:
+								imageData.data[offset+c*4] = value * 17;
+								imageData.data[offset+c*4+1] = value * 17;
+								imageData.data[offset+c*4+2] = value * 17;
+								imageData.data[offset+c*4+3] = 255;
+								break;
+						}
 					}
-					switch (value2) {
-						case 5:
-							imageData.data[i*8+4] = 255;
-							imageData.data[i*8+5] = 0;
-							imageData.data[i*8+6] = 0;
-							imageData.data[i*8+7] = 255;
-							break;
-						case 9:
-							imageData.data[i*8+4] = 0;
-							imageData.data[i*8+5] = 0;
-							imageData.data[i*8+6] = 255;
-							imageData.data[i*8+7] = 255;
-							break;
-						case 11:
-							imageData.data[i*8+4] = 125;
-							imageData.data[i*8+5] = 184;
-							imageData.data[i*8+6] = 86;
-							imageData.data[i*8+7] = 255;
-							break;
-						case 13:
-							imageData.data[i*8+4] = 255;
-							imageData.data[i*8+5] = 253;
-							imageData.data[i*8+6] = 84;
-							imageData.data[i*8+7] = 255;
-							break;
-						default:
-							imageData.data[i*8+4] = value2 * 17;
-							imageData.data[i*8+5] = value2 * 17;
-							imageData.data[i*8+6] = value2 * 17;
-							imageData.data[i*8+7] = 255;
-							break;
-					}
+					offset += (count*4);
 				}
 				// Display the ImageData on the canvas
 				fixedContext.putImageData(imageData, 0, 0);
