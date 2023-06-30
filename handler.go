@@ -16,7 +16,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			<-waitingQueue
 		}()
 		// Generate a random integer between 0 and 100
-		tick := time.Tick(200 * time.Millisecond) // Create a tick channel that emits a value every 200 milliseconds
+		tick := time.Tick(time.Duration(c.Rate) * time.Millisecond) // Create a tick channel that emits a value every 200 milliseconds
 		if c.Dev {
 			tick = time.Tick(2000 * time.Millisecond) // Create a tick channel that emits a value every 200 milliseconds
 		}
