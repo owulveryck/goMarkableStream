@@ -41,7 +41,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 		imageData := make([]byte, ScreenWidth*ScreenHeight)
 		// the informations are int4, therefore store it in a uint8array to reduce data transfer
-		uint8Array := make([]uint8, len(imageData)/2)
 
 		for {
 			select {
@@ -57,10 +56,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					log.Fatal(err)
 				}
-				for i := 0; i < len(imageData); i += 2 {
-					packedValue := (uint8(imageData[i]) << 4) | uint8(imageData[i+1])
-					uint8Array[i/2] = packedValue
-				}
+				uint8Array := encodeRLE(imageData)
 
 				err = conn.Write(ctx, websocket.MessageBinary, uint8Array)
 				if err != nil {
