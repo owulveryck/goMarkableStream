@@ -22,12 +22,14 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			<-waitingQueue
 		}()
-		// Generate a random integer between 0 and 100
-		tick := time.Tick(time.Duration(c.Rate) * time.Millisecond) // Create a tick channel that emits a value every 200 milliseconds
+		//ctx, cancel := context.WithTimeout(r.Context(), 1*time.Hour)
+		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Hour)
+		defer cancel()
+		ticker := time.NewTicker(time.Duration(c.Rate) * time.Millisecond) // Create a tick channel that emits a value every 200 milliseconds
 		if c.Dev {
-			tick = time.Tick(2000 * time.Millisecond) // Create a tick channel that emits a value every 200 milliseconds
+			ticker = time.NewTicker(2000 * time.Millisecond) // Create a tick channel that emits a value every 200 milliseconds
 		}
-		timeout := time.Tick(1 * time.Hour)
+		defer ticker.Stop()
 
 		// Create a context with a cancellation function
 		options := &websocket.AcceptOptions{
@@ -55,23 +57,21 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 		for {
 			select {
-			case <-timeout:
+			case <-ctx.Done():
 				conn.Close(websocket.StatusNormalClosure, "timeout")
 				return
-			case <-r.Context().Done():
-				return
-			case <-tick:
-				ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
-				defer cancel()
+			case <-ticker.C:
 				_, err := file.ReadAt(imageData, pointerAddr)
 				if err != nil {
 					log.Fatal(err)
 				}
 				uint8Array := encodeRLE(imageData)
 
-				err = conn.Write(ctx, websocket.MessageBinary, uint8Array)
+				err = conn.Write(r.Context(), websocket.MessageBinary, uint8Array)
 				if err != nil {
-					//					log.Println(err)
+					if websocket.CloseStatus(err) != websocket.StatusNormalClosure {
+						log.Printf("expected to be disconnected with StatusNormalClosure but got: %v", err)
+					}
 					return
 				}
 			}
