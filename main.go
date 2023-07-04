@@ -20,7 +20,7 @@ type configuration struct {
 	Password    string `envconfig:"SERVER_PASSWORD" default:"password"`
 	TLS         bool   `envconfig:"HTTPS" default:"true"`
 	Compression bool   `envconfig:"COMPRESSION" default:"false"`
-	Rate        int    `envconfig:"Rate" default:"100"`
+	Rate        int    `envconfig:"Rate" default:"200"`
 }
 
 const (
