@@ -215,7 +215,8 @@ body, html {
 				socket.onclose = function(event) {
 					console.log("WebSocket connection closed with code: " + event.code);
 					if (event.code == 1000) {
-						waiting("reMarkable has closed the connexion probably due to timeout");
+						console.log("normal closure");
+						waiting("reMarkable has closed the connexion; please refresh");
 						return;
 					}
 					// Retry the connection with exponential backoff
