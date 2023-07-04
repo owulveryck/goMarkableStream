@@ -1,6 +1,15 @@
 package main
 
-import "log"
+import (
+	"log"
+	"sync"
+)
+
+var encodedPool = sync.Pool{
+	New: func() interface{} {
+		return make([]uint8, 0, 1872*1404/2) // Adjust the initial capacity as needed
+	},
+}
 
 func pack(value1, value2 uint8) uint8 {
 	// Ensure that the values are within the valid range (0-15)
@@ -15,7 +24,8 @@ func pack(value1, value2 uint8) uint8 {
 }
 
 func encodeRLE(data []uint8) []uint8 {
-	var encoded []uint8
+	encoded := encodedPool.Get().([]uint8)[:0] // Borrow a slice from the pool
+	defer encodedPool.Put(encoded)             // Return the slice to the pool when done
 
 	length := len(data)
 	if length == 0 {

@@ -4,10 +4,17 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"nhooyr.io/websocket"
 )
+
+var imagePool = sync.Pool{
+	New: func() any {
+		return make([]uint8, ScreenWidth*ScreenHeight) // Adjust the initial capacity as needed
+	},
+}
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	select {
@@ -42,7 +49,8 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 		// Simulated pixel data
 
-		imageData := make([]byte, ScreenWidth*ScreenHeight)
+		imageData := imagePool.Get().([]uint8)
+		defer imagePool.Put(imageData) // Return the slice to the pool when done
 		// the informations are int4, therefore store it in a uint8array to reduce data transfer
 
 		for {
