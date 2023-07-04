@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io/ioutil"
 	"testing"
 )
 
@@ -85,4 +86,15 @@ func extractUint4Values(encodedValue uint8) (uint8, uint8) {
 	value2 := encodedValue & 0x0F
 
 	return value1 + 1, value2
+}
+
+func BenchmarkEncodeRLE(b *testing.B) {
+	content, err := ioutil.ReadFile("testdata/empty.raw")
+	if err != nil {
+		b.Fatal(err)
+	}
+	data := []uint8(content)
+	for i := 0; i < b.N; i++ {
+		encodeRLE(data)
+	}
 }
