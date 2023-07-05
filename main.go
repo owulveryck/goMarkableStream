@@ -5,13 +5,10 @@ import (
 	"crypto/tls"
 	"embed"
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
-
-	_ "net/http/pprof"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -53,10 +50,6 @@ var (
 )
 
 func main() {
-	// Server for pprof
-	go func() {
-		fmt.Println(http.ListenAndServe(":6060", nil))
-	}()
 
 	ifaces()
 	help := flag.Bool("h", false, "print usage")
