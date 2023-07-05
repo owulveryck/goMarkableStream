@@ -42,6 +42,8 @@ var (
 	favicon []byte
 	//go:embed index.html
 	index []byte
+	//go:embed stream.js
+	js []byte
 	//go:embed cert.pem key.pem
 	tlsAssets    embed.FS
 	waitingQueue = make(chan struct{}, 2)
@@ -86,6 +88,9 @@ func main() {
 	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, _ *http.Request) {
 		io.Copy(w, bytes.NewReader(favicon))
 	})
+	mux.HandleFunc("/stream.js", func(w http.ResponseWriter, _ *http.Request) {
+		io.Copy(w, bytes.NewReader(js))
+	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		select {
 		case waitingQueue <- struct{}{}:
@@ -98,7 +103,7 @@ func main() {
 			return
 		}
 	})
-	mux.HandleFunc("/ws", handleWebSocket)
+	mux.HandleFunc("/stream", handleStream)
 	handler := BasicAuthMiddleware(mux)
 	if *unsafe {
 		handler = mux

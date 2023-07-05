@@ -1,15 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"log"
-	"sync"
 )
-
-var encodedPool = sync.Pool{
-	New: func() interface{} {
-		return make([]uint8, 0, 1872*1404/2) // Adjust the initial capacity as needed
-	},
-}
 
 func pack(value1, value2 uint8) uint8 {
 	// Ensure that the values are within the valid range (0-15)
@@ -23,27 +17,38 @@ func pack(value1, value2 uint8) uint8 {
 	return encodedValue
 }
 
-func encodeRLE(data []uint8) []uint8 {
-	encoded := encodedPool.Get().([]uint8)[:0] // Borrow a slice from the pool
-	defer encodedPool.Put(encoded)             // Return the slice to the pool when done
+type rleWriter struct {
+	sub *bufio.Writer
+}
 
+func (rlewriter *rleWriter) Write(data []byte) (n int, err error) {
 	length := len(data)
 	if length == 0 {
-		return encoded
+		return 0, nil
 	}
 
 	current := data[0]
 	var count uint8 = 1
+	var global int
 
 	for i := 1; i < length; i++ {
 		if data[i] == current && count < 16 {
 			count++
 		} else {
-			encoded = append(encoded, pack(count, current))
+			err = rlewriter.sub.WriteByte(pack(count, current))
+			if err != nil {
+				return global, err
+			}
+			global++
 			current = data[i]
 			count = 1
 		}
 	}
 
-	return append(encoded, pack(count, current))
+	err = rlewriter.sub.WriteByte(pack(count, current))
+	if err != nil {
+		return global, err
+	}
+	global++
+	return global, nil
 }
