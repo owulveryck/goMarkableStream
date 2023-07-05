@@ -140,84 +140,106 @@ function downloadScreenshot(dataUrl) {
 // JavaScript file (stream.js)
 
 async function initiateStream() {
-	// Create a new ReadableStream instance from a fetch request
-	const response = await fetch('/stream');
-	const stream = response.body;
+	const RETRY_DELAY_MS = 3000; // Delay before retrying the connection (in milliseconds)
 
-	// Create a reader for the ReadableStream
-	const reader = stream.getReader();
-	// Create an ImageData object with the byte array length
-	var imageData = fixedContext.createImageData(fixedCanvas.width, fixedCanvas.height);
+	try {
+
+		// Create a new ReadableStream instance from a fetch request
+		const response = await fetch('/stream');
+		const stream = response.body;
+
+		// Create a reader for the ReadableStream
+		const reader = stream.getReader();
+		// Create an ImageData object with the byte array length
+		var imageData = fixedContext.createImageData(fixedCanvas.width, fixedCanvas.height);
 
 
-	var offset = 0;
+		var offset = 0;
 
 
-	// Define a function to process the chunks of data as they arrive
-	const processData = async ({ done, value }) => {
-		if (done) {
-			console.log('Stream has ended');
-			return;
-		}
-
-		// Process the received data chunk
-		// Assuming each pixel is represented by 4 bytes (RGBA)
-		var uint8Array = new Uint8Array(value);
-		for (let i = 0; i < uint8Array.length; i++) {
-			const [count, value] = unpackValues(uint8Array[i]);
-			for (let c=0;c<count;c++) {
-				switch (value) {
-					case 5:
-						imageData.data[offset+c*4] = 255;
-						imageData.data[offset+c*4+1] = 0;
-						imageData.data[offset+c*4+2] = 0;
-						imageData.data[offset+c*4+3] = 255;
-						break;
-					case 9:
-						imageData.data[offset+c*4] = 0;
-						imageData.data[offset+c*4+1] = 0;
-						imageData.data[offset+c*4+2] = 255;
-						imageData.data[offset+c*4+3] = 255;
-						break;
-					case 11:
-						imageData.data[offset+c*4] = 125;
-						imageData.data[offset+c*4+1] = 184;
-						imageData.data[offset+c*4+2] = 86;
-						imageData.data[offset+c*4+3] = 255;
-						break;
-					case 13:
-						imageData.data[offset+c*4] = 255;
-						imageData.data[offset+c*4+1] = 253;
-						imageData.data[offset+c*4+2] = 84;
-						imageData.data[offset+c*4+3] = 255;
-						break;
-					default:
-						imageData.data[offset+c*4] = value * 17;
-						imageData.data[offset+c*4+1] = value * 17;
-						imageData.data[offset+c*4+2] = value * 17;
-						imageData.data[offset+c*4+3] = 255;
-						break;
+		// Define a function to process the chunks of data as they arrive
+		const processData = async ({ done, value }) => {
+			try {
+				if (done) {
+					console.log('Stream has ended');
+					return;
 				}
+
+				// Process the received data chunk
+				// Assuming each pixel is represented by 4 bytes (RGBA)
+				var uint8Array = new Uint8Array(value);
+				for (let i = 0; i < uint8Array.length; i++) {
+					const [count, value] = unpackValues(uint8Array[i]);
+					for (let c=0;c<count;c++) {
+						switch (value) {
+							case 5:
+								imageData.data[offset+c*4] = 255;
+								imageData.data[offset+c*4+1] = 0;
+								imageData.data[offset+c*4+2] = 0;
+								imageData.data[offset+c*4+3] = 255;
+								break;
+							case 9:
+								imageData.data[offset+c*4] = 0;
+								imageData.data[offset+c*4+1] = 0;
+								imageData.data[offset+c*4+2] = 255;
+								imageData.data[offset+c*4+3] = 255;
+								break;
+							case 11:
+								imageData.data[offset+c*4] = 125;
+								imageData.data[offset+c*4+1] = 184;
+								imageData.data[offset+c*4+2] = 86;
+								imageData.data[offset+c*4+3] = 255;
+								break;
+							case 13:
+								imageData.data[offset+c*4] = 255;
+								imageData.data[offset+c*4+1] = 253;
+								imageData.data[offset+c*4+2] = 84;
+								imageData.data[offset+c*4+3] = 255;
+								break;
+							default:
+								imageData.data[offset+c*4] = value * 17;
+								imageData.data[offset+c*4+1] = value * 17;
+								imageData.data[offset+c*4+2] = value * 17;
+								imageData.data[offset+c*4+3] = 255;
+								break;
+						}
+					}
+					offset += (count*4);
+
+					if (offset >= fixedCanvas.height*fixedCanvas.width*4) {
+						offset = 0;
+						// Display the ImageData on the canvas
+						fixedContext.putImageData(imageData, 0, 0);
+
+						copyCanvasContent();
+					}
+				}
+
+				// Read the next chunk
+				const nextChunk = await reader.read();
+				processData(nextChunk);
+			} catch (error) {
+				console.error('Error:', error);
+				// Handle the error and determine if a reconnection should be attempted
+				// For example, you can check the error message or status code to decide
+
+				// Retry the connection after the delay
+				waiting("reMarkable disconnected, please refresh");
 			}
-			offset += (count*4);
 
-			if (offset >= fixedCanvas.height*fixedCanvas.width*4) {
-				offset = 0;
-				// Display the ImageData on the canvas
-				fixedContext.putImageData(imageData, 0, 0);
+		};
 
-				copyCanvasContent();
-			}
-		}
+		// Start reading the initial chunk of data
+		const initialChunk = await reader.read();
+		processData(initialChunk);
+	} catch (error) {
+		console.error('Error:', error);
+		// Handle the error and determine if a reconnection should be attempted
+		// For example, you can check the error message or status code to decide
 
-		// Read the next chunk
-		const nextChunk = await reader.read();
-		processData(nextChunk);
-	};
-
-	// Start reading the initial chunk of data
-	const initialChunk = await reader.read();
-	processData(initialChunk);
+		// Retry the connection after the delay
+		waiting("reMarkable disconnected, please refresh");
+	}
 }
 
 initiateStream();

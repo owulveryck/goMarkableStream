@@ -1,24 +1,31 @@
 package main
 
 import (
-	"bufio"
-	"log"
+	"io"
+	"sync"
 )
 
-func pack(value1, value2 uint8) uint8 {
-	// Ensure that the values are within the valid range (0-15)
-	if value1 > 16 || value2 > 255 {
-		log.Fatalf("invalid value; count=%v, value=%v", value1, value2)
-	}
+var encodedPool = sync.Pool{
+	New: func() interface{} {
+		return make([]uint8, 0, 1872*1404/2) // Adjust the initial capacity as needed
+	},
+}
 
-	value1 = value1 - 1
+func pack(value1, value2 uint8) uint8 {
+	/*
+		// Ensure that the values are within the valid range (0-15)
+		if value1 > 16 || value2 > 255 {
+			log.Fatalf("invalid value; count=%v, value=%v", value1, value2)
+		}
+	*/
+
 	// Shift the first value by 4 bits and OR it with the second value
 	encodedValue := (value1 << 4) | value2
 	return encodedValue
 }
 
 type rleWriter struct {
-	sub *bufio.Writer
+	sub io.Writer
 }
 
 func (rlewriter *rleWriter) Write(data []byte) (n int, err error) {
@@ -26,29 +33,25 @@ func (rlewriter *rleWriter) Write(data []byte) (n int, err error) {
 	if length == 0 {
 		return 0, nil
 	}
+	encoded := encodedPool.Get().([]uint8)[:0] // Borrow a slice from the pool
+	defer encodedPool.Put(encoded)
 
 	current := data[0]
-	var count uint8 = 1
-	var global int
+	var count uint8 = 0
 
 	for i := 1; i < length; i++ {
-		if data[i] == current && count < 16 {
+		if count < 15 && data[i] == current {
 			count++
 		} else {
-			err = rlewriter.sub.WriteByte(pack(count, current))
+			encoded = append(encoded, pack(count, current))
 			if err != nil {
-				return global, err
+				return 0, err
 			}
-			global++
 			current = data[i]
-			count = 1
+			count = 0
 		}
 	}
 
-	err = rlewriter.sub.WriteByte(pack(count, current))
-	if err != nil {
-		return global, err
-	}
-	global++
-	return global, nil
+	encoded = append(encoded, pack(count, current))
+	return rlewriter.sub.Write(encoded)
 }
