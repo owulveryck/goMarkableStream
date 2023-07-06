@@ -17,10 +17,13 @@ Its primary goal is to enable users to stream their reMarkable tablet screen to 
 
 ```bash
 localhost> ssh root@remarkable
-reMarkable: ~/ export GORKVERSION=$(curl -s https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
-reMarkable: ~/ curl -L -s https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/goMarkableStream_${GORKVERSION//v}_linux_arm.tar.gz | tar xzvf - -O goMarkableStream_${GORKVERSION//v}_linux_arm/goMarkableStream > goMarkableStream
-reMarkable: ~/ chmod+x goMarkableStream
-reMarkable: ~/ ./goMarkableStream
+```
+
+```bash
+export GORKVERSION=$(curl -s https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
+curl -L -s https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/goMarkableStream_${GORKVERSION//v}_linux_arm.tar.gz | tar xzvf - -O goMarkableStream_${GORKVERSION//v}_linux_arm/goMarkableStream > goMarkableStream
+~/ chmod+x goMarkableStream
+./goMarkableStream
 ```
 
 then go to [https://remarkable:2001](https://remarkable:2001) and login with `admin`/`password` (can be changed through environment variables or disable authentication with `-unsafe`)
@@ -40,23 +43,33 @@ reMarkable: ~/ RK_COMPRESSION=false ./goMarkableStream
 
 ## Technical Details
 
-### Data Retrieval from reMarkable Memory
+### Remarkable HTTP Server
 
-The reMarkable Screen Streaming Tool leverages a combination of techniques to capture the screen data from the reMarkable tablet's memory. 
-It utilizes low-level access provided by the device's operating system to retrieve the necessary data. 
-This approach ensures that the tool does not require any unauthorized modifications to the reMarkable tablet.
+This is a standalone application that runs directly on a Remarkable tablet. It does not have any dependencies on third-party libraries, making it a completely self-sufficient solution. This application exposes an HTTP server with two endpoints:
+### Endpoints 
+- `/`: This endpoint serves an embedded HTML and JavaScript file containing the necessary logic to display an image from the Remarkable tablet on a client's web browser. 
+- `/stream`: This endpoint streams the image data from the Remarkable tablet to the client continuously.
+### Implementation
 
-### Data Transmission via WebSocket
+The image data is read directly from the main process's memory as a byte array. A simple Run-Length Encoding (RLE) compression algorithm is applied on the tablet to reduce the amount of data transferred between the tablet and the browser. 
+The CPU footprint is relatively low, using about 10% of the CPU for a frame every 200 ms. You can increase the frame rate, but it will consume slightly more CPU.
 
-Once the screen data is obtained from the reMarkable tablet's memory, the tool serves it to clients via a WebSocket connection. 
-A WebSocket is a communication protocol that provides full-duplex communication channels over a single TCP connection, making it ideal for real-time data streaming. 
-The WebSocket connection ensures that the screen data is transmitted efficiently and promptly to connected clients.
+On the client side, the streamed byte data is decoded and displayed on an invisible canvas that matches the size of the Remarkable tablet's display. This canvas is then copied to another responsive canvas for viewing.
 
-### Client-Side Rendering with HTML Canvas
+Additionally, the application features a side menu which allows users to rotate the displayed image. All image transformations utilize native browser implementations, providing optimized performance.
 
-On the client side, the reMarkable Screen Streaming Tool fetches the transmitted screen data and renders it using an HTML canvas element. 
-The HTML canvas provides a powerful and flexible platform for displaying graphics and images on web pages. 
-By leveraging the capabilities of the HTML canvas, the tool ensures a performant and lossless streaming experience for users.
+### Performance
+
+Despite the continuous streaming and processing of images, this application maintains a minimal impact on the CPU, using only about 10% of its capacity. However, increasing the frame rate will proportionally increase CPU usage.
+On idle (if not browser is opened), the programs goes to idel and therefore does not drain the battery.
+
+### Client-side Operations
+
+All operations, including image rendering and transformations, are performed using the client's native browser capabilities. This ensures the best performance and compatibility across a range of devices.
+
+### Transformations
+
+The application includes features for rotating the displayed image. This is achieved using the browser's native capabilities, ensuring an optimal performance during transformations.
 
 ## Getting Started
 
@@ -76,15 +89,13 @@ To use the reMarkable Screen Streaming Tool, follow these steps:
 The application is configured via environment variables:
 
 ```text
-This application is configured via the environment. The following environment
-variables can be used:
-
 KEY                    TYPE             DEFAULT     REQUIRED    DESCRIPTION
 RK_SERVER_BIND_ADDR    String           :2001       true        
 RK_SERVER_DEV          True or False    false                   
 RK_SERVER_USERNAME     String           admin                   
 RK_SERVER_PASSWORD     String           password                
-RK_HTTPS               True or False    true
+RK_HTTPS               True or False    true                    
+RK_RATE                Integer          200
 ```
 
 ### Compilation
