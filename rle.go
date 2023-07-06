@@ -30,23 +30,23 @@ func (rlewriter *rleWriter) Write(data []byte) (n int, err error) {
 	defer encodedPool.Put(encoded)
 
 	current := data[0]
-	var count uint8 = 0
+	count := -1
 
 	for _, datum := range data {
 		if count == 15 {
-			encoded = append(encoded, pack(count, current))
+			encoded = append(encoded, pack(uint8(count), current))
 			count = 0
 			continue
 		}
 		if datum == current {
 			count++
 		} else {
-			encoded = append(encoded, pack(count, current))
+			encoded = append(encoded, pack(uint8(count), current))
 			current = datum
 			count = 0
 		}
 	}
 
-	encoded = append(encoded, pack(count, current))
+	encoded = append(encoded, pack(uint8(count), current))
 	return rlewriter.sub.Write(encoded)
 }
