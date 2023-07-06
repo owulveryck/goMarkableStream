@@ -1,100 +1,121 @@
 package main
 
 import (
-	"io/ioutil"
+	"bytes"
+	"math/rand"
 	"testing"
 )
 
-func Test_encodeRLE(t *testing.T) {
-	type args struct {
-		data []uint8
+func decodeUint8(data []byte) []byte {
+	decoded := make([]byte, 0, len(data)*15)
+	for i := 0; i < len(data); i += 2 {
+		count := data[i]
+		item := data[i+1]
+		for i := uint8(0); i < count+1; i++ {
+			decoded = append(decoded, uint8(item))
+		}
 	}
-	tests := []struct {
-		name string
-		args args
-		want []uint8
-	}{
-		{
-			name: "small zeros",
-			args: args{
-				data: []uint8{0, 0, 0, 0},
-			},
-			want: []uint8{4, 0},
-		},
-		{
-			name: "small ones",
-			args: args{
-				data: []uint8{1, 1, 1, 1},
-			},
-			want: []uint8{4, 1},
-		},
-		{
-			name: "both",
-			args: args{
-				data: []uint8{0, 0, 0, 0, 1, 1, 1, 1},
-			},
-			want: []uint8{4, 0, 4, 1},
-		},
-		{
-			name: "both",
-			args: args{
-				data: []uint8{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3},
-			},
-			want: []uint8{16, 2, 5, 3},
-		},
-		{
-			name: "lots of zeros",
-			args: args{
-				data: []uint8{
-					0, 0, 0, 0,
-					0, 0, 0, 0,
-					0, 0, 0, 0,
-					0, 0, 0, 0,
-					0, 0, 0, 0,
-					0, 0, 0, 0,
-					0, 0, 0, 0,
-					0, 0, 0, 0,
-					0, 0, 0, 0,
-				},
-			},
-			want: []uint8{16, 0, 16, 0, 4, 0},
-		},
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			encoded := encodeRLE(tt.args.data)
-			for i, val := range encoded {
-				v1, v2 := extractUint4Values(val)
-				if tt.want[i*2] != v1 {
-					t.Errorf("encodeRLE() count = %v, want %v", v1, tt.want[i*2])
-				}
-				if tt.want[i*2+1] != v2 {
-					t.Errorf("encodeRLE() value = %v, want %v", v2, tt.want[i*2+1])
-				}
-
-			}
-		})
-	}
+	return decoded
 }
 
-func extractUint4Values(encodedValue uint8) (uint8, uint8) {
-	// Mask the upper 4 bits to extract the first value
-	value1 := (encodedValue >> 4) & 0x0F
-
-	// Mask the lower 4 bits to extract the second value
-	value2 := encodedValue & 0x0F
-
-	return value1 + 1, value2
+func decodePacked(data []byte) []byte {
+	decoded := make([]byte, 0, len(data)*15)
+	for _, value := range data {
+		count := value >> 4
+		item := value & 0x0F
+		for i := uint8(0); i < count+1; i++ {
+			decoded = append(decoded, uint8(item))
+		}
+	}
+	return decoded
 }
 
-func BenchmarkEncodeRLE(b *testing.B) {
-	content, err := ioutil.ReadFile("testdata/empty.raw")
+func generateSampleData(size int) []byte {
+	data := make([]byte, size)
+	for i := 0; i < len(data); i++ {
+		// Generate a random number between 1 and 10
+		num := rand.Intn(10) + 1
+
+		// Set the byte to zero with a probability of 80%
+		if num <= 8 {
+			data[i] = 0
+		} else {
+			// Otherwise, generate a random byte between 1 and 15
+			data[i] = uint8(rand.Intn(15))
+		}
+	}
+	return data
+}
+
+func TestRleWriterUint8(t *testing.T) {
+	sample := generateSampleData(ScreenHeight * ScreenWidth)
+
+	var buf bytes.Buffer
+	rw := rleWriter{sub: &buf}
+
+	_, err := rw.WriteUint8(sample)
 	if err != nil {
-		b.Fatal(err)
+		t.Fatal(err)
 	}
-	data := []uint8(content)
+
+	encoded := buf.Bytes()
+	t.Logf("size for uint8: %v", buf.Len())
+
+	decoded := decodeUint8(encoded)
+
+	if !bytes.Equal(decoded, sample) {
+		for i := 0; i < len(sample); i++ {
+			if sample[i] != decoded[i] {
+				t.Fatalf("at index %v, sample: %v, decoded: %v", i, sample[i-20:i+1], decoded[i-20:i+1])
+			}
+		}
+		t.Errorf("Decoded data does not match the original data")
+	}
+}
+
+func TestRleWriter(t *testing.T) {
+	sample := generateSampleData(ScreenHeight * ScreenWidth)
+
+	var buf bytes.Buffer
+	rw := rleWriter{sub: &buf}
+
+	_, err := rw.Write(sample)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	encoded := buf.Bytes()
+	t.Logf("size for packed: %v", buf.Len())
+
+	decoded := decodePacked(encoded)
+
+	if !bytes.Equal(decoded, sample) {
+		for i := 0; i < len(sample); i++ {
+			if sample[i] != decoded[i] {
+				t.Fatalf("at index %v, sample: %v, decoded: %v", i, sample[i-20:i+1], decoded[i-20:i+1])
+			}
+		}
+		t.Errorf("Decoded data does not match the original data")
+	}
+}
+
+func BenchmarkRleWriterUint8(b *testing.B) {
+	data := generateSampleData(ScreenHeight * ScreenWidth)
+
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		encodeRLE(data)
+		var buf bytes.Buffer
+		rw := rleWriter{sub: &buf}
+		_, _ = rw.WriteUint8(data)
+	}
+}
+func BenchmarkRleWriter(b *testing.B) {
+	data := generateSampleData(ScreenHeight * ScreenWidth)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var buf bytes.Buffer
+		rw := rleWriter{sub: &buf}
+		_, _ = rw.Write(data)
 	}
 }
