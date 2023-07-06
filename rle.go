@@ -7,7 +7,7 @@ import (
 
 var encodedPool = sync.Pool{
 	New: func() interface{} {
-		return make([]uint8, 0, 1872*1404/2) // Adjust the initial capacity as needed
+		return make([]uint8, 0, 1872*1404/8) // Adjust the initial capacity as needed
 	},
 }
 
@@ -26,19 +26,14 @@ func (rlewriter *rleWriter) Write(data []byte) (n int, err error) {
 	if length == 0 {
 		return 0, nil
 	}
-	encoded := encodedPool.Get().([]uint8)[:0] // Borrow a slice from the pool
+	encoded := encodedPool.Get().([]uint8) // Borrow a slice from the pool
 	defer encodedPool.Put(encoded)
 
 	current := data[0]
 	count := -1
 
 	for _, datum := range data {
-		if count == 15 {
-			encoded = append(encoded, pack(uint8(count), current))
-			count = 0
-			continue
-		}
-		if datum == current {
+		if count < 15 && datum == current {
 			count++
 		} else {
 			encoded = append(encoded, pack(uint8(count), current))
