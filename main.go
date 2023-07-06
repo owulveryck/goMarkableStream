@@ -14,13 +14,12 @@ import (
 )
 
 type configuration struct {
-	BindAddr    string `envconfig:"SERVER_BIND_ADDR" default:":2001" required:"true" description:"The server bind address"`
-	Dev         bool   `envconfig:"SERVER_DEV" default:"false" description:"Development mode: serves a local picture"`
-	Username    string `envconfig:"SERVER_USERNAME" default:"admin"`
-	Password    string `envconfig:"SERVER_PASSWORD" default:"password"`
-	TLS         bool   `envconfig:"HTTPS" default:"true"`
-	Compression bool   `envconfig:"COMPRESSION" default:"false"`
-	Rate        int    `envconfig:"Rate" default:"200"`
+	BindAddr string `envconfig:"SERVER_BIND_ADDR" default:":2001" required:"true" description:"The server bind address"`
+	Dev      bool   `envconfig:"SERVER_DEV" default:"false" description:"Development mode: serves a local picture"`
+	Username string `envconfig:"SERVER_USERNAME" default:"admin"`
+	Password string `envconfig:"SERVER_PASSWORD" default:"password"`
+	TLS      bool   `envconfig:"HTTPS" default:"true"`
+	Rate     int    `envconfig:"Rate" default:"200"`
 }
 
 const (
@@ -42,6 +41,8 @@ var (
 	favicon []byte
 	//go:embed index.html
 	index []byte
+	//go:embed stream.js
+	js []byte
 	//go:embed cert.pem key.pem
 	tlsAssets    embed.FS
 	waitingQueue = make(chan struct{}, 2)
@@ -86,6 +87,9 @@ func main() {
 	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, _ *http.Request) {
 		io.Copy(w, bytes.NewReader(favicon))
 	})
+	mux.HandleFunc("/stream.js", func(w http.ResponseWriter, _ *http.Request) {
+		io.Copy(w, bytes.NewReader(js))
+	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		select {
 		case waitingQueue <- struct{}{}:
@@ -98,7 +102,7 @@ func main() {
 			return
 		}
 	})
-	mux.HandleFunc("/ws", handleWebSocket)
+	mux.HandleFunc("/stream", handleStream)
 	handler := BasicAuthMiddleware(mux)
 	if *unsafe {
 		handler = mux
