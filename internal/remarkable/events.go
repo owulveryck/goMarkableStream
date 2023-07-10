@@ -52,15 +52,35 @@ func NewEventScanner() *EventScanner {
 	}
 }
 
-func (e *EventScanner) Close() {
-	close(e.EventC)
-	e.pen.Close()
-	e.touch.Close()
-}
-
 func (e *EventScanner) Start(ctx context.Context) {
+	penEvent := make(chan InputEvent)
+	touchEvent := make(chan InputEvent)
+
+	go func(ctx context.Context) {
+		defer close(e.EventC)
+		ctx1, cancel := context.WithCancel(ctx)
+		defer cancel()
+		defer e.pen.Close()
+		defer e.touch.Close()
+		defer close(penEvent)
+		defer close(touchEvent)
+
+		for {
+			select {
+			case <-ctx1.Done():
+				return
+			case evt := <-penEvent:
+				e.EventC <- evt
+			case evt := <-touchEvent:
+				e.EventC <- evt
+			}
+		}
+	}(ctx)
+
 	// Start a goroutine to read events and send them on the channel
-	go func() {
+	go func(ctx context.Context) {
+		ctx1, cancel := context.WithCancel(ctx)
+		defer cancel()
 		for {
 			var ev InputEvent
 			_, err := e.pen.Read((*(*[unsafe.Sizeof(ev)]byte)(unsafe.Pointer(&ev)))[:])
@@ -69,13 +89,15 @@ func (e *EventScanner) Start(ctx context.Context) {
 				return
 			}
 			select {
-			case <-ctx.Done():
+			case <-ctx1.Done():
 				return
-			case e.EventC <- ev:
+			case penEvent <- ev:
 			}
 		}
-	}()
-	go func() {
+	}(ctx)
+	go func(ctx context.Context) {
+		ctx1, cancel := context.WithCancel(ctx)
+		defer cancel()
 		for {
 			var ev InputEvent
 			_, err := e.touch.Read((*(*[unsafe.Sizeof(ev)]byte)(unsafe.Pointer(&ev)))[:])
@@ -84,10 +106,10 @@ func (e *EventScanner) Start(ctx context.Context) {
 				return
 			}
 			select {
-			case <-ctx.Done():
+			case <-ctx1.Done():
 				return
-			case e.EventC <- ev:
+			case touchEvent <- ev:
 			}
 		}
-	}()
+	}(ctx)
 }
