@@ -1,13 +1,15 @@
-package main
+package rle
 
 import (
 	"io"
 	"sync"
+
+	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 )
 
 var encodedPool = sync.Pool{
 	New: func() interface{} {
-		return make([]uint8, 0, 1872*1404) // Adjust the initial capacity as needed
+		return make([]uint8, 0, remarkable.ScreenHeight*remarkable.ScreenWidth)
 	},
 }
 
@@ -17,11 +19,17 @@ func pack(value1, value2 uint8) uint8 {
 	return encodedValue
 }
 
-type rleWriter struct {
+func NewRLE(w io.Writer) *RLE {
+	return &RLE{
+		sub: w,
+	}
+}
+
+type RLE struct {
 	sub io.Writer
 }
 
-func (rlewriter *rleWriter) Write(data []byte) (n int, err error) {
+func (rlewriter *RLE) Write(data []byte) (n int, err error) {
 	length := len(data)
 	if length == 0 {
 		return 0, nil
@@ -43,30 +51,5 @@ func (rlewriter *rleWriter) Write(data []byte) (n int, err error) {
 	}
 
 	encoded = append(encoded, pack(uint8(count), current))
-	return rlewriter.sub.Write(encoded)
-}
-
-func (rlewriter *rleWriter) WriteUint8(data []byte) (n int, err error) {
-	length := len(data)
-	if length == 0 {
-		return 0, nil
-	}
-	encoded := encodedPool.Get().([]uint8) // Borrow a slice from the pool
-	defer encodedPool.Put(encoded)
-
-	current := data[0]
-	count := -1
-
-	for _, datum := range data {
-		if count < 255 && datum == current {
-			count++
-		} else {
-			encoded = append(encoded, uint8(count), current)
-			current = datum
-			count = 0
-		}
-	}
-
-	encoded = append(encoded, uint8(count), current)
 	return rlewriter.sub.Write(encoded)
 }

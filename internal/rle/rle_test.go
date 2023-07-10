@@ -1,9 +1,11 @@
-package main
+package rle
 
 import (
 	"bytes"
 	"math/rand"
 	"testing"
+
+	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 )
 
 func decodeUint8(data []byte) []byte {
@@ -47,37 +49,21 @@ func generateSampleData(size int) []byte {
 	return data
 }
 
-func TestRleWriterUint8(t *testing.T) {
-	sample := generateSampleData(ScreenHeight * ScreenWidth)
+func BenchmarkRleWriter(b *testing.B) {
+	data := generateSampleData(remarkable.ScreenHeight * remarkable.ScreenWidth)
 
-	var buf bytes.Buffer
-	rw := rleWriter{sub: &buf}
-
-	_, err := rw.WriteUint8(sample)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	encoded := buf.Bytes()
-	t.Logf("size for uint8: %v", buf.Len())
-
-	decoded := decodeUint8(encoded)
-
-	if !bytes.Equal(decoded, sample) {
-		for i := 0; i < len(sample); i++ {
-			if sample[i] != decoded[i] {
-				t.Fatalf("at index %v, sample: %v, decoded: %v", i, sample[i-20:i+1], decoded[i-20:i+1])
-			}
-		}
-		t.Errorf("Decoded data does not match the original data")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var buf bytes.Buffer
+		rw := RLE{sub: &buf}
+		_, _ = rw.Write(data)
 	}
 }
-
 func TestRleWriter(t *testing.T) {
 	sample := generateSampleData(ScreenHeight * ScreenWidth)
 
 	var buf bytes.Buffer
-	rw := rleWriter{sub: &buf}
+	rw := RLE{sub: &buf}
 
 	_, err := rw.Write(sample)
 	if err != nil {
@@ -96,26 +82,5 @@ func TestRleWriter(t *testing.T) {
 			}
 		}
 		t.Errorf("Decoded data does not match the original data")
-	}
-}
-
-func BenchmarkRleWriterUint8(b *testing.B) {
-	data := generateSampleData(ScreenHeight * ScreenWidth)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		var buf bytes.Buffer
-		rw := rleWriter{sub: &buf}
-		_, _ = rw.WriteUint8(data)
-	}
-}
-func BenchmarkRleWriter(b *testing.B) {
-	data := generateSampleData(ScreenHeight * ScreenWidth)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		var buf bytes.Buffer
-		rw := rleWriter{sub: &buf}
-		_, _ = rw.Write(data)
 	}
 }

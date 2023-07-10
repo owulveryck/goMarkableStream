@@ -1,4 +1,4 @@
-package main
+package remarkable
 
 import (
 	"bufio"
@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func getPointer(pid string) (int64, error) {
+func getFramePointer(pid string) (int64, error) {
 	file, err := os.OpenFile("/proc/"+pid+"/maps", os.O_RDONLY, os.ModeDevice)
 	if err != nil {
 		log.Fatal("cannot open file: ", err)

@@ -1,4 +1,4 @@
-package main
+package remarkable
 
 import (
 	"log"
@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func findPid() string {
+func findXochitlPID() string {
 	base := "/proc"
 	entries, err := os.ReadDir(base)
 	if err != nil {
