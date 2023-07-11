@@ -63,7 +63,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// the informations are int4, therefore store it in a uint8array to reduce data transfer
 		rleWriter := rle.NewRLE(w)
 		writing := true
-		stopWriting := time.NewTicker(1 * time.Second)
+		stopWriting := time.NewTicker(2 * time.Second)
 		defer stopWriting.Stop()
 
 		for {
@@ -72,7 +72,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			case <-h.eventLoop.EventC:
 				writing = true
-				stopWriting.Reset(1 * time.Second)
+				stopWriting.Reset(2 * time.Second)
 			case <-stopWriting.C:
 				writing = false
 			case <-h.ticker.C:

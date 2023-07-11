@@ -45,6 +45,7 @@ var (
 )
 
 func main() {
+	var err error
 
 	ifaces()
 	help := flag.Bool("h", false, "print usage")
@@ -59,7 +60,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var err error
 	if c.Dev {
 		file, err = os.OpenFile("testdata/empty.raw", os.O_RDONLY, os.ModeDevice)
 		if err != nil {

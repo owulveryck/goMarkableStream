@@ -60,7 +60,7 @@ func BenchmarkRleWriter(b *testing.B) {
 	}
 }
 func TestRleWriter(t *testing.T) {
-	sample := generateSampleData(ScreenHeight * ScreenWidth)
+	sample := generateSampleData(remarkable.ScreenHeight * remarkable.ScreenWidth)
 
 	var buf bytes.Buffer
 	rw := RLE{sub: &buf}
