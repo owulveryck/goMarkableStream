@@ -1,10 +1,11 @@
+//go:build !linux || !arm
+
 package remarkable
 
 import (
-	"log"
 	"os"
 	"syscall"
-	"unsafe"
+	"time"
 
 	"context"
 )
@@ -37,78 +38,21 @@ type EventScanner struct {
 }
 
 func NewEventScanner() *EventScanner {
-	pen, err := os.OpenFile("/dev/input/event1", os.O_RDONLY, 0644)
-	if err != nil {
-		panic(err)
-	}
-	touch, err := os.OpenFile("/dev/input/event2", os.O_RDONLY, 0644)
-	if err != nil {
-		panic(err)
-	}
 	return &EventScanner{
-		pen:    pen,
-		touch:  touch,
 		EventC: make(chan InputEvent),
 	}
 }
 
 func (e *EventScanner) Start(ctx context.Context) {
-	penEvent := make(chan InputEvent)
-	touchEvent := make(chan InputEvent)
-
 	go func(ctx context.Context) {
-		defer close(e.EventC)
-		ctx1, cancel := context.WithCancel(ctx)
-		defer cancel()
-		defer e.pen.Close()
-		defer e.touch.Close()
-		defer close(penEvent)
-		defer close(touchEvent)
-
+		tick := time.NewTicker(4000 * time.Millisecond)
+		defer tick.Stop()
 		for {
 			select {
-			case <-ctx1.Done():
+			case <-ctx.Done():
 				return
-			case evt := <-penEvent:
-				e.EventC <- evt
-			case evt := <-touchEvent:
-				e.EventC <- evt
-			}
-		}
-	}(ctx)
-
-	// Start a goroutine to read events and send them on the channel
-	go func(ctx context.Context) {
-		ctx1, cancel := context.WithCancel(ctx)
-		defer cancel()
-		for {
-			var ev InputEvent
-			_, err := e.pen.Read((*(*[unsafe.Sizeof(ev)]byte)(unsafe.Pointer(&ev)))[:])
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			select {
-			case <-ctx1.Done():
-				return
-			case penEvent <- ev:
-			}
-		}
-	}(ctx)
-	go func(ctx context.Context) {
-		ctx1, cancel := context.WithCancel(ctx)
-		defer cancel()
-		for {
-			var ev InputEvent
-			_, err := e.touch.Read((*(*[unsafe.Sizeof(ev)]byte)(unsafe.Pointer(&ev)))[:])
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			select {
-			case <-ctx1.Done():
-				return
-			case touchEvent <- ev:
+			case <-tick.C:
+				e.EventC <- InputEvent{}
 			}
 		}
 	}(ctx)
