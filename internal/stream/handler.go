@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	rate = 100
+	rate = 200
 )
 
 var imagePool = sync.Pool{

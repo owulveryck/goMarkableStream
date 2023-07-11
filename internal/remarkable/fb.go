@@ -1,20 +1,31 @@
+//go:build !linux || !arm
+
 package remarkable
 
 import (
 	"io"
-	"os"
+	"math/rand"
 )
 
 func GetFileAndPointer() (io.ReaderAt, int64, error) {
-	pid := findXochitlPID()
-	file, err := os.OpenFile("/proc/"+pid+"/mem", os.O_RDONLY, os.ModeDevice)
-	if err != nil {
-		return file, 0, err
-	}
-	pointerAddr, err := getFramePointer(pid)
-	if err != nil {
-		return file, 0, err
-	}
-	return file, pointerAddr, nil
+	return &dummyPicture{}, 0, nil
 
+}
+
+type dummyPicture struct{}
+
+func (dummypicture *dummyPicture) ReadAt(p []byte, off int64) (n int, err error) {
+	for i := 0; i < len(p); i++ {
+		// Generate a random number between 1 and 10
+		num := rand.Intn(10) + 1
+
+		// Set the byte to zero with a probability of 80%
+		if num <= 8 {
+			p[i] = 255
+		} else {
+			// Otherwise, generate a random byte between 1 and 15
+			p[i] = uint8(rand.Intn(15))
+		}
+	}
+	return len(p), nil
 }

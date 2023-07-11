@@ -38,12 +38,12 @@ func setMux() *http.ServeMux {
 
 func runTLS(handler http.Handler) error {
 	// Load the certificate and key from embedded files
-	cert, err := tlsAssets.ReadFile("cert.pem")
+	cert, err := tlsAssets.ReadFile("assets/cert.pem")
 	if err != nil {
 		log.Fatal("Error reading embedded certificate:", err)
 	}
 
-	key, err := tlsAssets.ReadFile("key.pem")
+	key, err := tlsAssets.ReadFile("assets/key.pem")
 	if err != nil {
 		log.Fatal("Error reading embedded key:", err)
 	}
