@@ -6,6 +6,11 @@
 The goMarkableStream is a lightweight and user-friendly application designed specifically for the reMarkable tablet. 
 Its primary goal is to enable users to stream their reMarkable tablet screen to a web browser without the need for any hacks or modifications that could void the warranty.
 
+## Version support
+
+- version <= 0.8.6 are supported on FW up to version 3.4
+- version >= 0.8.6 are supported on FW >= 3.4
+
 ## Features
 
 - No hacks or warranty voiding: The tool operates within the boundaries of the reMarkable tablet's intended functionality and does not require any unauthorized modifications.
@@ -31,15 +36,6 @@ then go to [https://remarkable:2001](https://remarkable:2001) and login with `ad
 _note_: replace _remarkable_ by the IP address if needed.
 
 _note 2_: you can use this to update to a new version (ensure that you killed the previous version before with `kill $(pidof goMarkableStream)`)
-
-### Safari
-
-Safari does not handle the compression mechanism properly.
-To use Safari (or an iOS device), remove the compression:
-
-```bash
-reMarkable: ~/ RK_COMPRESSION=false ./goMarkableStream
-```
 
 ## Technical Details
 
@@ -91,11 +87,9 @@ The application is configured via environment variables:
 ```text
 KEY                    TYPE             DEFAULT     REQUIRED    DESCRIPTION
 RK_SERVER_BIND_ADDR    String           :2001       true        
-RK_SERVER_DEV          True or False    false                   
 RK_SERVER_USERNAME     String           admin                   
 RK_SERVER_PASSWORD     String           password                
 RK_HTTPS               True or False    true                    
-RK_RATE                Integer          200
 ```
 
 ### Compilation
