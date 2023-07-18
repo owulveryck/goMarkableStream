@@ -7,6 +7,7 @@ import (
 	"math/rand"
 )
 
+// GetFileAndPointer finds the filedescriptor of the xochitl process and the pointer address of the virtual framebuffer
 func GetFileAndPointer() (io.ReaderAt, int64, error) {
 	return &dummyPicture{}, 0, nil
 

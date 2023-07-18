@@ -25,6 +25,7 @@ const (
 	evFfSt = 23
 )
 
+// InputEvent is a representation of a mouse movement or a touch movement
 type InputEvent struct {
 	Time  syscall.Timeval
 	Type  uint16
@@ -32,17 +33,20 @@ type InputEvent struct {
 	Value int32
 }
 
+// EventScanner listens to events on input2 and 3 and sends them to the EventC
 type EventScanner struct {
 	pen, touch *os.File
 	EventC     chan InputEvent
 }
 
+// NewEventScanner ...
 func NewEventScanner() *EventScanner {
 	return &EventScanner{
 		EventC: make(chan InputEvent),
 	}
 }
 
+// Start the event scanner and feed the EventC on movement. use the context to end the routine
 func (e *EventScanner) Start(ctx context.Context) {
 	go func(ctx context.Context) {
 		tick := time.NewTicker(4000 * time.Millisecond)

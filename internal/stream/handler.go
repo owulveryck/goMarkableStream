@@ -22,6 +22,7 @@ var imagePool = sync.Pool{
 	},
 }
 
+// NewStreamHandler creates a new stream handler reading from file @pointerAddr
 func NewStreamHandler(file io.ReaderAt, pointerAddr int64) *StreamHandler {
 	return &StreamHandler{
 		ticker:       time.NewTicker(rate * time.Millisecond),
@@ -31,6 +32,7 @@ func NewStreamHandler(file io.ReaderAt, pointerAddr int64) *StreamHandler {
 	}
 }
 
+// StreamHandler is an http.Handler that serves the stream of data to the client
 type StreamHandler struct {
 	ticker       *time.Ticker
 	waitingQueue chan struct{}
@@ -39,6 +41,7 @@ type StreamHandler struct {
 	eventLoop    *remarkable.EventScanner
 }
 
+// ServeHTTP implements http.Handler
 func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	select {
 	case h.waitingQueue <- struct{}{}:

@@ -19,16 +19,25 @@ func pack(value1, value2 uint8) uint8 {
 	return encodedValue
 }
 
+// NewRLE creates a default RLE
 func NewRLE(w io.Writer) *RLE {
 	return &RLE{
 		sub: w,
 	}
 }
 
+// RLE implements an io.Writer that implements the Run Length Encoder
 type RLE struct {
 	sub io.Writer
 }
 
+// Write encodes the data using run-length encoding (RLE) and writes the results to the subwriter.
+//
+// The data parameter is expected to be in the format []uint4, but is passed as []byte.
+// The result is packed before being written to the subwriter. The packing scheme
+// combines the count and value into a single uint8, with the count ranging from 0 to 15.
+//
+// Implements: io.Writer
 func (rlewriter *RLE) Write(data []byte) (n int, err error) {
 	length := len(data)
 	if length == 0 {
