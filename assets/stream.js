@@ -1,6 +1,7 @@
 let rotate = true;  // start with a false boolean
 document.getElementById('rotate').addEventListener('click', function() {
 	rotate  = !rotate;  // toggle the boolean
+	resizeAndCopy();
 });
 
 const sidebar = document.querySelector('.sidebar');

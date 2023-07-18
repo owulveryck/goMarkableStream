@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"crypto/tls"
 	"embed"
 	"flag"
 	"io"
@@ -11,6 +9,8 @@ import (
 	"os"
 
 	"github.com/kelseyhightower/envconfig"
+
+	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 )
 
 type configuration struct {
@@ -23,10 +23,6 @@ type configuration struct {
 }
 
 const (
-	// ScreenWidth of the remarkable 2
-	ScreenWidth = 1872
-	// ScreenHeight of the remarkable 2
-	ScreenHeight = 1404
 	// ConfigPrefix for environment variable based configuration
 	ConfigPrefix = "RK"
 )
@@ -37,18 +33,19 @@ var (
 	// Define the username and password for authentication
 	c configuration
 
-	//go:embed favicon.ico
+	//go:embed assets/favicon.ico
 	favicon []byte
-	//go:embed index.html
+	//go:embed assets/index.html
 	index []byte
-	//go:embed stream.js
+	//go:embed assets/stream.js
 	js []byte
-	//go:embed cert.pem key.pem
+	//go:embed assets/cert.pem assets/key.pem
 	tlsAssets    embed.FS
 	waitingQueue = make(chan struct{}, 2)
 )
 
 func main() {
+	var err error
 
 	ifaces()
 	help := flag.Bool("h", false, "print usage")
@@ -63,7 +60,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var err error
 	if c.Dev {
 		file, err = os.OpenFile("testdata/empty.raw", os.O_RDONLY, os.ModeDevice)
 		if err != nil {
@@ -71,76 +67,19 @@ func main() {
 		}
 		pointerAddr = 0
 	} else {
-		pid := findPid()
-		file, err = os.OpenFile("/proc/"+pid+"/mem", os.O_RDONLY, os.ModeDevice)
-		if err != nil {
-			log.Fatal("cannot open file: ", err)
-		}
-		pointerAddr, err = getPointer(pid)
+		file, pointerAddr, err = remarkable.GetFileAndPointer()
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
+	mux := setMux()
 
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, _ *http.Request) {
-		io.Copy(w, bytes.NewReader(favicon))
-	})
-	mux.HandleFunc("/stream.js", func(w http.ResponseWriter, _ *http.Request) {
-		io.Copy(w, bytes.NewReader(js))
-	})
-	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
-		select {
-		case waitingQueue <- struct{}{}:
-			defer func() {
-				<-waitingQueue
-			}()
-			io.Copy(w, bytes.NewReader(index))
-		default:
-			http.Error(w, "too many requests", http.StatusTooManyRequests)
-			return
-		}
-	})
-	mux.HandleFunc("/stream", handleStream)
 	handler := BasicAuthMiddleware(mux)
 	if *unsafe {
 		handler = mux
 	}
 	if c.TLS {
-		// Load the certificate and key from embedded files
-		cert, err := tlsAssets.ReadFile("cert.pem")
-		if err != nil {
-			log.Fatal("Error reading embedded certificate:", err)
-		}
-
-		key, err := tlsAssets.ReadFile("key.pem")
-		if err != nil {
-			log.Fatal("Error reading embedded key:", err)
-		}
-
-		certPair, err := tls.X509KeyPair(cert, key)
-		if err != nil {
-			log.Fatal("Error creating X509 key pair:", err)
-		}
-
-		config := &tls.Config{
-			Certificates:       []tls.Certificate{certPair},
-			InsecureSkipVerify: true,
-		}
-
-		// Create the server
-		server := &http.Server{
-			Addr:      c.BindAddr,
-			TLSConfig: config,
-			Handler:   handler,
-		}
-
-		// Start the server
-		err = server.ListenAndServeTLS("", "")
-		if err != nil {
-			log.Fatal("HTTP server error:", err)
-		}
+		log.Fatal(runTLS(handler))
 	}
 	log.Fatal(http.ListenAndServe(c.BindAddr, handler))
 }
