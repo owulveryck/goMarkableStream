@@ -8,7 +8,7 @@ Its primary goal is to enable users to stream their reMarkable tablet screen to 
 
 ## Version support
 
-- version <= 0.8.6 are supported on FW up to version 3.4
+- version < 0.8.6 are supported on FW < 3.4
 - version >= 0.8.6 are supported on FW >= 3.4
 
 ## Features
