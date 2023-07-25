@@ -31,9 +31,9 @@ curl -L -s https://github.com/owulveryck/goMarkableStream/releases/download/$GOR
 ./goMarkableStream
 ```
 
-then go to [https://remarkable:2001](https://remarkable:2001) and login with `admin`/`password` (can be changed through environment variables or disable authentication with `-unsafe`)
+then go to [https://remarkable.local.:2001](https://remarkable.local.:2001) and login with `admin`/`password` (can be changed through environment variables or disable authentication with `-unsafe`)
 
-_note_: replace _remarkable_ by the IP address if needed.
+_note_: _remarkable.local._ may work from apple devices (mDNS resolution). Please note the `.` at the end. If it does not work, you may need to replace `remarkable.local.` by the IP address of the tablet.
 
 _note 2_: you can use this to update to a new version (ensure that you killed the previous version before with `kill $(pidof goMarkableStream)`)
 
