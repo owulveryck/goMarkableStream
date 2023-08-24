@@ -17,6 +17,7 @@ type configuration struct {
 	Username string `envconfig:"SERVER_USERNAME" default:"admin"`
 	Password string `envconfig:"SERVER_PASSWORD" default:"password"`
 	TLS      bool   `envconfig:"HTTPS" default:"true"`
+	DevMode  bool   `envconfig:"DEV_MODE" default:"false"`
 }
 
 const (
