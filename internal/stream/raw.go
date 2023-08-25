@@ -24,8 +24,8 @@ type RawHandler struct {
 
 // ServeHTTP implements http.Handler
 func (h *RawHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	imageData := imagePool.Get().([]uint8)
-	defer imagePool.Put(imageData) // Return the slice to the pool when done
+	imageData := rawFrameBuffer.Get().([]uint8)
+	defer rawFrameBuffer.Put(imageData) // Return the slice to the pool when done
 	_, err := h.file.ReadAt(imageData, h.pointerAddr)
 	if err != nil {
 		log.Fatal(err)

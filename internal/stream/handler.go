@@ -9,16 +9,15 @@ import (
 	"time"
 
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
-	"github.com/owulveryck/goMarkableStream/internal/rle"
 )
 
 const (
 	rate = 200
 )
 
-var imagePool = sync.Pool{
+var rawFrameBuffer = sync.Pool{
 	New: func() any {
-		return make([]uint8, remarkable.ScreenWidth*remarkable.ScreenHeight) // Adjust the initial capacity as needed
+		return make([]uint8, remarkable.ScreenWidth*remarkable.ScreenHeight*2) // Adjust the initial capacity as needed
 	},
 }
 
@@ -61,10 +60,10 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.ticker.Reset(rate * time.Millisecond)
 		defer h.ticker.Stop()
 
-		imageData := imagePool.Get().([]uint8)
-		defer imagePool.Put(imageData) // Return the slice to the pool when done
+		imageData := rawFrameBuffer.Get().([]uint8)
+		defer rawFrameBuffer.Put(imageData) // Return the slice to the pool when done
 		// the informations are int4, therefore store it in a uint8array to reduce data transfer
-		rleWriter := rle.NewRLE(w)
+		//rleWriter := rle.NewRLE(w)
 		writing := true
 		stopWriting := time.NewTicker(2 * time.Second)
 		defer stopWriting.Stop()
@@ -84,7 +83,8 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					if err != nil {
 						log.Fatal(err)
 					}
-					rleWriter.Write(imageData)
+					ooot := &oneOutOfTwo{w}
+					ooot.Write(imageData)
 				}
 			}
 		}

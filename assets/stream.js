@@ -170,40 +170,40 @@ async function initiateStream() {
 				// Assuming each pixel is represented by 4 bytes (RGBA)
 				var uint8Array = new Uint8Array(value);
 				for (let i = 0; i < uint8Array.length; i++) {
-					const [count, value] = unpackValues(uint8Array[i]);
-					for (let c=0;c<count;c++) {
-						switch (value) {
-							case 5:
-								imageData.data[offset+c*4] = 255;
-								imageData.data[offset+c*4+1] = 0;
-								imageData.data[offset+c*4+2] = 0;
-								imageData.data[offset+c*4+3] = 255;
-								break;
-							case 9:
-								imageData.data[offset+c*4] = 0;
-								imageData.data[offset+c*4+1] = 0;
-								imageData.data[offset+c*4+2] = 255;
-								imageData.data[offset+c*4+3] = 255;
-								break;
-							case 11:
-								imageData.data[offset+c*4] = 125;
-								imageData.data[offset+c*4+1] = 184;
-								imageData.data[offset+c*4+2] = 86;
-								imageData.data[offset+c*4+3] = 255;
-								break;
-							case 13:
-								imageData.data[offset+c*4] = 255;
-								imageData.data[offset+c*4+1] = 253;
-								imageData.data[offset+c*4+2] = 84;
-								imageData.data[offset+c*4+3] = 255;
-								break;
-							default:
-								imageData.data[offset+c*4] = value * 17;
-								imageData.data[offset+c*4+1] = value * 17;
-								imageData.data[offset+c*4+2] = value * 17;
-								imageData.data[offset+c*4+3] = 255;
-								break;
-						}
+					const value = uint8Array[i];
+					const c=0;
+					const count=1;
+					switch (value) {
+						case 5:
+							imageData.data[offset+c*4] = 255;
+							imageData.data[offset+c*4+1] = 0;
+							imageData.data[offset+c*4+2] = 0;
+							imageData.data[offset+c*4+3] = 255;
+							break;
+						case 9:
+							imageData.data[offset+c*4] = 0;
+							imageData.data[offset+c*4+1] = 0;
+							imageData.data[offset+c*4+2] = 255;
+							imageData.data[offset+c*4+3] = 255;
+							break;
+						case 11:
+							imageData.data[offset+c*4] = 125;
+							imageData.data[offset+c*4+1] = 184;
+							imageData.data[offset+c*4+2] = 86;
+							imageData.data[offset+c*4+3] = 255;
+							break;
+						case 13:
+							imageData.data[offset+c*4] = 255;
+							imageData.data[offset+c*4+1] = 253;
+							imageData.data[offset+c*4+2] = 84;
+							imageData.data[offset+c*4+3] = 255;
+							break;
+						default:
+							imageData.data[offset+c*4] = value * 17;
+							imageData.data[offset+c*4+1] = value * 17;
+							imageData.data[offset+c*4+2] = value * 17;
+							imageData.data[offset+c*4+3] = 255;
+							break;
 					}
 					offset += (count*4);
 
