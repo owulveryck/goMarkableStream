@@ -27,7 +27,7 @@ localhost> ssh root@remarkable
 ```bash
 export GORKVERSION=$(curl -s https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
 curl -L -s https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/goMarkableStream_${GORKVERSION//v}_linux_arm.tar.gz | tar xzvf - -O goMarkableStream_${GORKVERSION//v}_linux_arm/goMarkableStream > goMarkableStream
-~/ chmod+x goMarkableStream
+~/ chmod +x goMarkableStream
 ./goMarkableStream
 ```
 
