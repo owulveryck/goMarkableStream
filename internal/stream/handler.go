@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
+	"github.com/owulveryck/goMarkableStream/internal/rle"
 )
 
 const (
@@ -60,10 +61,11 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.ticker.Reset(rate * time.Millisecond)
 		defer h.ticker.Stop()
 
-		imageData := rawFrameBuffer.Get().([]uint8)
-		defer rawFrameBuffer.Put(imageData) // Return the slice to the pool when done
+		rawData := rawFrameBuffer.Get().([]uint8)
+		defer rawFrameBuffer.Put(rawData) // Return the slice to the pool when done
 		// the informations are int4, therefore store it in a uint8array to reduce data transfer
-		//rleWriter := rle.NewRLE(w)
+		rleWriter := rle.NewRLE(w)
+		extractor := &oneOutOfTwo{rleWriter}
 		writing := true
 		stopWriting := time.NewTicker(2 * time.Second)
 		defer stopWriting.Stop()
@@ -79,12 +81,11 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				writing = false
 			case <-h.ticker.C:
 				if writing {
-					_, err := h.file.ReadAt(imageData, h.pointerAddr)
+					_, err := h.file.ReadAt(rawData, h.pointerAddr)
 					if err != nil {
 						log.Fatal(err)
 					}
-					ooot := &oneOutOfTwo{w}
-					ooot.Write(imageData)
+					extractor.Write(rawData)
 				}
 			}
 		}

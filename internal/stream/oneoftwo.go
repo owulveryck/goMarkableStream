@@ -17,12 +17,20 @@ type oneOutOfTwo struct {
 	w io.Writer
 }
 
-func (oneoutoftwo *oneOutOfTwo) Write(p []byte) (n int, err error) {
+func (oneoutoftwo *oneOutOfTwo) Write(src []byte) (n int, err error) {
 	imageData := imagePool.Get().([]uint8)
 	defer imagePool.Put(imageData) // Return the slice to the pool when done
-	for i := 0; i < len(p); i += 2 {
-		imageData[i/2] = p[i]
-	}
+	unflipAndExtract(src, imageData, remarkable.ScreenWidth, remarkable.ScreenHeight)
 	n, err = oneoutoftwo.w.Write(imageData)
 	return
+}
+
+func unflipAndExtract(src, dst []uint8, w, h int) {
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			srcIndex := (y*w + x) * 2 // every second byte is useful
+			dstIndex := (h-y-1)*w + x // unflip position
+			dst[dstIndex] = src[srcIndex]
+		}
+	}
 }
