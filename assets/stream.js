@@ -13,7 +13,7 @@ sidebar.addEventListener('mouseover', function() {
 sidebar.addEventListener('mouseout', function() {
 	sidebar.classList.remove('active');
 });
-
+console.log("hello");
 
 // Use the fixed-size canvas context to draw on the canvas
 var fixedCanvas = document.getElementById("fixedCanvas");
@@ -173,26 +173,27 @@ async function initiateStream() {
 					const value = uint8Array[i];
 					const c=0;
 					const count=1;
+					// map[0:14227 2:27 4:20 6:18 8:782 10:9194 12:14 14:21 16:23 18:15672 20:4337 22:4861 24:10532 26:3786 28:23 30:2564751]
 					switch (value) {
-						case 5:
+						case 10: // red
 							imageData.data[offset+c*4] = 255;
 							imageData.data[offset+c*4+1] = 0;
 							imageData.data[offset+c*4+2] = 0;
 							imageData.data[offset+c*4+3] = 255;
 							break;
-						case 9:
+						case 18: // blue
 							imageData.data[offset+c*4] = 0;
 							imageData.data[offset+c*4+1] = 0;
 							imageData.data[offset+c*4+2] = 255;
 							imageData.data[offset+c*4+3] = 255;
 							break;
-						case 11:
+						case 20: // green
 							imageData.data[offset+c*4] = 125;
 							imageData.data[offset+c*4+1] = 184;
 							imageData.data[offset+c*4+2] = 86;
 							imageData.data[offset+c*4+3] = 255;
 							break;
-						case 13:
+						case 24: // yellow
 							imageData.data[offset+c*4] = 255;
 							imageData.data[offset+c*4+1] = 253;
 							imageData.data[offset+c*4+2] = 84;
