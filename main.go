@@ -59,6 +59,7 @@ func main() {
 	}
 
 	file, pointerAddr, err = remarkable.GetFileAndPointer()
+	pointerAddr = pointerAddr + 8
 	if err != nil {
 		log.Fatal(err)
 	}
