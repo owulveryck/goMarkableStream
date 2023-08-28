@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	rate = 200
+	rate = 100
 )
 
 var rawFrameBuffer = sync.Pool{
@@ -69,6 +69,8 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writing := true
 		stopWriting := time.NewTicker(2 * time.Second)
 		defer stopWriting.Stop()
+
+		w.Header().Set("Content-Type", "application/octet-stream")
 
 		for {
 			select {

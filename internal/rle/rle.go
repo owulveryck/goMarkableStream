@@ -39,26 +39,29 @@ type RLE struct {
 //
 // Implements: io.Writer
 func (rlewriter *RLE) Write(data []byte) (n int, err error) {
-	length := len(data)
-	if length == 0 {
-		return 0, nil
-	}
-	encoded := encodedPool.Get().([]uint8) // Borrow a slice from the pool
-	defer encodedPool.Put(encoded)
+	return rlewriter.sub.Write(data)
+	/*
+			length := len(data)
+			if length == 0 {
+				return 0, nil
+			}
+			encoded := encodedPool.Get().([]uint8) // Borrow a slice from the pool
+			defer encodedPool.Put(encoded)
 
-	current := data[0]
-	count := -1
+			current := data[0]
+			count := -1
 
-	for _, datum := range data {
-		if count < 15 && datum == current {
-			count++
-		} else {
+			for _, datum := range data {
+				if count < 15 && datum == current {
+					count++
+				} else {
+					encoded = append(encoded, pack(uint8(count), current))
+					current = datum
+					count = 0
+				}
+			}
+
 			encoded = append(encoded, pack(uint8(count), current))
-			current = datum
-			count = 0
-		}
-	}
-
-	encoded = append(encoded, pack(uint8(count), current))
-	return rlewriter.sub.Write(encoded)
+		return rlewriter.sub.Write(encoded)
+	*/
 }

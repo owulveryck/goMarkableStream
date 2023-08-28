@@ -1,11 +1,13 @@
 package main
 
 import (
+	"compress/gzip"
 	"embed"
 	"flag"
 	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/kelseyhightower/envconfig"
 
@@ -65,7 +67,7 @@ func main() {
 	}
 	mux := setMux()
 
-	handler := BasicAuthMiddleware(mux)
+	handler := BasicAuthMiddleware(gzMiddleware(mux))
 	if *unsafe {
 		handler = mux
 	}
@@ -73,4 +75,27 @@ func main() {
 		log.Fatal(runTLS(handler))
 	}
 	log.Fatal(http.ListenAndServe(c.BindAddr, handler))
+}
+
+type gzipResponseWriter struct {
+	io.Writer
+	http.ResponseWriter
+}
+
+func (w gzipResponseWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
+
+func gzMiddleware(fn http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			fn.ServeHTTP(w, r)
+			return
+		}
+		w.Header().Set("Content-Encoding", "gzip")
+		gz, _ := gzip.NewWriterLevel(w, 1)
+		defer gz.Close()
+		gzr := gzipResponseWriter{Writer: gz, ResponseWriter: w}
+		fn.ServeHTTP(gzr, r)
+	}
 }

@@ -10,7 +10,8 @@ import (
 )
 
 func main() {
-	testdata := "../testdata/full_memory_region.raw"
+	//testdata := "../testdata/full_memory_region.raw"
+	testdata := "../testdata/blue.raw"
 	stats, _ := os.Stat(testdata)
 	f, err := os.Open(testdata)
 	if err != nil {
