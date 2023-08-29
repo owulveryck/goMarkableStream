@@ -156,6 +156,8 @@ async function initiateStream() {
 
 
 		var offset = 0;
+		var count = 0;
+		var value = 0;
 
 
 		// Define a function to process the chunks of data as they arrive
@@ -169,9 +171,15 @@ async function initiateStream() {
 				// Process the received data chunk
 				// Assuming each pixel is represented by 4 bytes (RGBA)
 				var uint8Array = new Uint8Array(value);
-				for (let i = 0; i < uint8Array.length; i+=2) {
-					const count = uint8Array[i]+1;
-					const value = uint8Array[i+1];
+
+				for (let i = 0; i < uint8Array.length; i++) {
+					// if no count, then it is a count
+					if (count === 0) {
+						count = uint8Array[i];
+						continue;
+					}
+					// if we have a count, it is a value...
+					const value = uint8Array[i];
 					for (let c=0;c<count;c++) {
 						offset += 4;
 						switch (value) {
@@ -207,17 +215,18 @@ async function initiateStream() {
 								break;
 						}
 					}
-						if (offset >= fixedCanvas.height*fixedCanvas.width*4) {
+					// value is treated, wait for a count
+					count = 0;
+					if (offset >= fixedCanvas.height*fixedCanvas.width*4) {
 
-							offset = 0;
-							// Display the ImageData on the canvas
-							fixedContext.putImageData(imageData, 0, 0);
+						offset = 0;
+						// Display the ImageData on the canvas
+						fixedContext.putImageData(imageData, 0, 0);
 
-							copyCanvasContent();
-						}
-
+						copyCanvasContent();
 					}
-				
+
+				}
 
 				// Read the next chunk
 				const nextChunk = await reader.read();
