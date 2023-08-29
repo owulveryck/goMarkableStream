@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	rate = 100
+	rate = 200
 )
 
 var rawFrameBuffer = sync.Pool{
@@ -72,26 +72,25 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Set("Content-Type", "application/octet-stream")
 
-		//		for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-h.eventLoop.EventC:
-			writing = true
-			stopWriting.Reset(2 * time.Second)
-		case <-stopWriting.C:
-			writing = false
-		case <-h.ticker.C:
-			if writing {
-				_, err := h.file.ReadAt(rawData, h.pointerAddr)
-				if err != nil {
-					log.Fatal(err)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-h.eventLoop.EventC:
+				writing = true
+				stopWriting.Reset(2 * time.Second)
+			case <-stopWriting.C:
+				writing = false
+			case <-h.ticker.C:
+				if writing {
+					_, err := h.file.ReadAt(rawData, h.pointerAddr)
+					if err != nil {
+						log.Fatal(err)
+					}
+					extractor.Write(rawData)
 				}
-				n, err := extractor.Write(rawData)
-				log.Printf("written %v bytes with error %v", n, err)
 			}
 		}
-		//		}
 	default:
 		http.Error(w, "too many requests", http.StatusTooManyRequests)
 		return

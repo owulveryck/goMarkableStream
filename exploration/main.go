@@ -10,8 +10,10 @@ import (
 )
 
 func main() {
+	palette := make(map[uint8]int64)
+	spectre := make(map[uint8]int64)
 	//testdata := "../testdata/full_memory_region.raw"
-	testdata := "../testdata/blue.raw"
+	testdata := "../testdata/multi.raw"
 	stats, _ := os.Stat(testdata)
 	f, err := os.Open(testdata)
 	if err != nil {
@@ -40,6 +42,14 @@ func main() {
 	w := remarkable.ScreenWidth
 	h := remarkable.ScreenHeight
 	unflipAndExtract(picture, img.Pix, w, h)
+	for i := 0; i < len(picture); i += 2 {
+		spectre[picture[i]]++
+	}
+	for _, v := range img.Pix {
+		palette[v]++
+	}
+	log.Println(spectre)
+	log.Println(palette)
 
 	png.Encode(os.Stdout, img)
 }
@@ -48,7 +58,7 @@ func unflipAndExtract(src, dst []uint8, w, h int) {
 		for x := 0; x < w; x++ {
 			srcIndex := (y*w + x) * 2 // every second byte is useful
 			dstIndex := (h-y-1)*w + x // unflip position
-			dst[dstIndex] = src[srcIndex] << 4
+			dst[dstIndex] = src[srcIndex] * 17
 		}
 	}
 }
