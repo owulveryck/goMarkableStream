@@ -17,6 +17,7 @@ type configuration struct {
 	Username string `envconfig:"SERVER_USERNAME" default:"admin"`
 	Password string `envconfig:"SERVER_PASSWORD" default:"password"`
 	TLS      bool   `envconfig:"HTTPS" default:"true"`
+	DevMode  bool   `envconfig:"DEV_MODE" default:"false"`
 }
 
 const (
@@ -58,11 +59,13 @@ func main() {
 	}
 
 	file, pointerAddr, err = remarkable.GetFileAndPointer()
+	pointerAddr = pointerAddr + 8
 	if err != nil {
 		log.Fatal(err)
 	}
 	mux := setMux()
 
+	//	handler := BasicAuthMiddleware(gzMiddleware(mux))
 	handler := BasicAuthMiddleware(mux)
 	if *unsafe {
 		handler = mux

@@ -156,6 +156,8 @@ async function initiateStream() {
 
 
 		var offset = 0;
+		var count = 0;
+		var value = 0;
 
 
 		// Define a function to process the chunks of data as they arrive
@@ -169,51 +171,61 @@ async function initiateStream() {
 				// Process the received data chunk
 				// Assuming each pixel is represented by 4 bytes (RGBA)
 				var uint8Array = new Uint8Array(value);
+
 				for (let i = 0; i < uint8Array.length; i++) {
-					const [count, value] = unpackValues(uint8Array[i]);
+					// if no count, then it is a count
+					if (count === 0) {
+						count = uint8Array[i];
+						continue;
+					}
+					// if we have a count, it is a value...
+					const value = uint8Array[i];
 					for (let c=0;c<count;c++) {
+						offset += 4;
 						switch (value) {
-							case 5:
-								imageData.data[offset+c*4] = 255;
-								imageData.data[offset+c*4+1] = 0;
-								imageData.data[offset+c*4+2] = 0;
-								imageData.data[offset+c*4+3] = 255;
+							case 10: // red
+								imageData.data[offset] = 255;
+								imageData.data[offset+1] = 0;
+								imageData.data[offset+2] = 0;
+								imageData.data[offset+3] = 255;
 								break;
-							case 9:
-								imageData.data[offset+c*4] = 0;
-								imageData.data[offset+c*4+1] = 0;
-								imageData.data[offset+c*4+2] = 255;
-								imageData.data[offset+c*4+3] = 255;
+							case 18: // blue
+								imageData.data[offset] = 0;
+								imageData.data[offset+1] = 0;
+								imageData.data[offset+2] = 255;
+								imageData.data[offset+3] = 255;
 								break;
-							case 11:
-								imageData.data[offset+c*4] = 125;
-								imageData.data[offset+c*4+1] = 184;
-								imageData.data[offset+c*4+2] = 86;
-								imageData.data[offset+c*4+3] = 255;
+							case 20: // green
+								imageData.data[offset] = 125;
+								imageData.data[offset+1] = 184;
+								imageData.data[offset+2] = 86;
+								imageData.data[offset+3] = 255;
 								break;
-							case 13:
-								imageData.data[offset+c*4] = 255;
-								imageData.data[offset+c*4+1] = 253;
-								imageData.data[offset+c*4+2] = 84;
-								imageData.data[offset+c*4+3] = 255;
+							case 24: // yellow
+								imageData.data[offset] = 255;
+								imageData.data[offset+1] = 253;
+								imageData.data[offset+2] = 84;
+								imageData.data[offset+3] = 255;
 								break;
 							default:
-								imageData.data[offset+c*4] = value * 17;
-								imageData.data[offset+c*4+1] = value * 17;
-								imageData.data[offset+c*4+2] = value * 17;
-								imageData.data[offset+c*4+3] = 255;
+								imageData.data[offset] = value * 17;
+								imageData.data[offset+1] = value * 17;
+								imageData.data[offset+2] = value * 17;
+								imageData.data[offset+3] = 255;
 								break;
 						}
 					}
-					offset += (count*4);
-
+					// value is treated, wait for a count
+					count = 0;
 					if (offset >= fixedCanvas.height*fixedCanvas.width*4) {
+
 						offset = 0;
 						// Display the ImageData on the canvas
 						fixedContext.putImageData(imageData, 0, 0);
 
 						copyCanvasContent();
 					}
+
 				}
 
 				// Read the next chunk

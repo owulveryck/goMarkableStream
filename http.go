@@ -33,6 +33,10 @@ func setMux() *http.ServeMux {
 	})
 	streanHandler := stream.NewStreamHandler(file, pointerAddr)
 	mux.Handle("/stream", streanHandler)
+	if c.DevMode {
+		rawHandler := stream.NewRawHandler(file, pointerAddr)
+		mux.Handle("/raw", rawHandler)
+	}
 	return mux
 }
 

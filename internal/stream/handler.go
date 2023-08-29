@@ -16,9 +16,9 @@ const (
 	rate = 200
 )
 
-var imagePool = sync.Pool{
+var rawFrameBuffer = sync.Pool{
 	New: func() any {
-		return make([]uint8, remarkable.ScreenWidth*remarkable.ScreenHeight) // Adjust the initial capacity as needed
+		return make([]uint8, remarkable.ScreenWidth*remarkable.ScreenHeight*2) // Adjust the initial capacity as needed
 	},
 }
 
@@ -61,13 +61,16 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.ticker.Reset(rate * time.Millisecond)
 		defer h.ticker.Stop()
 
-		imageData := imagePool.Get().([]uint8)
-		defer imagePool.Put(imageData) // Return the slice to the pool when done
+		rawData := rawFrameBuffer.Get().([]uint8)
+		defer rawFrameBuffer.Put(rawData) // Return the slice to the pool when done
 		// the informations are int4, therefore store it in a uint8array to reduce data transfer
 		rleWriter := rle.NewRLE(w)
+		extractor := &oneOutOfTwo{rleWriter}
 		writing := true
 		stopWriting := time.NewTicker(2 * time.Second)
 		defer stopWriting.Stop()
+
+		w.Header().Set("Content-Type", "application/octet-stream")
 
 		for {
 			select {
@@ -80,11 +83,11 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				writing = false
 			case <-h.ticker.C:
 				if writing {
-					_, err := h.file.ReadAt(imageData, h.pointerAddr)
+					_, err := h.file.ReadAt(rawData, h.pointerAddr)
 					if err != nil {
 						log.Fatal(err)
 					}
-					rleWriter.Write(imageData)
+					extractor.Write(rawData)
 				}
 			}
 		}
