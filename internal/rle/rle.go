@@ -13,12 +13,6 @@ var encodedPool = sync.Pool{
 	},
 }
 
-func pack(value1, value2 uint8) uint8 {
-	// Shift the first value by 4 bits and OR it with the second value
-	encodedValue := (value1 << 4) | value2
-	return encodedValue
-}
-
 // NewRLE creates a default RLE
 func NewRLE(w io.Writer) *RLE {
 	return &RLE{
@@ -39,9 +33,6 @@ type RLE struct {
 //
 // Implements: io.Writer
 func (rlewriter *RLE) Write(data []byte) (n int, err error) {
-	/*
-		return rlewriter.sub.Write(data)
-	*/
 	length := len(data)
 	if length == 0 {
 		return 0, nil
@@ -50,7 +41,6 @@ func (rlewriter *RLE) Write(data []byte) (n int, err error) {
 	defer encodedPool.Put(encoded)
 
 	current := data[0]
-	total := 0
 	count := -1
 
 	for _, datum := range data {
@@ -59,8 +49,6 @@ func (rlewriter *RLE) Write(data []byte) (n int, err error) {
 		} else {
 			encoded = append(encoded, uint8(count))
 			encoded = append(encoded, uint8(current))
-			//			encoded = append(encoded, pack(uint8(count), current))
-			total += count + 1
 			current = datum
 			count = 0
 		}
@@ -68,7 +56,6 @@ func (rlewriter *RLE) Write(data []byte) (n int, err error) {
 
 	encoded = append(encoded, uint8(count))
 	encoded = append(encoded, uint8(current))
-	//encoded = append(encoded, pack(uint8(count), current))
 
 	n, err = rlewriter.sub.Write(encoded)
 	return
