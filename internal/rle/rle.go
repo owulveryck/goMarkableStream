@@ -41,16 +41,16 @@ func (rlewriter *RLE) Write(data []byte) (n int, err error) {
 	defer encodedPool.Put(encoded)
 
 	current := data[0]
-	count := -1
+	count := 0
 
 	for _, datum := range data {
-		if count < 255 && datum == current {
+		if count < 254 && datum == current {
 			count++
 		} else {
 			encoded = append(encoded, uint8(count))
 			encoded = append(encoded, uint8(current))
 			current = datum
-			count = 0
+			count = 1
 		}
 	}
 
