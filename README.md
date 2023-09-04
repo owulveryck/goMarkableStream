@@ -8,9 +8,9 @@ Its primary goal is to enable users to stream their reMarkable tablet screen to 
 
 ## Version support
 
-- version < 0.8.6 are supported on FW < 3.4
-- version >= 0.8.6 are supported on 3.6 > FW >= 3.4
-- version >= 0.11.0 are supported on FW >= 3.6
+- reMarkable with firmware < 3.4 may use goMarkableStream version < 0.8.6
+- reMarkable with firmware >= 3.4 and < 3.6 may use version >= 0.8.6 and < 0.11.0
+- reMarkable with firmware >= 3.6 may use version >= 0.11.0
 
 ## Features
 
@@ -25,10 +25,21 @@ Its primary goal is to enable users to stream their reMarkable tablet screen to 
 localhost> ssh root@remarkable
 ```
 
+For version >= 3.6 
+
+```bash
+export GORKVERSION=$(wget -q -O - https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
+wget -q -O - https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/goMarkableStream_${GORKVERSION//v}_linux_arm.tar.gz | tar xzvf - -O goMarkableStream_${GORKVERSION//v}_linux_arm/goMarkableStream > goMarkableStream
+chmod +x goMarkableStream
+./goMarkableStream
+```
+
+for version < 3.6
+
 ```bash
 export GORKVERSION=$(curl -s https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
 curl -L -s https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/goMarkableStream_${GORKVERSION//v}_linux_arm.tar.gz | tar xzvf - -O goMarkableStream_${GORKVERSION//v}_linux_arm/goMarkableStream > goMarkableStream
-~/ chmod +x goMarkableStream
+~/chmod +x goMarkableStream
 ./goMarkableStream
 ```
 
