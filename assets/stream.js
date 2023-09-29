@@ -179,7 +179,7 @@ async function initiateStream() {
 						continue;
 					}
 					// if we have a count, it is a value...
-					const value = uint8Array[i];
+						const value = uint8Array[i];
 					for (let c=0;c<count;c++) {
 						offset += 4;
 						switch (value) {
@@ -255,5 +255,66 @@ async function initiateStream() {
 	}
 }
 
+let mediaRecorder;
+let recordedChunks = [];
+function startRecording() {
+	console.log("recording in progress");
+	let stream = fixedCanvas.captureStream(25); // 25 fps
+
+	mediaRecorder = new MediaRecorder(stream, {
+		mimeType: 'video/webm;codecs=vp9'
+	});
+
+	mediaRecorder.ondataavailable = function(event) {
+		if (event.data.size > 0) {
+			recordedChunks.push(event.data);
+		}
+	};
+
+	mediaRecorder.onstop = function() {
+		download();
+	};
+
+	mediaRecorder.start();
+}
+
+function stopRecording() {
+	mediaRecorder.stop();
+}
+
+function download() {
+	let blob = new Blob(recordedChunks, {
+		type: 'video/webm'
+	});
+
+	let url = URL.createObjectURL(blob);
+	let a = document.createElement('a');
+	a.style.display = 'none';
+	a.href = url;
+	a.download = 'goMarkableStreamRecording.webm';
+	document.body.appendChild(a);
+	a.click();
+	setTimeout(() => {
+		document.body.removeChild(a);
+		window.URL.revokeObjectURL(url);
+	}, 100);
+}
+
+document.getElementById('startStopButton').addEventListener('click', function() {
+    let icon = document.getElementById('icon');
+    let label = document.getElementById('label');
+
+	
+    if (label.textContent === 'Record') {
+        label.textContent = 'Stop';
+        icon.classList.add('recording');
+		startRecording();
+    } else {
+        label.textContent = 'Record';
+        icon.classList.remove('recording');
+		stopRecording();
+    }
+});
 initiateStream();
+
 
