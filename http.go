@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"io"
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/owulveryck/goMarkableStream/internal/stream"
@@ -40,7 +41,7 @@ func setMux() *http.ServeMux {
 	return mux
 }
 
-func runTLS(handler http.Handler) error {
+func runTLS(l net.Listener, handler http.Handler) error {
 	// Load the certificate and key from embedded files
 	cert, err := tlsAssets.ReadFile("assets/cert.pem")
 	if err != nil {
@@ -62,13 +63,8 @@ func runTLS(handler http.Handler) error {
 		InsecureSkipVerify: true,
 	}
 
-	// Create the server
-	server := &http.Server{
-		Addr:      c.BindAddr,
-		TLSConfig: config,
-		Handler:   handler,
-	}
+	tlsListener := tls.NewListener(l, config)
 
 	// Start the server
-	return server.ListenAndServeTLS("", "")
+	return http.Serve(tlsListener, handler)
 }

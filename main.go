@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"flag"
 	"io"
@@ -70,8 +71,13 @@ func main() {
 	if *unsafe {
 		handler = mux
 	}
-	if c.TLS {
-		log.Fatal(runTLS(handler))
+	l, err := setupListener(context.Background(), &c)
+	if err != nil {
+		log.Fatal(err)
 	}
-	log.Fatal(http.ListenAndServe(c.BindAddr, handler))
+	log.Printf("listening on %v", l.Addr())
+	if c.TLS {
+		log.Fatal(runTLS(l, handler))
+	}
+	log.Fatal(http.Serve(l, handler))
 }
