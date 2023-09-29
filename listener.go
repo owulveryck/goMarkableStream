@@ -15,6 +15,7 @@ func setupListener(ctx context.Context, s *configuration) (net.Listener, error) 
 			ngrok.WithAuthtokenFromEnv(),
 		)
 		s.BindAddr = l.Addr().String()
+		c.TLS = false
 		return l, err
 	}
 	return net.Listen("tcp", s.BindAddr)

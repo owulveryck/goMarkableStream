@@ -38,6 +38,20 @@ _note_: _remarkable.local._ may work from apple devices (mDNS resolution). Pleas
 
 _note 2_: you can use this to update to a new version (ensure that you killed the previous version before with `kill $(pidof goMarkableStream)`)
 
+## ngrok builtin
+
+If your reMarkable is on a different network than the displaying device, you can use the `ngrok` builtin feature for automatic tunneling.
+To utilize this tunneling, you need to sign up for an ngrok account and [obtain a token from the dashboard](https://dashboard.ngrok.com/get-started/your-authtoken).
+Once you have the token, launch reMarkable using the following command:
+
+`NGROK_AUTHTOKEN=YOURTOKEN RK_SERVER_BIND_ADDR=ngrok ./goMarkableStream`
+
+The app will start, displaying a message similar to:
+
+`2023/09/29 16:49:20 listening on 72e5-22-159-32-48.ngrok-free.app` 
+
+Then, connect to `https://72e5-22-159-32-48.ngrok-free.app` to view the result.
+
 ## Technical Details
 
 ### Remarkable HTTP Server
