@@ -1,4 +1,5 @@
 let rotate = true;  // start with a false boolean
+let withColor = true;  // start with a false boolean
 document.getElementById('rotate').addEventListener('click', function() {
 	rotate  = !rotate;  // toggle the boolean
 	resizeAndCopy();
@@ -179,40 +180,47 @@ async function initiateStream() {
 						continue;
 					}
 					// if we have a count, it is a value...
-						const value = uint8Array[i];
+					const value = uint8Array[i];
 					for (let c=0;c<count;c++) {
 						offset += 4;
-						switch (value) {
-							case 10: // red
-								imageData.data[offset] = 255;
-								imageData.data[offset+1] = 0;
-								imageData.data[offset+2] = 0;
-								imageData.data[offset+3] = 255;
-								break;
-							case 18: // blue
-								imageData.data[offset] = 0;
-								imageData.data[offset+1] = 0;
-								imageData.data[offset+2] = 255;
-								imageData.data[offset+3] = 255;
-								break;
-							case 20: // green
-								imageData.data[offset] = 125;
-								imageData.data[offset+1] = 184;
-								imageData.data[offset+2] = 86;
-								imageData.data[offset+3] = 255;
-								break;
-							case 24: // yellow
-								imageData.data[offset] = 255;
-								imageData.data[offset+1] = 253;
-								imageData.data[offset+2] = 84;
-								imageData.data[offset+3] = 255;
-								break;
-							default:
-								imageData.data[offset] = value * 17;
-								imageData.data[offset+1] = value * 17;
-								imageData.data[offset+2] = value * 17;
-								imageData.data[offset+3] = 255;
-								break;
+						if (withColor) {
+							switch (value) {
+								case 10: // red
+									imageData.data[offset] = 255;
+									imageData.data[offset+1] = 0;
+									imageData.data[offset+2] = 0;
+									imageData.data[offset+3] = 255;
+									break;
+								case 18: // blue
+									imageData.data[offset] = 0;
+									imageData.data[offset+1] = 0;
+									imageData.data[offset+2] = 255;
+									imageData.data[offset+3] = 255;
+									break;
+								case 20: // green
+									imageData.data[offset] = 125;
+									imageData.data[offset+1] = 184;
+									imageData.data[offset+2] = 86;
+									imageData.data[offset+3] = 255;
+									break;
+								case 24: // yellow
+									imageData.data[offset] = 255;
+									imageData.data[offset+1] = 253;
+									imageData.data[offset+2] = 84;
+									imageData.data[offset+3] = 255;
+									break;
+								default:
+									imageData.data[offset] = value * 10;
+									imageData.data[offset+1] = value * 10;
+									imageData.data[offset+2] = value * 10;
+									imageData.data[offset+3] = 255;
+									break;
+							}
+						} else {
+							imageData.data[offset] = value * 10;
+							imageData.data[offset+1] = value * 10;
+							imageData.data[offset+2] = value * 10;
+							imageData.data[offset+3] = 255;
 						}
 					}
 					// value is treated, wait for a count
@@ -301,19 +309,19 @@ function download() {
 }
 
 document.getElementById('startStopButton').addEventListener('click', function() {
-    let icon = document.getElementById('icon');
-    let label = document.getElementById('label');
+	let icon = document.getElementById('icon');
+	let label = document.getElementById('label');
 
-	
-    if (label.textContent === 'Record') {
-        label.textContent = 'Stop';
-        icon.classList.add('recording');
+
+	if (label.textContent === 'Record') {
+		label.textContent = 'Stop';
+		icon.classList.add('recording');
 		startRecording();
-    } else {
-        label.textContent = 'Record';
-        icon.classList.remove('recording');
+	} else {
+		label.textContent = 'Record';
+		icon.classList.remove('recording');
 		stopRecording();
-    }
+	}
 });
 initiateStream();
 
