@@ -32,7 +32,7 @@ body, html {
 	.sidebar {
 		width: 150px;
 		height: 100vh;
-		background-color: #a1c1a1;
+		background-color: #a19131;
 		position: fixed;
 		top: 0;
 		left: -140px;
@@ -74,31 +74,36 @@ body, html {
 		cursor: pointer;
 		border-radius: 4px;
 	}
-	
-.icon {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    margin-right: 5px;
-    background-color: transparent;
-    position: relative;
-    border-radius: 50%;
-    border: 2px solid white; /* White border for record button */
-    background-color: red; /* Red circle for record button */
-}
+	.my-button.toggled {
+		/* Styles for the toggled state */
+		background-color: #2E7D32; /* Darker green for example */
+		color: #f0f0f0; /* Slightly off-white for contrast */
+	}
 
-@keyframes fadeInOut {
-    0%, 100% {
-        opacity: 0.5;
-    }
-    50% {
-        opacity: 1;
-    }
-}
+	.icon {
+		display: inline-block;
+		width: 16px;
+		height: 16px;
+		margin-right: 5px;
+		background-color: transparent;
+		position: relative;
+		border-radius: 50%;
+		border: 2px solid white; /* White border for record button */
+		background-color: red; /* Red circle for record button */
+	}
 
-.recording {
-    animation: fadeInOut 1s linear infinite;
-}
+	@keyframes fadeInOut {
+		0%, 100% {
+			opacity: 0.5;
+		}
+		50% {
+			opacity: 1;
+		}
+	}
+
+	.recording {
+		animation: fadeInOut 1s linear infinite;
+	}
 		</style>
 	</head>
 	<body>
@@ -107,6 +112,7 @@ body, html {
 			<div class="sidebar" id="sidebar">
 				<ul class="menu">
 					<li><button id="rotate" class="my-button">Rotate</button></li>
+					<li><button id="colors" class="my-button">Colors</button></li>
 					<li><button id="startStopButton" class="my-button">
 							<div class="icon" id="icon"></div>
 							<span id="label">Record</span>
@@ -115,6 +121,7 @@ body, html {
 				</ul>
 			</div>
 		</div>
+		<canvas id="fixedCanvas" width="1872" height="1404" class="hidden"></canvas>
 		<div id="container">
 			<canvas id="canvas" width="1872" height="1404"></canvas>
 		</div>

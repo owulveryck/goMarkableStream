@@ -2,7 +2,20 @@ let rotate = true;  // start with a false boolean
 let withColor = true;  // start with a false boolean
 document.getElementById('rotate').addEventListener('click', function() {
 	rotate  = !rotate;  // toggle the boolean
-	resizeAndCopy();
+	
+    // Toggle the 'toggled' class on the button
+    this.classList.toggle('toggled');
+
+    resizeAndCopy();
+});
+
+document.getElementById('colors').addEventListener('click', function() {
+	withColor  = !withColor;  // toggle the boolean
+	
+    // Toggle the 'toggled' class on the button
+    this.classList.toggle('toggled');
+
+    resizeAndCopy();
 });
 
 const sidebar = document.querySelector('.sidebar');
@@ -17,7 +30,7 @@ sidebar.addEventListener('mouseout', function() {
 
 
 // Use the fixed-size canvas context to draw on the canvas
-var fixedCanvas = new OffscreenCanvas(1872,1404);
+var fixedCanvas = document.getElementById("fixedCanvas");
 var fixedContext = fixedCanvas.getContext("2d");
 var resizableCanvas = document.getElementById("canvas");
 var resizableContext = resizableCanvas.getContext("2d");
