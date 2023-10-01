@@ -63,6 +63,10 @@ The app will start, displaying a message similar to:
 
 Then, connect to `https://72e5-22-159-32-48.ngrok-free.app` to view the result.
 
+## Exxperimental feature: video recording
+
+There is anew exxperimental feature to record the stream in [webm](https://en.wikipedia.org/wiki/WebM) format. This is available on the side menu. 
+
 ## Technical Details
 
 ### Remarkable HTTP Server
