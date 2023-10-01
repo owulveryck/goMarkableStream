@@ -404,42 +404,43 @@ function removeTempCanvas() {
 	}
 }
 let animationFrameId;
-
 function updateTempCanvas(tempCanvas) {
-	const tempContext= tempCanvas.getContext('2d');
-	if (rotate) {
-		// clear the canvas
-		tempContext.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-		tempContext.save(); // Save the current state
-		// Calculate the destination coordinates for drawing the rotated image
-		var destX = (tempCanvas.width - fixedCanvas.height) / 2;
-		var destY = (tempCanvas.height - fixedCanvas.width) / 2;
-		var destWidth = fixedCanvas.height;
-		var destHeight = fixedCanvas.width;
+    const tempContext = tempCanvas.getContext('2d');
+    
+    if (rotate) {
+        // Set tempCanvas dimensions to match fixedCanvas
+        tempCanvas.width = fixedCanvas.height;
+        tempCanvas.height = fixedCanvas.width;
 
-		// Move the rotation point to the center of the rectangle
-		tempContext.translate(tempCanvas.width / 2, tempCanvas.height / 2);
+        // Clear the canvas
+        tempContext.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+        tempContext.save(); // Save the current state
 
-		// Rotate the canvas
-		tempContext.rotate(Math.PI / 180 * 270); // Rotate 45 degrees
+        // Move the rotation point to the center of the canvas
+        tempContext.translate(tempCanvas.width / 2, tempCanvas.height / 2);
 
-		tempContext.translate(-tempCanvas.width / 2, -tempCanvas.height / 2);
+        // Rotate the canvas by 270 degrees
+        tempContext.rotate(Math.PI / 180 * 270);
 
-		// Draw the image on the second canvas
-		//tempContext.drawImage(fixedCanvas, -fixedCanvas.width / 2, -fixedCanvas.height / 2);
-		//					tempContext.drawImage(fixedCanvas, 0,0, tempCanvas.width, tempCanvas.height);
-		tempContext.drawImage(fixedCanvas, 0, 0, fixedCanvas.width, fixedCanvas.height, destX, destY, destWidth, destHeight);
+        // Draw the image from fixedCanvas onto tempCanvas
+        tempContext.drawImage(fixedCanvas, -fixedCanvas.width / 2, -fixedCanvas.height / 2);
 
-		tempContext.restore(); // Restore the state
-	} else {
-		tempContext.drawImage(fixedCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
-	}
-	//tempContext.drawImage(fixedCanvas, 0, 0);
+        tempContext.restore(); // Restore the state
+    } else {
+        // Reset the dimensions of tempCanvas to match fixedCanvas
+        tempCanvas.width = fixedCanvas.width;
+        tempCanvas.height = fixedCanvas.height;
+		
+        // Clear the canvas
+        tempContext.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+        
+        tempContext.drawImage(fixedCanvas, 0, 0);
+    }
 
-	// Continue updating tempCanvas
-	animationFrameId = requestAnimationFrame(() => updateTempCanvas(tempCanvas));
-
+    // Continue updating tempCanvas
+    animationFrameId = requestAnimationFrame(() => updateTempCanvas(tempCanvas));
 }
+
 initiateStream();
 
 
