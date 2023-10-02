@@ -105,8 +105,8 @@ document.getElementById('startStopButton').addEventListener('click', function() 
 // JavaScript file (stream.js)
 function createTempCanvas() {
 	const tempCanvas = document.createElement('canvas');
-	tempCanvas.width = fixedCanvas.width;
-	tempCanvas.height = fixedCanvas.height;
+	tempCanvas.width = rawCanvas.width;
+	tempCanvas.height = rawCanvas.height;
 	tempCanvas.id = 'tempCanvas'; // Assign an ID for easy reference
 
 	// Hide the tempCanvas
@@ -128,38 +128,7 @@ function removeTempCanvas() {
 }
 let animationFrameId;
 function updateTempCanvas(tempCanvas) {
-    const tempContext = tempCanvas.getContext('2d');
-    
-    if (rotate) {
-        // Set tempCanvas dimensions to match fixedCanvas
-        tempCanvas.width = fixedCanvas.height;
-        tempCanvas.height = fixedCanvas.width;
-
-        // Clear the canvas
-        tempContext.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-        tempContext.save(); // Save the current state
-
-        // Move the rotation point to the center of the canvas
-        tempContext.translate(tempCanvas.width / 2, tempCanvas.height / 2);
-
-        // Rotate the canvas by 270 degrees
-        tempContext.rotate(Math.PI / 180 * 270);
-
-        // Draw the image from fixedCanvas onto tempCanvas
-        tempContext.drawImage(fixedCanvas, -fixedCanvas.width / 2, -fixedCanvas.height / 2);
-
-        tempContext.restore(); // Restore the state
-    } else {
-        // Reset the dimensions of tempCanvas to match fixedCanvas
-        tempCanvas.width = fixedCanvas.width;
-        tempCanvas.height = fixedCanvas.height;
-		
-        // Clear the canvas
-        tempContext.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-        
-        tempContext.drawImage(fixedCanvas, 0, 0);
-    }
-
+	renderCanvas(rawCanvas,tempCanvas);
     // Continue updating tempCanvas
     animationFrameId = requestAnimationFrame(() => updateTempCanvas(tempCanvas));
 }
