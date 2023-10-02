@@ -49,34 +49,33 @@ function waiting(message) {
 	ctx.fillText(message, centerX, centerY);
 }
 
-function renderCanvas(sourceCanvas, destCanvas) {
-	var ctx = destCanvas.getContext("2d");
+function renderCanvas(srcCanvas, dstCanvas) {
+	let ctxSrc = srcCanvas.getContext('2d');
+	let ctxDst = dstCanvas.getContext('2d');
+
+	let w = srcCanvas.width;
+	let h = srcCanvas.height;
+
+	// Clear the destination canvas
+	ctxDst.clearRect(0, 0, w, h);
+
 	if (rotate) {
-		// clear the canvas
-		ctx.clearRect(0, 0, destCanvas.width, destCanvas.height);
-		ctx.save(); // Save the current state
-		// Calculate the destination coordinates for drawing the rotated image
-		var destX = (destCanvas.width - sourceCanvas.height) / 2;
-		var destY = (destCanvas.height - sourceCanvas.width) / 2;
-		var destWidth = sourceCanvas.height;
-		var destHeight = sourceCanvas.width;
+		// Swap width and height for dstCanvas to accommodate rotated content
+		dstCanvas.width = h;
+		dstCanvas.height = w;
+		ctxDst.translate(0,w);  // Move the drawing origin to the right side of dstCanvas
+		ctxDst.rotate(-Math.PI / 2); // Rotate by 90 degrees
 
-		// Move the rotation point to the center of the rectangle
-		ctx.translate(destCanvas.width / 2, destCanvas.height / 2);
 
-		// Rotate the canvas
-		ctx.rotate(Math.PI / 180 * 270); // Rotate 45 degrees
-
-		ctx.translate(-destCanvas.width / 2, -destCanvas.height / 2);
-
-		// Draw the image on the second canvas
-		ctx.drawImage(sourceCanvas, 0, 0, sourceCanvas.width, sourceCanvas.height, destX, destY, destWidth, destHeight);
-
-		ctx.restore(); // Restore the state
-		//resizeCanvas(dstCanvas);
-		return;
-
+		// Since the source canvas is now rotated, width and height are swapped
+		ctxDst.drawImage(srcCanvas, 0, 0);
+	} else {
+		dstCanvas.width = w;
+		dstCanvas.height = h;
+		ctxDst.drawImage(srcCanvas, 0, 0);
 	}
-	ctx.drawImage(sourceCanvas, 0, 0, destCanvas.width, destCanvas.height);
+
+	// Reset transformations for future calls
+	ctxDst.setTransform(1, 0, 0, 1, 0, 0);
 }
 
