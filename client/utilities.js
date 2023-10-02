@@ -1,4 +1,4 @@
-function copyCanvasContent() {
+function copyCanvasContent(fixedCanvas) {
 	if (rotate) {
 		// clear the canvas
 		resizableContext.clearRect(0, 0, resizableCanvas.width, resizableCanvas.height);
@@ -23,7 +23,6 @@ function copyCanvasContent() {
 		resizableContext.drawImage(fixedCanvas, 0, 0, fixedCanvas.width, fixedCanvas.height, destX, destY, destWidth, destHeight);
 
 		resizableContext.restore(); // Restore the state
-		resizeCanvas();
 		return;
 
 	}
