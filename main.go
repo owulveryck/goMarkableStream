@@ -32,12 +32,8 @@ var (
 	// Define the username and password for authentication
 	c configuration
 
-	//go:embed assets/favicon.ico
-	favicon []byte
-	//go:embed assets/index.html
-	index []byte
-	//go:embed assets/stream.js
-	js []byte
+	//go:embed client/*
+	assetsFS embed.FS
 	//go:embed assets/cert.pem assets/key.pem
 	tlsAssets    embed.FS
 	waitingQueue = make(chan struct{}, 2)

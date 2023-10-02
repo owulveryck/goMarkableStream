@@ -11,27 +11,32 @@ import (
 	"github.com/owulveryck/goMarkableStream/internal/stream"
 )
 
+type stripFS struct {
+	fs http.FileSystem
+}
+
+func (s stripFS) Open(name string) (http.File, error) {
+	return s.fs.Open("client" + name)
+}
+
 func setMux() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, _ *http.Request) {
-		io.Copy(w, bytes.NewReader(favicon))
-	})
-	mux.HandleFunc("/stream.js", func(w http.ResponseWriter, _ *http.Request) {
-		io.Copy(w, bytes.NewReader(js))
-	})
-	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
-		select {
-		case waitingQueue <- struct{}{}:
-			defer func() {
-				<-waitingQueue
-			}()
+	fs := http.FileServer(stripFS{http.FS(assetsFS)})
+
+	// Custom handler to serve index.html for root path
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			index, err := assetsFS.ReadFile("client/index.html")
+			if err != nil {
+				log.Fatal(err)
+			}
 			io.Copy(w, bytes.NewReader(index))
-		default:
-			http.Error(w, "too many requests", http.StatusTooManyRequests)
 			return
 		}
+		fs.ServeHTTP(w, r)
 	})
+
 	streanHandler := stream.NewStreamHandler(file, pointerAddr)
 	mux.Handle("/stream", streanHandler)
 	if c.DevMode {
