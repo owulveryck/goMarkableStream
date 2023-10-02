@@ -1,12 +1,3 @@
-function unpackValues(packedValue) {
-	// Extract the upper 4 bits as the first value
-	const value1 = (packedValue >> 4) & 0x0F;
-
-	// Extract the lower 4 bits as the second value
-	const value2 = packedValue & 0x0F;
-
-	return [value1+1, value2];
-}
 function waiting(message) {
 	var fontSize = 48;
 	var fontFamily = "Arial";
