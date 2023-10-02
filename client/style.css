@@ -104,12 +104,16 @@ canvas.hidden {
 /* Reset button styles to avoid browser defaults */
 .apple-button {
 	display: inline-block;
-	border: none;
-	outline: none;
-	cursor: pointer;
-	text-align: center;
-	transition: background-color 0.2s, box-shadow 0.2s;
-	font-family: 'San Francisco', 'Helvetica Neue', sans-serif; /* Apple's default font */
+    width: 120px; /* Fixed width */
+    line-height: 30px; /* Centers the text vertically */
+    padding: 0; /* Since we've set fixed width and height, padding is set to 0 */
+    border-radius: 8px;
+    border: none;
+    font-family: 'San Francisco', 'Helvetica Neue', sans-serif;
+    font-size: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    outline: none;
 }
 
 /* Main button styles */
@@ -131,7 +135,7 @@ canvas.hidden {
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); /* reduce shadow for pressed state */
 }
 
-.apple-button:disabled {
+.apple-button:toggled {
 	background-color: #B3C7D6; /* Greyed out when disabled */
 	color: #FFFFFF;
 	cursor: not-allowed;
