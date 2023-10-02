@@ -4,13 +4,13 @@ let recordingWithSound = false;
 
 document.getElementById('rotate').addEventListener('click', function() {
 	rotate = !rotate;
-	this.classList.toggle('toggled');
+	this.classList.toggle('active');
 	resizeVisibleCanvas();
 });
 
 document.getElementById('colors').addEventListener('click', function() {
 	withColor = !withColor;
-	this.classList.toggle('toggled');
+	this.classList.toggle('active');
 	worker.postMessage({ type: 'withColorChanged', withColor: withColor });
 });
 
