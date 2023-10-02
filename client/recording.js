@@ -105,8 +105,8 @@ document.getElementById('startStopButton').addEventListener('click', function() 
 // JavaScript file (stream.js)
 function createTempCanvas() {
 	const tempCanvas = document.createElement('canvas');
-	tempCanvas.width = rawCanvas.width;
-	tempCanvas.height = rawCanvas.height;
+	tempCanvas.width = width;
+	tempCanvas.height = height;
 	tempCanvas.id = 'tempCanvas'; // Assign an ID for easy reference
 
 	// Hide the tempCanvas
@@ -129,8 +129,8 @@ function removeTempCanvas() {
 let animationFrameId;
 function updateTempCanvas(tempCanvas) {
 	renderCanvas(rawCanvas,tempCanvas);
-    // Continue updating tempCanvas
-    animationFrameId = requestAnimationFrame(() => updateTempCanvas(tempCanvas));
+	// Continue updating tempCanvas
+	animationFrameId = requestAnimationFrame(() => updateTempCanvas(tempCanvas));
 }
 
 
