@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>goMarkableStream</title>
+		<link rel="icon" type="image/x-icon" href="favicon.ico">
+		    <!-- Including the CSS stylesheet -->
+    <link rel="stylesheet" href="style.css">
+	</head>
+	<body>
+		<div id="menuContainer">
+
+			<div class="sidebar" id="sidebar">
+				<ul class="menu">
+					<li><button id="rotate" class="apple-button">Rotate</button></li>
+					<li><button id="colors" class="apple-button">Colors</button></li>
+					<li><button id="startStopButton" class="apple-button">
+							<div class="icon" id="icon"></div>
+							<span id="label">Record</span>
+						</button></li>
+					<li><button id="startStopButtonWithSound" class="apple-button">
+							<div class="icon" id="icon2"></div>
+							<span id="label2">Record with audio</span>
+						</button></li>
+						<li><button id="screenshotButton" class="apple-button">Screenshot</button><a id="screenshot"></a></li>
+				</ul>
+			</div>
+		</div>
+		<div id="container">
+			<canvas id="canvas" width="1872" height="1404"></canvas>
+		</div>
+
+	</body>
+	<script src="main.js"></script> <!-- Include the JavaScript file -->
+	<script src="utilities.js"></script> <!-- Include the JavaScript file -->
+	<script src="recording.js"></script> <!-- Include the JavaScript file -->
+	<script src="canvasHandling.js"></script> <!-- Include the JavaScript file -->
+	<script src="uiInteractions.js"></script> <!-- Include the JavaScript file -->
+</html>

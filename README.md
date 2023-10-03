@@ -1,6 +1,9 @@
 [![Go](https://github.com/owulveryck/goMarkableStream/actions/workflows/go.yml/badge.svg)](https://github.com/owulveryck/goMarkableStream/actions/workflows/go.yml)
 
 # goMarkableStream
+
+![poster](docs/goMarkableStream.png)
+
 ## Overview
 
 The goMarkableStream is a lightweight and user-friendly application designed specifically for the reMarkable tablet. 
@@ -65,7 +68,9 @@ Then, connect to `https://72e5-22-159-32-48.ngrok-free.app` to view the result.
 
 ## Exxperimental feature: video recording
 
-There is anew exxperimental feature to record the stream in [webm](https://en.wikipedia.org/wiki/WebM) format. This is available on the side menu. 
+There is a new exxperimental feature to record the stream in [webm](https://en.wikipedia.org/wiki/WebM) format. This is available on the side menu. 
+
+[See this example with audio](docs/goMarkableStreamRecording.webm)
 
 ## Technical Details
 

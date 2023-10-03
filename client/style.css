@@ -1,0 +1,170 @@
+/* CSS styles for the layout */
+body, html {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+}
+
+#container {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+}
+
+#canvas {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+canvas.hidden {
+	display: none;
+}
+.sidebar {
+	width: 150px;
+	height: 100vh;
+    background-color: #f5f5f5; /* Light gray */
+    border-right: 1px solid #e0e0e0; /* Slight border to separate from the main content */
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+	position: fixed;
+	top: 0;
+	left: -140px;
+	transition: left 0.3s;
+	z-index: 2;
+
+}
+
+.sidebar.active {
+	left: 0;
+}
+
+.menu {
+	list-style: none;
+	padding: 0;
+}
+
+.menu li {
+	padding: 10px;
+}
+
+.menu li a {
+	text-decoration: none;
+	color: #000;
+}
+
+.menu li a:hover {
+	color: #ff0000;
+}
+.my-button {
+	background-color: #4CAF50;
+	border: none;
+	color: white;
+	padding: 10px 20px;
+	text-align: center;
+	text-decoration: none;
+	display: inline-block;
+	font-size: 16px;
+	cursor: pointer;
+	border-radius: 4px;
+}
+.my-button.toggled {
+	/* Styles for the toggled state */
+	background-color: #2E7D32; /* Darker green for example */
+	color: #f0f0f0; /* Slightly off-white for contrast */
+}
+
+.icon {
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	margin-right: 5px;
+	background-color: transparent;
+	position: relative;
+	border-radius: 50%;
+	border: 2px solid white; /* White border for record button */
+	background-color: red; /* Red circle for record button */
+}
+
+@keyframes fadeInOut {
+	0%, 100% {
+		opacity: 0.5;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+
+.recording {
+	animation: fadeInOut 1s linear infinite;
+}
+
+/* Reset button styles to avoid browser defaults */
+.apple-button {
+	display: inline-block;
+    width: 120px; /* Fixed width */
+    line-height: 30px; /* Centers the text vertically */
+    padding: 0; /* Since we've set fixed width and height, padding is set to 0 */
+    border-radius: 8px;
+    border: none;
+    font-family: 'San Francisco', 'Helvetica Neue', sans-serif;
+    font-size: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    outline: none;
+}
+
+/* Main button styles */
+.apple-button {
+	background-color: #007AFF; /* Default blue Apple uses */
+	color: #fff;
+	border-radius: 8px;
+	padding: 10px 20px;
+	font-size: 16px;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); /* subtle shadow for depth */
+}
+
+.apple-button:hover {
+	background-color: #005EDD; /* A bit darker on hover */
+}
+
+.apple-button:active {
+	background-color: #004ABF; /* Even darker when active (pressed) */
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); /* reduce shadow for pressed state */
+}
+
+.apple-button:toggled {
+	background-color: #B3C7D6; /* Greyed out when disabled */
+	color: #FFFFFF;
+	cursor: not-allowed;
+	box-shadow: none;
+}
+
+
+/* Base styles for the toggle button */
+.toggle-button {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-family: 'San Francisco', 'Helvetica Neue', sans-serif;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    outline: none;
+}
+
+/* Style for the "off" state (default) */
+.toggle-button {
+    background-color: #D1D1D1;  /* Gray background */
+    color: #6B6B6B;  /* Dark gray text */
+}
+
+/* Style for the "on" state */
+.toggle-button.active {
+    background-color: #007AFF;  /* Blue background (like our Apple button) */
+    color: #FFFFFF;  /* White text */
+}
+
