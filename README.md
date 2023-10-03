@@ -70,7 +70,7 @@ Then, connect to `https://72e5-22-159-32-48.ngrok-free.app` to view the result.
 
 There is a new exxperimental feature to record the stream in [webm](https://en.wikipedia.org/wiki/WebM) format. This is available on the side menu. 
 
-![poster](docs/goMarkableStreamRecording.webm)
+[![recording](docs/goMarkableStreamRecording.webm)](docs/goMarkableStreamRecording.webm)
 
 ## Technical Details
 
