@@ -1,12 +1,11 @@
 [Unit]
-Description=goMarkableStream
-Requires=xochitl.service
-After=xochitl.service network.target
+Description=goMarkableStream Service
+After=xochitl.service
 
 [Service]
-ExecStart=/home/root/goMarkableStreamServer.arm
-ExecStartPre=/bin/sleep 30
+ExecStart=/home/root/goMarkableStream
 Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
