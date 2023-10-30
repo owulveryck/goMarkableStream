@@ -3,34 +3,46 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/jung-kurt/gofpdf"
 	"github.com/skip2/go-qrcode"
 )
 
-var outputFile string
+var (
+	outputFile string
+	qrPDFName  string
+)
 
 func init() {
-	flag.StringVar(&outputFile, "output", "output.pdf", "The output PDF file")
+	flag.StringVar(&qrPDFName, "output", "goMarkableStreamQRCode.pdf", "The output PDF file")
 }
 
 func main() {
 	flag.Parse()
+	matchedFiles := searchContentFiles(".local/share/remarkable/xochitl/")
+	if len(matchedFiles) != 1 {
+		log.Fatal("did not find the " + qrPDFName)
+	}
+	outputFile = matchedFiles[0]
+	outputFile = outputFile[:len(outputFile)-len(filepath.Ext(outputFile))] + ".pdf"
+	log.Println("using ", outputFile)
 
 	// Fetch initial IP addresses
 	ips, err := getIPAddresses()
 	if err != nil {
-		fmt.Println("Error fetching IP addresses:", err)
+		log.Println("Error fetching IP addresses:", err)
 		return
 	}
 
 	// Generate initial PDF
 	err = generatePDF(ips, outputFile)
 	if err != nil {
-		fmt.Println("Error generating PDF:", err)
+		log.Println("Error generating PDF:", err)
 		return
 	}
 
@@ -41,25 +53,22 @@ func main() {
 		// Fetch current IP addresses
 		currentIPs, err := getIPAddresses()
 		if err != nil {
-			fmt.Println("Error fetching IP addresses:", err)
+			log.Println("Error fetching IP addresses:", err)
 			continue
 		}
 
 		// Check if the IP addresses have changed
 		if !isEqual(ips, currentIPs) {
-			fmt.Println("IP addresses have changed. Regenerating PDF...")
 
 			// IP addresses have changed, update the PDF
 			err = generatePDF(currentIPs, outputFile)
 			if err != nil {
-				fmt.Println("Error generating PDF:", err)
+				log.Println("Error generating PDF:", err)
 				continue
 			}
 
 			// Update the known IP addresses
 			ips = currentIPs
-
-			fmt.Println("PDF successfully regenerated.")
 		}
 	}
 }
@@ -112,6 +121,8 @@ func generatePDF(ips []net.IP, outputFile string) error {
 			y += height + labelHeight + 10
 		}
 	}
+	pdf.SetXY(x, y+height)
+	pdf.MultiCell(width, labelHeight, time.Now().String(), "0", "C", false)
 
 	// Save PDF to file
 	err := pdf.OutputFileAndClose(outputFile)
