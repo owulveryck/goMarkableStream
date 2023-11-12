@@ -69,6 +69,9 @@ async function initiateStream() {
 						offset += 4;
 						if (withColor) {
 							switch (value) {
+								case 30: // red
+									imageData[offset+3] = 0;
+									break;
 								case 10: // red
 									imageData[offset] = 255;
 									imageData[offset+1] = 0;
