@@ -42,4 +42,19 @@ worker.onmessage = (event) => {
 	}
 };
 
+window.onload = function() {
+    // Function to get the value of a query parameter by name
+    function getQueryParam(name) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(name);
+    }
+
+    // Get the 'present' parameter from the URL
+    const presentURL = getQueryParam('present');
+
+    // Set the iframe source if the URL is available
+    if (presentURL) {
+        document.getElementById('content').src = presentURL;
+    }
+};
 

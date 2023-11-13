@@ -66,11 +66,46 @@ The app will start, displaying a message similar to:
 
 Then, connect to `https://72e5-22-159-32-48.ngrok-free.app` to view the result.
 
-## Exxperimental feature: video recording
+## Experimental feature: video recording
 
 There is a new exxperimental feature to record the stream in [webm](https://en.wikipedia.org/wiki/WebM) format. This is available on the side menu. 
 
 [See this example with audio](docs/goMarkableStreamRecording.webm)
+
+## Experimental Feature: Embedded Presentations and Videos
+
+### Overview
+
+`goMarkableStream` introduces an innovative experimental feature that allows users to set a presentation or video in the background, enabling live annotations using a reMarkable tablet. This feature is ideal for enhancing presentations or educational content by allowing dynamic, real-time interaction.
+
+### How It Works
+
+- To use this feature, append `?present=https://url-of-the-embedded-file` to your streaming URL.
+- This action will embed your chosen presentation or video in the stream's background.
+- You can then annotate or draw on the reMarkable tablet, with your input appearing over the embedded content in the stream.
+
+### Usage Example
+
+- **Live Presentation Enhancement**: For instance, using Google Slides, you can leave spaces in your slides or use a blank slide to write additional content live. This feature is perfect for educators, presenters, and anyone looking to make their presentations more interactive and engaging.
+
+![](docs/gorgoniaExample.png)
+
+### Compatibility
+
+- The feature works with any content that can be embedded in an iframe. This includes a variety of presentation and video platforms.
+- Ensure that the content you wish to embed allows iframe integration.
+
+### Limitations and Performance
+
+- **Screen Size**: Currently, the drawing screen size on the tablet is smaller than the presentations, which may affect how content is displayed.
+- **Control**: There is no way to control the underlying presentation directly from the tablet. Users must use the side menu for navigation and control.
+- This feature operates seamlessly, with no additional load on the reMarkable tablet, as all rendering is done in the client's browser.
+
+### Feedback and Contributions
+
+- As this is an experimental feature, your feedback is crucial for its development. Please share your experiences, suggestions, and any issues encountered using the GitHub issues section of this repository.
+
+---
 
 ## Technical Details
 
@@ -130,6 +165,9 @@ RK_HTTPS               True or False    true
 ### Compilation
 
 `GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build .`
+
+
+
 
 ## Contributing
 

@@ -58,6 +58,8 @@ function renderCanvas(srcCanvas, dstCanvas) {
 
 	// Clear the destination canvas
 	ctxDst.clearRect(0, 0, w, h);
+	ctxDst.imageSmoothingEnabled = true;
+
 
 	if (rotate) {
 		// Swap width and height for dstCanvas to accommodate rotated content
