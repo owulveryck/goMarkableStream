@@ -5,7 +5,7 @@ async function startRecording() {
 	const tempCanvas = createTempCanvas(); // Create the temporary canvas
 
 	console.log("recording in progress");
-	let videoStream = tempCanvas.captureStream(5); // 25 fps
+	let videoStream = tempCanvas.captureStream(25); // 25 fps
 
 	if (recordingWithSound) {
 		// Capture audio stream from the user's microphone
