@@ -104,10 +104,14 @@ async function initiateStream() {
 									break;
 							}
 						} else {
-							imageData[offset] = value * 10;
-							imageData[offset+1] = value * 10;
-							imageData[offset+2] = value * 10;
-							imageData[offset+3] = 255;
+							if (value === 30) {
+								imageData[offset+3] = 0;
+							} else {
+								imageData[offset] = value * 10;
+								imageData[offset+1] = value * 10;
+								imageData[offset+2] = value * 10;
+								imageData[offset+3] = 255;
+							}
 						}
 					}
 					// value is treated, wait for a count
@@ -121,7 +125,7 @@ async function initiateStream() {
 
 							// Instead of calling copyCanvasContent(), send the OffscreenCanvas to the main thread
 							postMessage({ type: 'update', data: imageData });
-						//}
+							//}
 						//lastSum = currentSum;
 					}
 
