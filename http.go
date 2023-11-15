@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/owulveryck/goMarkableStream/internal/eventhttphandler"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/stream"
 )
@@ -38,8 +39,11 @@ func setMuxer(eventPublisher *pubsub.PubSub) *http.ServeMux {
 		fs.ServeHTTP(w, r)
 	})
 
-	streanHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher)
-	mux.Handle("/stream", streanHandler)
+	streamHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher)
+	mux.Handle("/stream", streamHandler)
+	wsHandler := eventhttphandler.NewEventHandler(eventPublisher)
+	mux.Handle("/events", wsHandler)
+
 	if c.DevMode {
 		rawHandler := stream.NewRawHandler(file, pointerAddr)
 		mux.Handle("/raw", rawHandler)
