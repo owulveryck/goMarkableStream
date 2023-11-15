@@ -10,6 +10,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 
+	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 )
 
@@ -60,7 +61,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	mux := setMux()
+	eventPublisher := pubsub.NewPubSub()
+	eventScanner := remarkable.NewEventScanner()
+	eventScanner.StartAndPublish(context.Background(), eventPublisher)
+
+	mux := setMuxer(eventPublisher)
 
 	//	handler := BasicAuthMiddleware(gzMiddleware(mux))
 	handler := BasicAuthMiddleware(mux)

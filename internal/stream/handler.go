@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 	"github.com/owulveryck/goMarkableStream/internal/rle"
 )
@@ -23,37 +24,33 @@ var rawFrameBuffer = sync.Pool{
 }
 
 // NewStreamHandler creates a new stream handler reading from file @pointerAddr
-func NewStreamHandler(file io.ReaderAt, pointerAddr int64) *StreamHandler {
+func NewStreamHandler(file io.ReaderAt, pointerAddr int64, inputEvents *pubsub.PubSub) *StreamHandler {
 	return &StreamHandler{
-		ticker:       time.NewTicker(rate * time.Millisecond),
-		waitingQueue: make(chan struct{}, 1),
-		file:         file,
-		pointerAddr:  pointerAddr,
+		ticker:         time.NewTicker(rate * time.Millisecond),
+		waitingQueue:   make(chan struct{}, 1),
+		file:           file,
+		pointerAddr:    pointerAddr,
+		inputEventsBus: inputEvents,
 	}
 }
 
 // StreamHandler is an http.Handler that serves the stream of data to the client
 type StreamHandler struct {
-	ticker       *time.Ticker
-	waitingQueue chan struct{}
-	file         io.ReaderAt
-	pointerAddr  int64
-	eventLoop    *remarkable.EventScanner
+	ticker         *time.Ticker
+	waitingQueue   chan struct{}
+	file           io.ReaderAt
+	pointerAddr    int64
+	inputEventsBus *pubsub.PubSub
 }
 
 // ServeHTTP implements http.Handler
 func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	select {
 	case h.waitingQueue <- struct{}{}:
-		if h.eventLoop == nil {
-			h.eventLoop = remarkable.NewEventScanner()
-			defer func() {
-				h.eventLoop = nil
-			}()
-			h.eventLoop.Start(r.Context())
-		}
+		eventC := h.inputEventsBus.Subscribe("stream")
 		defer func() {
 			<-h.waitingQueue
+			h.inputEventsBus.Unsubscribe(eventC)
 		}()
 		//ctx, cancel := context.WithTimeout(r.Context(), 1*time.Hour)
 		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Hour)
@@ -76,7 +73,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			select {
 			case <-ctx.Done():
 				return
-			case <-h.eventLoop.EventC:
+			case <-eventC:
 				writing = true
 				stopWriting.Reset(2 * time.Second)
 			case <-stopWriting.C:

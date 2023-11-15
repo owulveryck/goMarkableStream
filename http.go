@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/stream"
 )
 
@@ -19,7 +20,7 @@ func (s stripFS) Open(name string) (http.File, error) {
 	return s.fs.Open("client" + name)
 }
 
-func setMux() *http.ServeMux {
+func setMuxer(eventPublisher *pubsub.PubSub) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	fs := http.FileServer(stripFS{http.FS(assetsFS)})
@@ -37,7 +38,7 @@ func setMux() *http.ServeMux {
 		fs.ServeHTTP(w, r)
 	})
 
-	streanHandler := stream.NewStreamHandler(file, pointerAddr)
+	streanHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher)
 	mux.Handle("/stream", streanHandler)
 	if c.DevMode {
 		rawHandler := stream.NewRawHandler(file, pointerAddr)
