@@ -25,3 +25,12 @@ sidebar.addEventListener('mouseout', function() {
 // Resize the canvas whenever the window is resized
 window.addEventListener("resize", resizeVisibleCanvas);
 resizeVisibleCanvas();
+
+document.getElementById('switchOrderButton').addEventListener('click', function() {
+	// Swap z-index values
+	var temp = iFrame.style.zIndex;
+	iFrame.style.zIndex = visibleCanvas.style.zIndex;
+	visibleCanvas.style.zIndex = temp;
+});
+
+
