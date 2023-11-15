@@ -21,7 +21,7 @@ const (
 
 // InputEvent from the reMarkable
 type InputEvent struct {
-	Time syscall.Timeval
+	Time syscall.Timeval `json:"-"`
 	Type uint16
 	// Code holds the position of the mouse/touch
 	// In case of an EV_ABS event,

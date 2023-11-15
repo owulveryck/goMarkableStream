@@ -136,4 +136,4 @@ function scaleValue(value, maxValue, canvasSize) {
 }
 
 // Initial WebSocket connection
-// connectWebSocket();
+connectWebSocket();
