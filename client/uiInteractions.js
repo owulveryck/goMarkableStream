@@ -7,6 +7,14 @@ document.getElementById('rotate').addEventListener('click', function() {
 	this.classList.toggle('toggled');
 	resizeVisibleCanvas();
 });
+document.getElementById('pointerButton').addEventListener('click', function() {
+	if (isWebSocketConnected(ws)) {
+		stopWebSocket();
+	} else {
+		connectWebSocket();
+	}
+});
+
 
 document.getElementById('colors').addEventListener('click', function() {
 	withColor = !withColor;
