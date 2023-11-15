@@ -4,6 +4,7 @@ const height = 1404;
 const rawCanvas = new OffscreenCanvas(width, height); // Define width and height as needed
 const visibleCanvas = document.getElementById("canvas");
 const canvasPresent = document.getElementById("canvasPresent");
+const iFrame = document.getElementById("content");
 
 // Initialize the worker
 const worker = new Worker('worker_stream_processing.js');
