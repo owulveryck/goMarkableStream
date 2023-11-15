@@ -109,10 +109,18 @@ function connectWebSocket() {
 		}
 		if (message.Type === 3) {
 			// Code 3: Update and draw laser pointer
-			if (message.Code === 1) { // Horizontal position
-				latestX = scaleValue(message.Value, MAX_X_VALUE, canvasPresent.width);
-			} else if (message.Code === 0) { // Vertical position
-				latestY = canvasPresent.height - scaleValue(message.Value, MAX_Y_VALUE, canvasPresent.height);
+			if (rotate) {
+				if (message.Code === 1) { // Horizontal position
+					latestX = scaleValue(message.Value, MAX_X_VALUE, canvasPresent.width);
+				} else if (message.Code === 0) { // Vertical position
+					latestY = canvasPresent.height - scaleValue(message.Value, MAX_Y_VALUE, canvasPresent.height);
+				}
+			} else {
+				if (message.Code === 1) { // Horizontal position
+					latestX = canvasPresent.width - scaleValue(message.Value, MAX_X_VALUE, canvasPresent.width);
+				} else if (message.Code === 0) { // Vertical position
+					latestY = scaleValue(message.Value, MAX_Y_VALUE, canvasPresent.height);
+				}
 			}
 			if (draw) {
 				drawLaser(latestX, latestY);
