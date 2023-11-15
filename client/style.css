@@ -23,12 +23,18 @@ body, html {
 canvas.hidden {
 	display: none;
 }
+#canvasPresent {
+	position: fixed;
+	max-width: 100%;
+	max-height: 100%;
+	background-color: rgba(0, 0, 0, 0); /* Transparent background */
+}
 .sidebar {
 	width: 150px;
 	height: 100vh;
-    background-color: #f5f5f5; /* Light gray */
-    border-right: 1px solid #e0e0e0; /* Slight border to separate from the main content */
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+	background-color: #f5f5f5; /* Light gray */
+	border-right: 1px solid #e0e0e0; /* Slight border to separate from the main content */
+	box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 	position: fixed;
 	top: 0;
 	left: -140px;
@@ -104,16 +110,16 @@ canvas.hidden {
 /* Reset button styles to avoid browser defaults */
 .apple-button {
 	display: inline-block;
-    width: 120px; /* Fixed width */
-    line-height: 30px; /* Centers the text vertically */
-    padding: 0; /* Since we've set fixed width and height, padding is set to 0 */
-    border-radius: 8px;
-    border: none;
-    font-family: 'San Francisco', 'Helvetica Neue', sans-serif;
-    font-size: 8px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-    outline: none;
+	width: 120px; /* Fixed width */
+	line-height: 30px; /* Centers the text vertically */
+	padding: 0; /* Since we've set fixed width and height, padding is set to 0 */
+	border-radius: 8px;
+	border: none;
+	font-family: 'San Francisco', 'Helvetica Neue', sans-serif;
+	font-size: 8px;
+	cursor: pointer;
+	transition: background-color 0.3s;
+	outline: none;
 }
 
 /* Main button styles */
@@ -145,26 +151,26 @@ canvas.hidden {
 
 /* Base styles for the toggle button */
 .toggle-button {
-    display: inline-block;
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: none;
-    font-family: 'San Francisco', 'Helvetica Neue', sans-serif;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-    outline: none;
+	display: inline-block;
+	padding: 10px 20px;
+	border-radius: 8px;
+	border: none;
+	font-family: 'San Francisco', 'Helvetica Neue', sans-serif;
+	font-size: 16px;
+	cursor: pointer;
+	transition: background-color 0.3s;
+	outline: none;
 }
 
 /* Style for the "off" state (default) */
 .toggle-button {
-    background-color: #D1D1D1;  /* Gray background */
-    color: #6B6B6B;  /* Dark gray text */
+	background-color: #D1D1D1;  /* Gray background */
+	color: #6B6B6B;  /* Dark gray text */
 }
 
 /* Style for the "on" state */
 .toggle-button.active {
-    background-color: #007AFF;  /* Blue background (like our Apple button) */
-    color: #FFFFFF;  /* White text */
+	background-color: #007AFF;  /* Blue background (like our Apple button) */
+	color: #FFFFFF;  /* White text */
 }
 
