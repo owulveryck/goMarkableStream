@@ -15,11 +15,12 @@ import (
 )
 
 type configuration struct {
-	BindAddr string `envconfig:"SERVER_BIND_ADDR" default:":2001" required:"true" description:"The server bind address"`
-	Username string `envconfig:"SERVER_USERNAME" default:"admin"`
-	Password string `envconfig:"SERVER_PASSWORD" default:"password"`
-	TLS      bool   `envconfig:"HTTPS" default:"true"`
-	DevMode  bool   `envconfig:"DEV_MODE" default:"false"`
+	BindAddr    string `envconfig:"SERVER_BIND_ADDR" default:":2001" required:"true" description:"The server bind address"`
+	Username    string `envconfig:"SERVER_USERNAME" default:"admin"`
+	Password    string `envconfig:"SERVER_PASSWORD" default:"password"`
+	TLS         bool   `envconfig:"HTTPS" default:"true"`
+	Compression bool   `envconfig:"COMPRESSION" default:"false"`
+	DevMode     bool   `envconfig:"DEV_MODE" default:"false"`
 }
 
 const (
@@ -68,7 +69,8 @@ func main() {
 	mux := setMuxer(eventPublisher)
 
 	//	handler := BasicAuthMiddleware(gzMiddleware(mux))
-	handler := BasicAuthMiddleware(mux)
+	var handler http.Handler
+	handler = BasicAuthMiddleware(mux)
 	if *unsafe {
 		handler = mux
 	}
