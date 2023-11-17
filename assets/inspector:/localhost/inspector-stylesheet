@@ -1,7 +1,0 @@
-iframe#content {}div#menuContainer {
-    z-index: 2;
-}canvas#canvas {
-    position: absolute;
-}
-
-canvas#canvas {}

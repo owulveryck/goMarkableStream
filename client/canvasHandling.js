@@ -4,10 +4,8 @@ function resizeVisibleCanvas() {
 
 	if (rotate) {
 		var aspectRatio = 1404 / 1872;
-		visibleCanvas.style.transform = "rotate(0)";
 	} else {
 		var aspectRatio = 1872 / 1404;
-		visibleCanvas.style.transform = "rotate(270deg)";
 	}
 
 	var containerWidth = container.offsetWidth;
@@ -17,16 +15,18 @@ function resizeVisibleCanvas() {
 
 	if (containerAspectRatio > aspectRatio) {
 		        // Canvas is relatively wider than container
-        canvas.style.width = '100vw';
-        canvas.style.height = 'auto';
-		//visibleCanvas.style.width = containerHeight * aspectRatio + "px";
-		//visibleCanvas.style.height = containerHeight + "px";
+        //canvas.style.width = '100vw';
+        //canvas.style.width = '100%';
+        //canvas.style.height = 'auto';
+		visibleCanvas.style.width = containerHeight * aspectRatio + "px";
+		visibleCanvas.style.height = containerHeight + "px";
 	} else {
 		        // Canvas is relatively taller than container
-        canvas.style.width = 'auto';
-        canvas.style.height = '100vh';
-		//visibleCanvas.style.width = containerWidth + "px";
-		//visibleCanvas.style.height = containerWidth / aspectRatio + "px";
+        //canvas.style.width = 'auto';
+        //canvas.style.height = '100vh';
+        //canvas.style.height = '100%';
+		visibleCanvas.style.width = containerWidth + "px";
+		visibleCanvas.style.height = containerWidth / aspectRatio + "px";
 	}
 	canvasPresent.style.width = visibleCanvas.style.width;	
 	canvasPresent.style.height = visibleCanvas.style.height;	

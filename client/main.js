@@ -2,6 +2,7 @@ const width = 1872;
 const height = 1404;
 
 const rawCanvas = new OffscreenCanvas(width, height); // Define width and height as needed
+let rotate = false;
 // Assuming rawCanvas is an OffscreenCanvas that's already been defined
 const ctx = rawCanvas.getContext('2d');
 const visibleCanvas = document.getElementById("canvas");
@@ -34,7 +35,7 @@ streamWorker.onmessage = (event) => {
 		case 'update':
 			// Handle the update
 			const data = event.data.data;
-			updateTexture(data);
+			updateTexture(data, rotate, 1);
 			break;
 		case 'error':
 			console.error('Error from worker:', event.data.message);

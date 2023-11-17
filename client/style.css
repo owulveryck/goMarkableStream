@@ -16,8 +16,14 @@ body, html {
 
 #canvas {
 	position: absolute;
-	max-width: 100vh;
+	/*
+	 * max-width: 100vh;
 	max-height: 100vw;
+	*/
+	width: 100vw;   /* 100% of the viewport width */
+    height: 100vh;  /* 100% of the viewport height */
+    display: block; /* Remove extra space around the canvas */
+
 	z-index: 2;
 }
 

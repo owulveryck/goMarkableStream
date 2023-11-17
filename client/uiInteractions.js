@@ -1,5 +1,4 @@
 //let rotate = true;
-let rotate = true;
 let withColor = true;
 let recordingWithSound = false;
 

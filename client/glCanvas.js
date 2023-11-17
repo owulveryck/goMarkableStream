@@ -9,10 +9,12 @@ if (!gl) {
 const vsSource = `
 attribute vec4 aVertexPosition;
 attribute vec2 aTextureCoord;
+uniform mat4 uRotationMatrix;
+uniform float uScaleFactor;
 varying highp vec2 vTextureCoord;
 
 void main(void) {
-	gl_Position = aVertexPosition;
+	gl_Position = uRotationMatrix * vec4(aVertexPosition.xy * uScaleFactor, aVertexPosition.zw);
 	vTextureCoord = aTextureCoord;
 }
 `;
@@ -26,6 +28,19 @@ void main(void) {
 	gl_FragColor = texture2D(uSampler, vTextureCoord);
 }
 `;
+
+function makeRotationZMatrix(angleInDegrees) {
+	var angleInRadians = angleInDegrees * Math.PI / 180;
+	var s = Math.sin(angleInRadians);
+	var c = Math.cos(angleInRadians);
+
+	return [
+		c, -s, 0, 0,
+		s, c, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	];
+}
 
 // Initialize a shader program
 function initShaderProgram(gl, vsSource, fsSource) {
@@ -113,11 +128,16 @@ gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_D
 	const texture = gl.createTexture();
 gl.bindTexture(gl.TEXTURE_2D, texture);
 
+
 // Set the parameters so we can render any size image.
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+// To apply a smoothing algorithm, you'll likely want to adjust the texture filtering parameters in your WebGL setup. 
+	// For smoothing, typically gl.LINEAR is used for both gl.TEXTURE_MIN_FILTER and gl.TEXTURE_MAG_FILTER
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+// gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+// gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
 // Upload the image into the texture.
 	// let imageData = new ImageData(rawData, width, height);
@@ -125,6 +145,9 @@ gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imageData);
 
 // Draw the scene
 function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture) {
+	if (resizeGLCanvas(gl.canvas)) {
+		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+	}
 	gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
 	gl.clearDepth(1.0);                 // Clear everything
 	gl.enable(gl.DEPTH_TEST);           // Enable depth testing
@@ -160,11 +183,37 @@ function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture)
 drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 
 // Update texture
-function updateTexture(newRawData) {
+function updateTexture(newRawData, shouldRotate, scaleFactor) {
 	gl.bindTexture(gl.TEXTURE_2D, texture);
 	gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, newRawData);
+
+	// Set rotation
+	const uRotationMatrixLocation = gl.getUniformLocation(shaderProgram, 'uRotationMatrix');
+	const rotationMatrix = shouldRotate ? makeRotationZMatrix(270) : makeRotationZMatrix(0);
+	gl.uniformMatrix4fv(uRotationMatrixLocation, false, rotationMatrix);
+
+	// Set scaling
+	const uScaleFactorLocation = gl.getUniformLocation(shaderProgram, 'uScaleFactor');
+	gl.uniform1f(uScaleFactorLocation, scaleFactor);
+
 	drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 }
 
 // Call `updateTexture` with new data whenever you need to update the image
 
+// Let's create a function that resizes the canvas element. 
+// This function will adjust the canvas's width and height attributes based on its display size, which can be set using CSS or directly in JavaScript.
+function resizeGLCanvas(canvas) {
+	const displayWidth = canvas.clientWidth;
+	const displayHeight = canvas.clientHeight;
+
+	// Check if the canvas size is different from its display size
+	if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+		// Make the canvas the same size as its display size
+		canvas.width = displayWidth;
+		canvas.height = displayHeight;
+		return true; // indicates that the size was changed
+	}
+
+	return false; // indicates no change in size
+}
