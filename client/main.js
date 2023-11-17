@@ -7,6 +7,8 @@ const ctx = rawCanvas.getContext('2d');
 const visibleCanvas = document.getElementById("canvas");
 const canvasPresent = document.getElementById("canvasPresent");
 const iFrame = document.getElementById("content");
+const messageDiv = document.getElementById('message');
+
 
 // Initialize the worker
 const streamWorker = new Worker('worker_stream_processing.js');
@@ -23,6 +25,9 @@ let imageData = ctx.createImageData(width, height); // width and height of your 
 
 // Listen for updates from the worker
 streamWorker.onmessage = (event) => {
+	// To hide the message (e.g., when you start drawing in WebGL again)
+	messageDiv.style.display = 'none';
+
 	const data = event.data;
 
 	switch (data.type) {
@@ -55,6 +60,9 @@ eventWorker.postMessage({
 
 // Listen for updates from the worker
 eventWorker.onmessage = (event) => {
+	// To hide the message (e.g., when you start drawing in WebGL again)
+	messageDiv.style.display = 'none';
+
 	const data = event.data;
 
 	switch (data.type) {
