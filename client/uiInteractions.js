@@ -1,13 +1,16 @@
-let rotate = true;
+//let rotate = true;
+let rotate = false;
 let withColor = true;
 let recordingWithSound = false;
 
-document.getElementById('rotate').addEventListener('click', function() {
+document.getElementById('rotate').addEventListener('click', function () {
 	rotate = !rotate;
 	this.classList.toggle('toggled');
+	visibleCanvas.style.transform = "rotate(270deg)";
+	visibleCanvas.style.transformOrigin = "center center";
 	resizeVisibleCanvas();
 });
-document.getElementById('pointerButton').addEventListener('click', function() {
+document.getElementById('pointerButton').addEventListener('click', function () {
 	if (isWebSocketConnected(ws)) {
 		stopWebSocket();
 	} else {
@@ -16,17 +19,17 @@ document.getElementById('pointerButton').addEventListener('click', function() {
 });
 
 
-document.getElementById('colors').addEventListener('click', function() {
+document.getElementById('colors').addEventListener('click', function () {
 	withColor = !withColor;
 	this.classList.toggle('toggled');
 	worker.postMessage({ type: 'withColorChanged', withColor: withColor });
 });
 
 const sidebar = document.querySelector('.sidebar');
-sidebar.addEventListener('mouseover', function() {
+sidebar.addEventListener('mouseover', function () {
 	sidebar.classList.add('active');
 });
-sidebar.addEventListener('mouseout', function() {
+sidebar.addEventListener('mouseout', function () {
 	sidebar.classList.remove('active');
 });
 
@@ -34,7 +37,7 @@ sidebar.addEventListener('mouseout', function() {
 window.addEventListener("resize", resizeVisibleCanvas);
 resizeVisibleCanvas();
 
-document.getElementById('switchOrderButton').addEventListener('click', function() {
+document.getElementById('switchOrderButton').addEventListener('click', function () {
 	// Swap z-index values
 	if (iFrame.style.zIndex == 1) {
 		iFrame.style.zIndex = 4;

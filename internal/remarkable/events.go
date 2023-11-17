@@ -33,7 +33,7 @@ func (e *EventScanner) StartAndPublish(ctx context.Context, pubsub *pubsub.PubSu
 				return
 			case <-tick.C:
 				pubsub.Publish(events.InputEventFromSource{
-					Source:     "dummy",
+					Source:     1,
 					InputEvent: events.InputEvent{},
 				})
 			}

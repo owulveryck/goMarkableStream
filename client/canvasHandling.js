@@ -22,7 +22,7 @@ function resizeVisibleCanvas() {
 	}
 	canvasPresent.style.width = visibleCanvas.style.width;	
 	canvasPresent.style.height = visibleCanvas.style.height;	
-	renderCanvas(rawCanvas,visibleCanvas);
+	//renderCanvas(rawCanvas,visibleCanvas);
 }
 function waiting(message) {
 	var ctx = visibleCanvas.getContext("2d");
