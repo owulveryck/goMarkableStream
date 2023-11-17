@@ -29,12 +29,14 @@ streamWorker.onmessage = (event) => {
 		case 'update':
 			// Handle the update
 			const data = event.data.data;
+			updateTexture(data);
 
-			imageData.data.set(data);
+			//imageData.data.set(data);
 
 			// Draw the ImageData onto the OffscreenCanvas
-			ctx.putImageData(imageData, 0, 0);
-			renderCanvas(rawCanvas,visibleCanvas);
+			//ctx.putImageData(imageData, 0, 0);
+			//renderCanvas(rawCanvas,visibleCanvas);
+
 			//resizeVisibleCanvas();
 			break;
 		case 'error':

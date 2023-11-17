@@ -72,6 +72,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		for {
 			select {
 			case <-ctx.Done():
+				log.Println("disconnected")
 				return
 			case <-eventC:
 				writing = true
