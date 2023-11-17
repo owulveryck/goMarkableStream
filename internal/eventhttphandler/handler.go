@@ -8,6 +8,7 @@ import (
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 
+	"github.com/owulveryck/goMarkableStream/internal/events"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 )
 
@@ -34,6 +35,12 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	for event := range eventC {
 		// Serialize the structure as JSON
+		if event.Source != events.Pen {
+			continue
+		}
+		if event.Type != events.EvAbs {
+			continue
+		}
 		jsonMessage, err := json.Marshal(event)
 		if err != nil {
 			http.Error(w, "cannot send json encode the message "+err.Error(), http.StatusInternalServerError)

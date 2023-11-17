@@ -19,6 +19,11 @@ const (
 	EvFfSt = 23
 )
 
+const (
+	Pen   int = 1
+	Touch int = 2
+)
+
 // InputEvent from the reMarkable
 type InputEvent struct {
 	Time syscall.Timeval `json:"-"`
@@ -32,6 +37,6 @@ type InputEvent struct {
 }
 
 type InputEventFromSource struct {
-	Source string
+	Source int
 	InputEvent
 }

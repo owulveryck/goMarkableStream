@@ -42,7 +42,7 @@ func (e *EventScanner) StartAndPublish(ctx context.Context, pubsub *pubsub.PubSu
 				continue
 			}
 			pubsub.Publish(events.InputEventFromSource{
-				Source:     "pen",
+				Source:     events.Pen,
 				InputEvent: ev,
 			})
 		}
@@ -56,7 +56,7 @@ func (e *EventScanner) StartAndPublish(ctx context.Context, pubsub *pubsub.PubSu
 				continue
 			}
 			pubsub.Publish(events.InputEventFromSource{
-				Source:     "touch",
+				Source:     events.Touch,
 				InputEvent: ev,
 			})
 		}

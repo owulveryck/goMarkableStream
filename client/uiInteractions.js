@@ -36,9 +36,11 @@ resizeVisibleCanvas();
 
 document.getElementById('switchOrderButton').addEventListener('click', function() {
 	// Swap z-index values
-	var temp = iFrame.style.zIndex;
-	iFrame.style.zIndex = visibleCanvas.style.zIndex;
-	visibleCanvas.style.zIndex = temp;
+	if (iFrame.style.zIndex == 1) {
+		iFrame.style.zIndex = 4;
+		return;
+	}
+	iFrame.style.zIndex = 1;
 });
 
 

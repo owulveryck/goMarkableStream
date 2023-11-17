@@ -38,7 +38,6 @@ async function initiateStream() {
 
 		var offset = 0;
 		var count = 0;
-		var value = 0;
 		var lastSum = 0;
 
 
@@ -119,14 +118,14 @@ async function initiateStream() {
 					if (offset >= height*width*4) {
 						offset = 0;
 						// Later, check if the sum has changed
-						//const currentSum = simpleSum(imageData);
-						//if (currentSum !== lastSum) {
+						const currentSum = simpleSum(imageData);
+						if (currentSum !== lastSum) {
 							// The sum has changed, execute your desired action
 
 							// Instead of calling copyCanvasContent(), send the OffscreenCanvas to the main thread
 							postMessage({ type: 'update', data: imageData });
-							//}
-						//lastSum = currentSum;
+						}
+						lastSum = currentSum;
 					}
 
 				}

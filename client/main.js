@@ -2,6 +2,8 @@ const width = 1872;
 const height = 1404;
 
 const rawCanvas = new OffscreenCanvas(width, height); // Define width and height as needed
+// Assuming rawCanvas is an OffscreenCanvas that's already been defined
+const ctx = rawCanvas.getContext('2d');
 const visibleCanvas = document.getElementById("canvas");
 const canvasPresent = document.getElementById("canvasPresent");
 const iFrame = document.getElementById("content");
@@ -17,6 +19,8 @@ streamWorker.postMessage({
 	height: height 
 });
 
+let imageData = ctx.createImageData(width, height); // width and height of your canvas
+
 // Listen for updates from the worker
 streamWorker.onmessage = (event) => {
 	const data = event.data;
@@ -25,11 +29,8 @@ streamWorker.onmessage = (event) => {
 		case 'update':
 			// Handle the update
 			const data = event.data.data;
-			// Assuming rawCanvas is an OffscreenCanvas that's already been defined
-			const ctx = rawCanvas.getContext('2d');
 
-			// Create an ImageData object with the provided Uint8ClampedArray
-			const imageData = new ImageData(data, width, height);
+			imageData.data.set(data);
 
 			// Draw the ImageData onto the OffscreenCanvas
 			ctx.putImageData(imageData, 0, 0);

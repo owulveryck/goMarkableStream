@@ -74,7 +74,7 @@ async function initiateEventsListener() {
 	ws.onclose = () => {
 		postMessage({
 			type: 'error',
-			message: error.message
+			message: 'closed connection'
 		});
 		console.log('WebSocket connection closed. Attempting to reconnect...');
 		//setTimeout(connectWebSocket, 3000); // Reconnect after 3 seconds

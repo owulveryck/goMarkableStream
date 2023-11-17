@@ -27,7 +27,7 @@ var rawFrameBuffer = sync.Pool{
 func NewStreamHandler(file io.ReaderAt, pointerAddr int64, inputEvents *pubsub.PubSub) *StreamHandler {
 	return &StreamHandler{
 		ticker:         time.NewTicker(rate * time.Millisecond),
-		waitingQueue:   make(chan struct{}, 1),
+		waitingQueue:   make(chan struct{}, 2),
 		file:           file,
 		pointerAddr:    pointerAddr,
 		inputEventsBus: inputEvents,
