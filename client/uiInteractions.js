@@ -7,6 +7,7 @@ document.getElementById('rotate').addEventListener('click', function () {
 	this.classList.toggle('toggled');
 	//visibleCanvas.style.transform = "rotate(270deg)";
 	//visibleCanvas.style.transformOrigin = "center center";
+	eventWorker.postMessage({ type: 'rotate', rotate: rotate });
 
 	resizeVisibleCanvas();
 });
@@ -22,7 +23,7 @@ document.getElementById('pointerButton').addEventListener('click', function () {
 document.getElementById('colors').addEventListener('click', function () {
 	withColor = !withColor;
 	this.classList.toggle('toggled');
-	worker.postMessage({ type: 'withColorChanged', withColor: withColor });
+	streamWorker.postMessage({ type: 'withColorChanged', withColor: withColor });
 });
 
 const sidebar = document.querySelector('.sidebar');

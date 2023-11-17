@@ -20,6 +20,11 @@ onmessage = (event) => {
 			rotate = event.data.rotate;
 			initiateEventsListener();
 			break;
+		case 'rotate':
+			rotate = event.data.rotate;
+			// Handle the error, maybe show a user-friendly message or take some corrective action
+			break;
+
 	}
 };
 
@@ -65,7 +70,7 @@ async function initiateEventsListener() {
 	ws.onerror = () => {
 		postMessage({
 			type: 'error',
-			message: error.message
+			message: "websocket error",
 		});
 		console.error('WebSocket error occurred. Attempting to reconnect...');
 		//setTimeout(connectWebSocket, 3000); // Reconnect after 3 seconds
