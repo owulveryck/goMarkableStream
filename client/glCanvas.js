@@ -112,14 +112,14 @@ const textureCoordBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
 
 const textureCoordinates = [
-	1.0,  0.0,  // Bottom right
-	0.0,  0.0,  // Bottom left
-	1.0,  1.0,  // Top right
-	0.0,  1.0,  // Top left
-	//1.0, 1.0,
-	//0.0, 1.0,
-	//1.0, 0.0,
-	//0.0, 0.0,
+//	1.0,  0.0,  // Bottom right
+//	0.0,  0.0,  // Bottom left
+//	1.0,  1.0,  // Top right
+//	0.0,  1.0,  // Top left
+	1.0, 1.0,
+	0.0, 1.0,
+	1.0, 0.0,
+	0.0, 0.0,
 ];
 
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);

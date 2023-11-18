@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"image"
 	"image/png"
 	"log"
@@ -12,8 +13,8 @@ import (
 func main() {
 	palette := make(map[uint8]int64)
 	spectre := make(map[uint8]int64)
-	//testdata := "../testdata/full_memory_region.raw"
-	testdata := "../testdata/multi.raw"
+	testdata := "../testdata/full_memory_region.raw"
+	//testdata := "../testdata/multi.raw"
 	stats, _ := os.Stat(testdata)
 	f, err := os.Open(testdata)
 	if err != nil {
@@ -39,9 +40,13 @@ func main() {
 		},
 	}
 	img := image.NewGray(boundaries)
-	w := remarkable.ScreenWidth
-	h := remarkable.ScreenHeight
-	unflipAndExtract(picture, img.Pix, w, h)
+	//	w := remarkable.ScreenWidth
+	//	h := remarkable.ScreenHeight
+
+	for i := 0; i < len(img.Pix); i++ {
+		img.Pix[i] = uint8(binary.LittleEndian.Uint16(picture[i*2 : i*2+2]))
+	}
+	//	unflipAndExtract(picture, img.Pix, w, h)
 	for i := 0; i < len(picture); i += 2 {
 		spectre[picture[i]]++
 	}
@@ -54,11 +59,7 @@ func main() {
 	png.Encode(os.Stdout, img)
 }
 func unflipAndExtract(src, dst []uint8, w, h int) {
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			srcIndex := (y*w + x) * 2 // every second byte is useful
-			dstIndex := (h-y-1)*w + x // unflip position
-			dst[dstIndex] = src[srcIndex] * 17
-		}
+	for i := 0; i < len(src)-2; i += 2 {
+		dst[i%2] = uint8(binary.LittleEndian.Uint16(src[i : i+2]))
 	}
 }
