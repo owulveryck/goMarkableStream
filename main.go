@@ -10,6 +10,8 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 
+	_ "net/http/pprof"
+
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 )
@@ -42,6 +44,9 @@ var (
 )
 
 func main() {
+	go func() {
+		log.Println(http.ListenAndServe(":6060", nil))
+	}()
 	var err error
 
 	ifaces()

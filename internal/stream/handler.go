@@ -10,7 +10,6 @@ import (
 
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
-	"github.com/owulveryck/goMarkableStream/internal/rle"
 )
 
 const (
@@ -61,8 +60,8 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rawData := rawFrameBuffer.Get().([]uint8)
 		defer rawFrameBuffer.Put(rawData) // Return the slice to the pool when done
 		// the informations are int4, therefore store it in a uint8array to reduce data transfer
-		rleWriter := rle.NewRLE(w)
-		extractor := &oneOutOfTwo{rleWriter}
+		//rleWriter := rle.NewRLE(w)
+		//extractor := &oneOutOfTwo{rleWriter}
 		writing := true
 		stopWriting := time.NewTicker(2 * time.Second)
 		defer stopWriting.Stop()
@@ -85,7 +84,11 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					if err != nil {
 						log.Fatal(err)
 					}
-					extractor.Write(rawData)
+					_, err = w.Write(rawData)
+					if err != nil {
+						return
+					}
+					//extractor.Write(rawData)
 				}
 			}
 		}
