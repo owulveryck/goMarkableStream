@@ -30,5 +30,10 @@ window.onload = function() {
 		document.getElementById('content').src = presentURL;
 	}
 };
-// connectWebSocket();
 
+// Add an event listener for the 'beforeunload' event, which is triggered when the page is refreshed or closed
+window.addEventListener('beforeunload', () => {
+  // Send a termination signal to the worker before the page is unloaded
+  streamWorker.postMessage({ type: 'terminate' });
+  eventWorker.postMessage({ type: 'terminate' });
+});

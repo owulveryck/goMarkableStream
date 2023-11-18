@@ -24,7 +24,10 @@ onmessage = (event) => {
 			rotate = event.data.rotate;
 			// Handle the error, maybe show a user-friendly message or take some corrective action
 			break;
-
+		case 'terminate':
+			console.log("terminating worker");
+			close();
+			break;
 	}
 };
 

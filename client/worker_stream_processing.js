@@ -15,6 +15,11 @@ onmessage = (event) => {
 			withColor = event.data.withColor;
 			// Handle the error, maybe show a user-friendly message or take some corrective action
 			break;
+		case 'terminate':
+			console.log("terminating worker");
+			close();
+			break;
+
 	}
 };
 
