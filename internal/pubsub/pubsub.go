@@ -6,17 +6,20 @@ import (
 	"github.com/owulveryck/goMarkableStream/internal/events"
 )
 
+// PubSub is a structure to hold publisher and subscribers to events
 type PubSub struct {
 	subscribers map[chan events.InputEventFromSource]bool
 	mu          sync.Mutex
 }
 
+// NewPubSub creates a new pubsub
 func NewPubSub() *PubSub {
 	return &PubSub{
 		subscribers: make(map[chan events.InputEventFromSource]bool),
 	}
 }
 
+// Publish an event to all subscribers
 func (ps *PubSub) Publish(event events.InputEventFromSource) {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
@@ -26,6 +29,7 @@ func (ps *PubSub) Publish(event events.InputEventFromSource) {
 	}
 }
 
+// Subscrine to the topics to get the event published by the publishers
 func (ps *PubSub) Subscribe(name string) chan events.InputEventFromSource {
 	eventChan := make(chan events.InputEventFromSource)
 
@@ -35,6 +39,8 @@ func (ps *PubSub) Subscribe(name string) chan events.InputEventFromSource {
 
 	return eventChan
 }
+
+// Unsubscribe from the events
 func (ps *PubSub) Unsubscribe(ch chan events.InputEventFromSource) {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()

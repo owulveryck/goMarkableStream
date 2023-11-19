@@ -12,16 +12,19 @@ import (
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 )
 
+// NewEventHandler creates an event habdler that subscribes from the inputEvents
 func NewEventHandler(inputEvents *pubsub.PubSub) *EventHandler {
 	return &EventHandler{
 		inputEventBus: inputEvents,
 	}
 }
 
+// EventHandler is a http.Handler that servers the input events over http via wabsockets
 type EventHandler struct {
 	inputEventBus *pubsub.PubSub
 }
 
+// ServeHTTP implements http.Handler
 func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn, _, _, err := ws.UpgradeHTTP(r, w)
 	if err != nil {
