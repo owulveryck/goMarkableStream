@@ -45,8 +45,10 @@ type StreamHandler struct {
 
 // ServeHTTP implements http.Handler
 func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Set the Connection header to close
 	select {
 	case h.waitingQueue <- struct{}{}:
+
 		eventC := h.inputEventsBus.Subscribe("stream")
 		defer func() {
 			<-h.waitingQueue
@@ -68,14 +70,14 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer stopWriting.Stop()
 
 		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Connection", "close")
+		w.Header().Set("Cache-Control", "no-cache")
 
 		for {
 			select {
 			case <-r.Context().Done():
-				log.Println("disconnected")
 				return
 			case <-ctx.Done():
-				log.Println("disconnected")
 				return
 			case <-eventC:
 				writing = true
