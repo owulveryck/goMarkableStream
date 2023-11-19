@@ -22,7 +22,7 @@ func NewEventScanner() *EventScanner {
 	return &EventScanner{}
 }
 
-// Start the event scanner and feed the EventC on movement. use the context to end the routine
+// StartAndPublish the event scanner and feed the EventC on movement. use the context to end the routine
 func (e *EventScanner) StartAndPublish(ctx context.Context, pubsub *pubsub.PubSub) {
 	go func(ctx context.Context) {
 		tick := time.NewTicker(500 * time.Millisecond)

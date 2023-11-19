@@ -5,6 +5,7 @@ import "syscall"
 const (
 	// Input event types
 	// see https://www.kernel.org/doc/Documentation/input/event-codes.txt
+
 	// EvSyn is used as markers to separate events. Events may be separated in time or in
 	// space, such as with the multitouch protocol.
 	EvSyn = 0
@@ -36,7 +37,9 @@ const (
 )
 
 const (
-	Pen   int = 1
+	// Pen event
+	Pen int = 1
+	// Touch event
 	Touch int = 2
 )
 
@@ -52,7 +55,7 @@ type InputEvent struct {
 	Value int32
 }
 
-// InputEventFromSrouce add the source origin
+// InputEventFromSource add the source origin
 type InputEventFromSource struct {
 	Source int
 	InputEvent

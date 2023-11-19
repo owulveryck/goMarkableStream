@@ -12,7 +12,7 @@ var (
 	cond          = sync.NewCond(&mu)
 )
 
-// TrhorrlingMiddleware to allow new connections only if there are no active writers or if max writers is exceeded.
+// ThrottlingMiddleware to allow new connections only if there are no active writers or if max writers is exceeded.
 func ThrottlingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()

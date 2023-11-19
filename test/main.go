@@ -7,14 +7,14 @@ import (
 	"log"
 )
 
-type InputEvent struct {
+type inputEvent struct {
 	Type  uint16
 	Code  uint16
 	Value int32
 }
 
 func main() {
-	event := InputEvent{Type: 1, Code: 2, Value: 3}
+	event := inputEvent{Type: 1, Code: 2, Value: 3}
 
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.LittleEndian, event)

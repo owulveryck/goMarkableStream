@@ -36,7 +36,7 @@ func (ps *PubSub) Publish(event events.InputEventFromSource) {
 	}
 }
 
-// Subscrine to the topics to get the event published by the publishers
+// Subscribe to the topics to get the event published by the publishers
 func (ps *PubSub) Subscribe(name string) chan events.InputEventFromSource {
 	eventChan := make(chan events.InputEventFromSource)
 
