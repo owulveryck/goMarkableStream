@@ -3,7 +3,6 @@ package stream
 import (
 	"encoding/binary"
 	"io"
-	"net/http"
 	"sync"
 
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
@@ -25,13 +24,5 @@ func (oneoutoftwo *oneOutOfTwo) Write(src []byte) (n int, err error) {
 	for i := 0; i < remarkable.ScreenHeight*remarkable.ScreenWidth; i++ {
 		imageData[i] = uint8(binary.LittleEndian.Uint16(src[i*2 : i*2+2]))
 	}
-	n, err = oneoutoftwo.w.Write(imageData)
-	// If using streaming or chunked responses
-	if err != nil {
-		return
-	}
-	if flusher, ok := oneoutoftwo.w.(http.Flusher); ok {
-		flusher.Flush()
-	}
-	return
+	return oneoutoftwo.w.Write(imageData)
 }

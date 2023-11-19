@@ -25,7 +25,10 @@ func (ps *PubSub) Publish(event events.InputEventFromSource) {
 	defer ps.mu.Unlock()
 
 	for ch := range ps.subscribers {
-		ch <- event
+		select {
+		case ch <- event:
+		default:
+		}
 	}
 }
 
@@ -34,6 +37,7 @@ func (ps *PubSub) Subscribe(name string) chan events.InputEventFromSource {
 	eventChan := make(chan events.InputEventFromSource)
 
 	ps.mu.Lock()
+
 	ps.subscribers[eventChan] = true
 	ps.mu.Unlock()
 
@@ -48,5 +52,6 @@ func (ps *PubSub) Unsubscribe(ch chan events.InputEventFromSource) {
 	if _, ok := ps.subscribers[ch]; ok {
 		delete(ps.subscribers, ch)
 		close(ch) // Close the channel to signal subscriber to exit.
+
 	}
 }
