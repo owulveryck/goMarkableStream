@@ -13,10 +13,12 @@ import (
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 )
 
+// EventScanner ...
 type EventScanner struct {
 	pen, touch *os.File
 }
 
+// NewEventScanner ...
 func NewEventScanner() *EventScanner {
 	pen, err := os.OpenFile("/dev/input/event1", os.O_RDONLY, 0644)
 	if err != nil {
@@ -32,6 +34,7 @@ func NewEventScanner() *EventScanner {
 	}
 }
 
+// StartAndPublish ...
 func (e *EventScanner) StartAndPublish(ctx context.Context, pubsub *pubsub.PubSub) {
 	// Start a goroutine to read events and send them on the channel
 	go func(_ context.Context) {
