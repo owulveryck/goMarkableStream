@@ -2,6 +2,7 @@ package pubsub
 
 import (
 	"sync"
+	"time"
 
 	"github.com/owulveryck/goMarkableStream/internal/events"
 )
@@ -21,13 +22,16 @@ func NewPubSub() *PubSub {
 
 // Publish an event to all subscribers
 func (ps *PubSub) Publish(event events.InputEventFromSource) {
+	// Create a ticker for the timeout
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 
 	for ch := range ps.subscribers {
 		select {
 		case ch <- event:
-		default:
+		case <-ticker.C:
 		}
 	}
 }
