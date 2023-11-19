@@ -1,7 +1,6 @@
 package stream
 
 import (
-	"context"
 	"io"
 	"log"
 	"net/http"
@@ -26,8 +25,7 @@ var rawFrameBuffer = sync.Pool{
 // NewStreamHandler creates a new stream handler reading from file @pointerAddr
 func NewStreamHandler(file io.ReaderAt, pointerAddr int64, inputEvents *pubsub.PubSub) *StreamHandler {
 	return &StreamHandler{
-		ticker:         time.NewTicker(rate * time.Millisecond),
-		waitingQueue:   make(chan struct{}, 2),
+		waitingQueue:   make(chan struct{}, 1),
 		file:           file,
 		pointerAddr:    pointerAddr,
 		inputEventsBus: inputEvents,
@@ -36,7 +34,6 @@ func NewStreamHandler(file io.ReaderAt, pointerAddr int64, inputEvents *pubsub.P
 
 // StreamHandler is an http.Handler that serves the stream of data to the client
 type StreamHandler struct {
-	ticker         *time.Ticker
 	waitingQueue   chan struct{}
 	file           io.ReaderAt
 	pointerAddr    int64
@@ -54,11 +51,9 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			<-h.waitingQueue
 			h.inputEventsBus.Unsubscribe(eventC)
 		}()
-		//ctx, cancel := context.WithTimeout(r.Context(), 1*time.Hour)
-		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Hour)
-		defer cancel()
-		h.ticker.Reset(rate * time.Millisecond)
-		defer h.ticker.Stop()
+		ticker := time.NewTicker(rate * time.Millisecond)
+		ticker.Reset(rate * time.Millisecond)
+		defer ticker.Stop()
 
 		rawData := rawFrameBuffer.Get().([]uint8)
 		defer rawFrameBuffer.Put(rawData) // Return the slice to the pool when done
@@ -72,25 +67,29 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Header().Set("Connection", "close")
 		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Transfer-Encoding", "chunked")
 
 		for {
 			select {
 			case <-r.Context().Done():
-				return
-			case <-ctx.Done():
 				return
 			case <-eventC:
 				writing = true
 				stopWriting.Reset(2 * time.Second)
 			case <-stopWriting.C:
 				writing = false
-			case <-h.ticker.C:
+			case <-ticker.C:
 				if writing {
 					_, err := h.file.ReadAt(rawData, h.pointerAddr)
 					if err != nil {
-						log.Fatal(err)
+						log.Println(err)
+						return
 					}
-					extractor.Write(rawData)
+					_, err = extractor.Write(rawData)
+					if err != nil {
+						log.Println("Error in writing", err)
+						return
+					}
 				}
 			}
 		}

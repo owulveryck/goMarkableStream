@@ -2,6 +2,7 @@ package rle
 
 import (
 	"io"
+	"net/http"
 	"sync"
 
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
@@ -58,5 +59,11 @@ func (rlewriter *RLE) Write(data []byte) (n int, err error) {
 	encoded = append(encoded, uint8(current))
 
 	n, err = rlewriter.sub.Write(encoded)
+	if err != nil {
+		return
+	}
+	if flusher, ok := rlewriter.sub.(http.Flusher); ok {
+		flusher.Flush()
+	}
 	return
 }

@@ -53,7 +53,6 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = wsutil.WriteServerText(conn, jsonMessage)
 		if err != nil {
 			log.Println(err)
-			http.Error(w, "cannot send message "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
