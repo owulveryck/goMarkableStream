@@ -33,7 +33,6 @@ onmessage = (event) => {
 
 
 async function initiateEventsListener() {
-	console.log(portrait);
 	const RETRY_DELAY_MS = 3000; // Delay before retrying the connection (in milliseconds)
 	ws = new WebSocket(wsURL);
 	draw = true;

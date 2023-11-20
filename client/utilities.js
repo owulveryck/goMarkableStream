@@ -1,9 +1,3 @@
-screenshotButton.addEventListener("click", function() {
-	const tempCanvas = createTempCanvas(); // Create the temporary canvas
-    var screenshotDataUrl = tempCanvas.toDataURL("image/png");
-    downloadScreenshot(screenshotDataUrl);
-	removeTempCanvas();
-});
 
 function downloadScreenshot(dataUrl) {
 	var link = document.getElementById("screenshot");

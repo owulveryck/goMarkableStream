@@ -60,7 +60,6 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "rate value is too low", http.StatusBadRequest)
 		return
 	}
-	log.Println(rate)
 
 	// Set CORS headers for the preflight request
 	if r.Method == http.MethodOptions {
