@@ -10,15 +10,17 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 
+	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 )
 
 type configuration struct {
-	BindAddr string `envconfig:"SERVER_BIND_ADDR" default:":2001" required:"true" description:"The server bind address"`
-	Username string `envconfig:"SERVER_USERNAME" default:"admin"`
-	Password string `envconfig:"SERVER_PASSWORD" default:"password"`
-	TLS      bool   `envconfig:"HTTPS" default:"true"`
-	DevMode  bool   `envconfig:"DEV_MODE" default:"false"`
+	BindAddr    string `envconfig:"SERVER_BIND_ADDR" default:":2001" required:"true" description:"The server bind address"`
+	Username    string `envconfig:"SERVER_USERNAME" default:"admin"`
+	Password    string `envconfig:"SERVER_PASSWORD" default:"password"`
+	TLS         bool   `envconfig:"HTTPS" default:"true"`
+	Compression bool   `envconfig:"COMPRESSION" default:"false"`
+	DevMode     bool   `envconfig:"DEV_MODE" default:"false"`
 }
 
 const (
@@ -60,10 +62,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	mux := setMux()
+	eventPublisher := pubsub.NewPubSub()
+	eventScanner := remarkable.NewEventScanner()
+	eventScanner.StartAndPublish(context.Background(), eventPublisher)
+
+	mux := setMuxer(eventPublisher)
 
 	//	handler := BasicAuthMiddleware(gzMiddleware(mux))
-	handler := BasicAuthMiddleware(mux)
+	var handler http.Handler
+	handler = BasicAuthMiddleware(mux)
 	if *unsafe {
 		handler = mux
 	}

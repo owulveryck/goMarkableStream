@@ -70,6 +70,7 @@ function download() {
 	}, 100);
 }
 
+/*
 document.getElementById('startStopButtonWithSound').addEventListener('click', function() {
 	let icon = document.getElementById('icon2');
 	let label = document.getElementById('label2');
@@ -102,6 +103,7 @@ document.getElementById('startStopButton').addEventListener('click', function() 
 		stopRecording();
 	}
 });
+*/
 // JavaScript file (stream.js)
 function createTempCanvas() {
 	const tempCanvas = document.createElement('canvas');
@@ -128,7 +130,7 @@ function removeTempCanvas() {
 }
 let animationFrameId;
 function updateTempCanvas(tempCanvas) {
-	renderCanvas(rawCanvas,tempCanvas);
+	//renderCanvas(rawCanvas,tempCanvas);
 	// Continue updating tempCanvas
 	animationFrameId = requestAnimationFrame(() => updateTempCanvas(tempCanvas));
 }

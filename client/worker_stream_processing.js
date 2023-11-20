@@ -1,6 +1,7 @@
 let withColor=true;
 let height;
 let width;
+let rate;
 
 onmessage = (event) => {
 	const data = event.data;
@@ -9,12 +10,19 @@ onmessage = (event) => {
 		case 'init':
 			height = event.data.height;
 			width = event.data.width;
+			withColor = event.data.withColor;
+			rate = event.data.rate;
 			initiateStream();
 			break;
 		case 'withColorChanged':
 			withColor = event.data.withColor;
 			// Handle the error, maybe show a user-friendly message or take some corrective action
 			break;
+		case 'terminate':
+			console.log("terminating worker");
+			close();
+			break;
+
 	}
 };
 
@@ -25,7 +33,7 @@ async function initiateStream() {
 	try {
 
 		// Create a new ReadableStream instance from a fetch request
-		const response = await fetch('/stream');
+		const response = await fetch('/stream?rate='+rate);
 		const stream = response.body;
 
 		// Create a reader for the ReadableStream
@@ -38,7 +46,6 @@ async function initiateStream() {
 
 		var offset = 0;
 		var count = 0;
-		var value = 0;
 		var lastSum = 0;
 
 
@@ -125,7 +132,7 @@ async function initiateStream() {
 
 							// Instead of calling copyCanvasContent(), send the OffscreenCanvas to the main thread
 							postMessage({ type: 'update', data: imageData });
-							//}
+						//}
 						//lastSum = currentSum;
 					}
 

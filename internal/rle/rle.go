@@ -1,6 +1,7 @@
 package rle
 
 import (
+	"bytes"
 	"io"
 	"sync"
 
@@ -32,7 +33,7 @@ type RLE struct {
 // combines the count and value into a single uint8, with the count ranging from 0 to 15.
 //
 // Implements: io.Writer
-func (rlewriter *RLE) Write(data []byte) (n int, err error) {
+func (rlewriter *RLE) Write(data []byte) (int, error) {
 	length := len(data)
 	if length == 0 {
 		return 0, nil
@@ -57,6 +58,6 @@ func (rlewriter *RLE) Write(data []byte) (n int, err error) {
 	encoded = append(encoded, uint8(count))
 	encoded = append(encoded, uint8(current))
 
-	n, err = rlewriter.sub.Write(encoded)
-	return
+	n, err := io.Copy(rlewriter.sub, bytes.NewBuffer(encoded))
+	return int(n), err
 }

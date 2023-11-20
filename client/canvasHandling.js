@@ -2,7 +2,7 @@
 function resizeVisibleCanvas() {
 	var container = document.getElementById("container");
 
-	if (rotate) {
+	if (portrait) {
 		var aspectRatio = 1404 / 1872;
 	} else {
 		var aspectRatio = 1872 / 1404;
@@ -14,70 +14,28 @@ function resizeVisibleCanvas() {
 	var containerAspectRatio = containerWidth / containerHeight;
 
 	if (containerAspectRatio > aspectRatio) {
+		        // Canvas is relatively wider than container
+        //canvas.style.width = '100vw';
+        //canvas.style.width = '100%';
+        //canvas.style.height = 'auto';
 		visibleCanvas.style.width = containerHeight * aspectRatio + "px";
 		visibleCanvas.style.height = containerHeight + "px";
 	} else {
+		        // Canvas is relatively taller than container
+        //canvas.style.width = 'auto';
+        //canvas.style.height = '100vh';
+        //canvas.style.height = '100%';
 		visibleCanvas.style.width = containerWidth + "px";
 		visibleCanvas.style.height = containerWidth / aspectRatio + "px";
 	}
-	renderCanvas(rawCanvas,visibleCanvas);
+	canvasPresent.style.width = visibleCanvas.style.width;	
+	canvasPresent.style.height = visibleCanvas.style.height;	
 }
 function waiting(message) {
-	var ctx = visibleCanvas.getContext("2d");
-	ctx.fillStyle = '#666666'; 
-	ctx.fillRect(0, 0, visibleCanvas.width, visibleCanvas.height);
-
-	var fontSize = 48;
-	var fontFamily = "Arial";
-	var textColor = "red";
-
-	// Calculate the text dimensions
-	ctx.font = fontSize + "px " + fontFamily;
-	var textWidth = ctx.measureText(message).width;
-	var textHeight = fontSize;
-
-	// Calculate the center position
-	var centerX = canvas.width / 2;
-	var centerY = canvas.height / 2;
-
-	// Set the fill style and align the text in the center
-	ctx.fillStyle = textColor;
-	ctx.textAlign = "center";
-	ctx.textBaseline = "middle";
-
-	// Draw the text at the center
-	ctx.fillText(message, centerX, centerY);
+	// Clear the canvas
+	gl.clearColor(0, 0, 0, 1); // Set clear color (black, in this case)
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	// To show the message
+	messageDiv.textContent = message;
+	messageDiv.style.display = 'block';
 }
-
-function renderCanvas(srcCanvas, dstCanvas) {
-	let ctxSrc = srcCanvas.getContext('2d');
-	let ctxDst = dstCanvas.getContext('2d');
-
-	let w = srcCanvas.width;
-	let h = srcCanvas.height;
-
-	// Clear the destination canvas
-	ctxDst.clearRect(0, 0, w, h);
-	ctxDst.imageSmoothingEnabled = true;
-
-
-	if (rotate) {
-		// Swap width and height for dstCanvas to accommodate rotated content
-		dstCanvas.width = h;
-		dstCanvas.height = w;
-		ctxDst.translate(0,w);  // Move the drawing origin to the right side of dstCanvas
-		ctxDst.rotate(-Math.PI / 2); // Rotate by 90 degrees
-
-
-		// Since the source canvas is now rotated, width and height are swapped
-		ctxDst.drawImage(srcCanvas, 0, 0);
-	} else {
-		dstCanvas.width = w;
-		dstCanvas.height = h;
-		ctxDst.drawImage(srcCanvas, 0, 0);
-	}
-
-	// Reset transformations for future calls
-	ctxDst.setTransform(1, 0, 0, 1, 0, 0);
-}
-

@@ -8,6 +8,8 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/owulveryck/goMarkableStream/internal/eventhttphandler"
+	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/stream"
 )
 
@@ -19,7 +21,7 @@ func (s stripFS) Open(name string) (http.File, error) {
 	return s.fs.Open("client" + name)
 }
 
-func setMux() *http.ServeMux {
+func setMuxer(eventPublisher *pubsub.PubSub) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	fs := http.FileServer(stripFS{http.FS(assetsFS)})
@@ -37,8 +39,16 @@ func setMux() *http.ServeMux {
 		fs.ServeHTTP(w, r)
 	})
 
-	streanHandler := stream.NewStreamHandler(file, pointerAddr)
-	mux.Handle("/stream", streanHandler)
+	streamHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher)
+	if c.Compression {
+		mux.Handle("/stream", gzMiddleware(stream.ThrottlingMiddleware(streamHandler)))
+	} else {
+		mux.Handle("/stream", stream.ThrottlingMiddleware(streamHandler))
+	}
+
+	wsHandler := eventhttphandler.NewEventHandler(eventPublisher)
+	mux.Handle("/events", wsHandler)
+
 	if c.DevMode {
 		rawHandler := stream.NewRawHandler(file, pointerAddr)
 		mux.Handle("/raw", rawHandler)

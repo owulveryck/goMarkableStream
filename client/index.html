@@ -3,8 +3,8 @@
 	<head>
 		<title>goMarkableStream</title>
 		<link rel="icon" type="image/x-icon" href="favicon.ico">
-		    <!-- Including the CSS stylesheet -->
-    <link rel="stylesheet" href="style.css">
+		<!-- Including the CSS stylesheet -->
+		<link rel="stylesheet" href="style.css">
 	</head>
 	<body>
 		<div id="menuContainer">
@@ -13,28 +13,36 @@
 				<ul class="menu">
 					<li><button id="rotate" class="apple-button">Rotate</button></li>
 					<li><button id="colors" class="apple-button">Colors</button></li>
+					<!--
 					<li><button id="startStopButton" class="apple-button">
 							<div class="icon" id="icon"></div>
 							<span id="label">Record</span>
 						</button></li>
-					<li><button id="startStopButtonWithSound" class="apple-button">
-							<div class="icon" id="icon2"></div>
-							<span id="label2">Record with audio</span>
-						</button></li>
-						<li><button id="screenshotButton" class="apple-button">Screenshot</button><a id="screenshot"></a></li>
+						<li><button id="startStopButtonWithSound" class="apple-button">
+								<div class="icon" id="icon2"></div>
+								<span id="label2">Record with audio</span>
+							</button></li>
+							<li><button id="screenshotButton" class="apple-button">Screenshot</button><a id="screenshot"></a></li>
+					-->
+							<li><button id="pointerButton" class="apple-button">Pointer</button></a></li>
+							<li><button id="switchOrderButton" class="apple-button">Mask drawing</button><a id="switch"></a></li>
 				</ul>
 			</div>
 		</div>
 		<div id="container">
-			<canvas id="canvas" width="1872" height="1404"></canvas>
-			<iframe id="content" allowfullscreen="true" frameborder="0" width="100%" height="100%"  allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true">></iframe>
+			<canvas id="canvas"></canvas>
+			<div id="message" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: red;"> </div>
+			<canvas id="canvasPresent" width="1872" height="1404"></canvas>
+			<iframe id="content" allow="camera *;" allowfullscreen="true" frameborder="0" width="100%" height="100%"  allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true">></iframe>
 		</div>
-		<!--<iframe id="content" src="https://docs.google.com/presentation/d/e/2PACX-1vQoU3OkrD499XPCjI1kl18dci2Um6eqCkZlKCMJaCVaUkonu6NOWZkLgDOdpTyJwLJlyZ9Yf8SAMTdE/embed?start=false&loop=false&delayms=3000" frameborder="0" width="100%"  allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>-->
 
 	</body>
 	<script src="main.js"></script> <!-- Include the JavaScript file -->
+	<script src="glCanvas.js"></script> <!-- Include the JavaScript file -->
+	<script src="pointer.js"></script> <!-- Include the JavaScript file -->
 	<script src="utilities.js"></script> <!-- Include the JavaScript file -->
 	<script src="recording.js"></script> <!-- Include the JavaScript file -->
 	<script src="canvasHandling.js"></script> <!-- Include the JavaScript file -->
 	<script src="uiInteractions.js"></script> <!-- Include the JavaScript file -->
+	<script src="workersHandling.js"></script>
 </html>
