@@ -2,7 +2,9 @@
 streamWorker.postMessage({ 
 	type: 'init', 
 	width: width, 
-	height: height 
+	height: height,
+	rate: rate,
+	withColor: withColor
 });
 
 

@@ -1,6 +1,7 @@
 let withColor=true;
 let height;
 let width;
+let rate;
 
 onmessage = (event) => {
 	const data = event.data;
@@ -9,6 +10,8 @@ onmessage = (event) => {
 		case 'init':
 			height = event.data.height;
 			width = event.data.width;
+			withColor = event.data.withColor;
+			rate = event.data.rate;
 			initiateStream();
 			break;
 		case 'withColorChanged':
@@ -30,7 +33,7 @@ async function initiateStream() {
 	try {
 
 		// Create a new ReadableStream instance from a fetch request
-		const response = await fetch('/stream');
+		const response = await fetch('/stream?rate='+rate);
 		const stream = response.body;
 
 		// Create a reader for the ReadableStream

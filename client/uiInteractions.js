@@ -1,5 +1,3 @@
-//let portrait = true;
-let withColor = true;
 let recordingWithSound = false;
 
 document.getElementById('rotate').addEventListener('click', function () {

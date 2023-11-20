@@ -1,5 +1,7 @@
 // WebGL initialization
-const gl = visibleCanvas.getContext('webgl');
+//const gl = visibleCanvas.getContext('webgl');
+const gl = canvas.getContext('webgl', { antialias: true });
+
 
 if (!gl) {
 	alert('WebGL not supported');
@@ -130,10 +132,10 @@ gl.bindTexture(gl.TEXTURE_2D, texture);
 
 
 // Set the parameters so we can render any size image.
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 // To apply a smoothing algorithm, you'll likely want to adjust the texture filtering parameters in your WebGL setup. 
-	// For smoothing, typically gl.LINEAR is used for both gl.TEXTURE_MIN_FILTER and gl.TEXTURE_MAG_FILTER
+// For smoothing, typically gl.LINEAR is used for both gl.TEXTURE_MIN_FILTER and gl.TEXTURE_MAG_FILTER
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -148,7 +150,7 @@ function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture)
 	if (resizeGLCanvas(gl.canvas)) {
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 	}
-	gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
+	gl.clearColor(0.5, 0.5, 0.5, 0.25);  // Gray with 75% transparency
 	gl.clearDepth(1.0);                 // Clear everything
 	gl.enable(gl.DEPTH_TEST);           // Enable depth testing
 	gl.depthFunc(gl.LEQUAL);            // Near things obscure far things

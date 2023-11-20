@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -12,8 +13,8 @@ import (
 	"github.com/owulveryck/goMarkableStream/internal/rle"
 )
 
-const (
-	rate = 200
+var (
+	rate time.Duration = 200
 )
 
 var rawFrameBuffer = sync.Pool{
@@ -40,6 +41,27 @@ type StreamHandler struct {
 
 // ServeHTTP implements http.Handler
 func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Parse query parameters
+	query := r.URL.Query()
+	rateStr := query.Get("rate")
+	// If 'rate' parameter exists and is valid, use its value
+	if rateStr != "" {
+		var err error
+		rateInt, err := strconv.Atoi(rateStr)
+		if err != nil {
+			// Handle error or keep the default value
+			// For example, you can send a response with an error message
+			http.Error(w, "Invalid 'rate' parameter", http.StatusBadRequest)
+			return
+		}
+		rate = time.Duration(rateInt)
+	}
+	if rate < 100 {
+		http.Error(w, "rate value is too low", http.StatusBadRequest)
+		return
+	}
+	log.Println(rate)
+
 	// Set CORS headers for the preflight request
 	if r.Method == http.MethodOptions {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
