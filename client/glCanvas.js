@@ -1,5 +1,6 @@
 // WebGL initialization
 //const gl = visibleCanvas.getContext('webgl');
+//const gl = canvas.getContext('webgl', { antialias: true, preserveDrawingBuffer: true  });
 const gl = canvas.getContext('webgl', { antialias: true });
 
 
