@@ -1,13 +1,13 @@
-//let rotate = true;
+//let portrait = true;
 let withColor = true;
 let recordingWithSound = false;
 
 document.getElementById('rotate').addEventListener('click', function () {
-	rotate = !rotate;
+	portrait = !portrait;
 	this.classList.toggle('toggled');
-	//visibleCanvas.style.transform = "rotate(270deg)";
+	//visibleCanvas.style.transform = "portrait(270deg)";
 	//visibleCanvas.style.transformOrigin = "center center";
-	eventWorker.postMessage({ type: 'rotate', rotate: rotate });
+	eventWorker.postMessage({ type: 'portrait', portrait: portrait });
 
 	resizeVisibleCanvas();
 });

@@ -17,7 +17,7 @@ streamWorker.onmessage = (event) => {
 		case 'update':
 			// Handle the update
 			const data = event.data.data;
-			updateTexture(data, rotate, 1);
+			updateTexture(data, portrait, 1);
 			break;
 		case 'error':
 			console.error('Error from worker:', event.data.message);
@@ -37,7 +37,7 @@ eventWorker.postMessage({
 	type: 'init', 
 	width: width, 
 	height: height, 
-	rotate: rotate,
+	portrait: portrait,
 	wsURL: wsURL
 });
 

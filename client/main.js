@@ -2,7 +2,7 @@ const width = 1872;
 const height = 1404;
 
 const rawCanvas = new OffscreenCanvas(width, height); // Define width and height as needed
-let rotate = false;
+let portrait = false;
 // Assuming rawCanvas is an OffscreenCanvas that's already been defined
 const ctx = rawCanvas.getContext('2d');
 const visibleCanvas = document.getElementById("canvas");

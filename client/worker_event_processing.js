@@ -1,7 +1,7 @@
 let height;
 let width;
 let wsURL;
-let rotate;
+let portrait;
 let draw; 
 let latestX;
 let latestY;
@@ -17,11 +17,11 @@ onmessage = (event) => {
 			height = event.data.height;
 			width = event.data.width;
 			wsURL = event.data.wsURL;
-			rotate = event.data.rotate;
+			portrait = event.data.portrait;
 			initiateEventsListener();
 			break;
-		case 'rotate':
-			rotate = event.data.rotate;
+		case 'portrait':
+			portrait = event.data.portrait;
 			// Handle the error, maybe show a user-friendly message or take some corrective action
 			break;
 		case 'terminate':
@@ -33,6 +33,7 @@ onmessage = (event) => {
 
 
 async function initiateEventsListener() {
+	console.log(portrait);
 	const RETRY_DELAY_MS = 3000; // Delay before retrying the connection (in milliseconds)
 	ws = new WebSocket(wsURL);
 	draw = true;
@@ -50,18 +51,18 @@ async function initiateEventsListener() {
 		}
 		if (message.Type === 3) {
 			// Code 3: Update and draw laser pointer
-			if (rotate) {
-				if (message.Code === 1) { // Horizontal position
-					latestX = width - scaleValue(message.Value, MAX_X_VALUE, width);
-				} else if (message.Code === 0) { // Vertical position
-					latestY = scaleValue(message.Value, MAX_Y_VALUE, height);
-				}
-
-			} else {
+			if (portrait) {
 				if (message.Code === 1) { // Horizontal position
 					latestX = scaleValue(message.Value, MAX_X_VALUE, width);
 				} else if (message.Code === 0) { // Vertical position
 					latestY = height - scaleValue(message.Value, MAX_Y_VALUE, height);
+				}
+			} else {
+				// wrong
+				if (message.Code === 1) { // Horizontal position
+					latestY = scaleValue(message.Value, MAX_X_VALUE, height);
+				} else if (message.Code === 0) { // Vertical position
+					latestX = scaleValue(message.Value, MAX_Y_VALUE, width);
 				}
 			}
 			if (draw) {

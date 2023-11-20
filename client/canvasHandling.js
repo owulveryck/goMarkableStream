@@ -2,7 +2,7 @@
 function resizeVisibleCanvas() {
 	var container = document.getElementById("container");
 
-	if (rotate) {
+	if (portrait) {
 		var aspectRatio = 1404 / 1872;
 	} else {
 		var aspectRatio = 1872 / 1404;
