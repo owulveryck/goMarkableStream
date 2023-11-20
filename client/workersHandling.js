@@ -37,7 +37,7 @@ eventWorker.postMessage({
 	type: 'init', 
 	width: width, 
 	height: height, 
-	rotate: true,
+	rotate: rotate,
 	wsURL: wsURL
 });
 
