@@ -1,6 +1,8 @@
 // WebGL initialization
 //const gl = visibleCanvas.getContext('webgl');
 //const gl = canvas.getContext('webgl', { antialias: true, preserveDrawingBuffer: true  });
+let laserX = 0; // Initialize with default values
+let laserY = 0;
 const gl = canvas.getContext('webgl', { antialias: true });
 
 
@@ -24,11 +26,21 @@ void main(void) {
 
 // Fragment shader program
 const fsSource = `
+precision mediump float; // Add this line for precision specification
+
 varying highp vec2 vTextureCoord;
 uniform sampler2D uSampler;
+uniform float uLaserX;
+uniform float uLaserY;
 
 void main(void) {
-	gl_FragColor = texture2D(uSampler, vTextureCoord);
+	
+	// Check if the current fragment is at the laser position
+    if(abs(gl_FragCoord.x - uLaserX) < 5.0 && abs(gl_FragCoord.y - uLaserY) < 5.0) {
+        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Red color for the laser pointer
+    } else {
+        gl_FragColor = texture2D(uSampler, vTextureCoord);
+    }
 }
 `;
 
@@ -90,6 +102,8 @@ const programInfo = {
 	},
 	uniformLocations: {
 		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
+        uLaserX: gl.getUniformLocation(shaderProgram, 'uLaserX'),
+        uLaserY: gl.getUniformLocation(shaderProgram, 'uLaserY'),
 	},
 };
 
@@ -180,6 +194,10 @@ function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture)
 	// Tell the shader we bound the texture to texture unit 0
 	gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
 
+	   // Set the laser coordinates
+    gl.uniform1f(programInfo.uniformLocations.uLaserX, laserX);
+    gl.uniform1f(programInfo.uniformLocations.uLaserY, laserY);
+
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
@@ -219,4 +237,10 @@ function resizeGLCanvas(canvas) {
 	}
 
 	return false; // indicates no change in size
+}
+
+function updateLaserPosition(x, y) {
+    laserX = x;
+    laserY = y;
+    drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 }
