@@ -52,14 +52,13 @@ eventWorker.onmessage = (event) => {
 
 	switch (data.type) {
 		case 'clear':
-			clearLaser();
+			//clearLaser();
 			break;
 		case 'update':
 			// Handle the update
 			const X = event.data.X;
 			const Y = event.data.Y;
-			drawLaser(X,Y);
-
+			updateLaserPosition(X,Y);
 			break;
 		case 'error':
 			console.error('Error from worker:', event.data.message);

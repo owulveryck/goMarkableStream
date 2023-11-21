@@ -28,8 +28,6 @@ function resizeVisibleCanvas() {
 		visibleCanvas.style.width = containerWidth + "px";
 		visibleCanvas.style.height = containerWidth / aspectRatio + "px";
 	}
-	canvasPresent.style.width = visibleCanvas.style.width;	
-	canvasPresent.style.height = visibleCanvas.style.height;	
 }
 function waiting(message) {
 	// Clear the canvas

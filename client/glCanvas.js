@@ -26,7 +26,7 @@ void main(void) {
 
 // Fragment shader program
 const fsSource = `
-precision mediump float; // Add this line for precision specification
+precision mediump float;
 
 varying highp vec2 vTextureCoord;
 uniform sampler2D uSampler;
@@ -34,10 +34,13 @@ uniform float uLaserX;
 uniform float uLaserY;
 
 void main(void) {
-	
-	// Check if the current fragment is at the laser position
-    if(abs(gl_FragCoord.x - uLaserX) < 5.0 && abs(gl_FragCoord.y - uLaserY) < 5.0) {
-        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Red color for the laser pointer
+    float dx = gl_FragCoord.x - uLaserX;
+    float dy = gl_FragCoord.y - uLaserY;
+    float distance = sqrt(dx * dx + dy * dy);
+    float radius = 5.0; // Radius of the dot, adjust as needed
+
+    if(distance < radius) {
+        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Red color for the laser dot
     } else {
         gl_FragColor = texture2D(uSampler, vTextureCoord);
     }
@@ -240,7 +243,9 @@ function resizeGLCanvas(canvas) {
 }
 
 function updateLaserPosition(x, y) {
-    laserX = x;
-    laserY = y;
+
+	laserX = x / 1872 * gl.canvas.width;
+	laserY = gl.canvas.height - (y / 1404 * gl.canvas.height);
+
     drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 }
