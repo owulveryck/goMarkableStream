@@ -14,7 +14,6 @@ let rate = parseInt(getQueryParamOrDefault('rate', '200'), 10);
 //const presentURL = getQueryParam('present');// Assuming rawCanvas is an OffscreenCanvas that's already been defined
 const ctx = rawCanvas.getContext('2d');
 const visibleCanvas = document.getElementById("canvas");
-const canvasPresent = document.getElementById("canvasPresent");
 const iFrame = document.getElementById("content");
 const messageDiv = document.getElementById('message');
 

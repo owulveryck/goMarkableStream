@@ -1,6 +1,8 @@
 // WebGL initialization
 //const gl = visibleCanvas.getContext('webgl');
 //const gl = canvas.getContext('webgl', { antialias: true, preserveDrawingBuffer: true  });
+let laserX = 0; // Initialize with default values
+let laserY = 0;
 const gl = canvas.getContext('webgl', { antialias: true });
 
 
@@ -24,11 +26,24 @@ void main(void) {
 
 // Fragment shader program
 const fsSource = `
+precision mediump float;
+
 varying highp vec2 vTextureCoord;
 uniform sampler2D uSampler;
+uniform float uLaserX;
+uniform float uLaserY;
 
 void main(void) {
-	gl_FragColor = texture2D(uSampler, vTextureCoord);
+    float dx = gl_FragCoord.x - uLaserX;
+    float dy = gl_FragCoord.y - uLaserY;
+    float distance = sqrt(dx * dx + dy * dy);
+    float radius = 5.0; // Radius of the dot, adjust as needed
+
+    if(distance < radius) {
+        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Red color for the laser dot
+    } else {
+        gl_FragColor = texture2D(uSampler, vTextureCoord);
+    }
 }
 `;
 
@@ -90,6 +105,8 @@ const programInfo = {
 	},
 	uniformLocations: {
 		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
+        uLaserX: gl.getUniformLocation(shaderProgram, 'uLaserX'),
+        uLaserY: gl.getUniformLocation(shaderProgram, 'uLaserY'),
 	},
 };
 
@@ -180,6 +197,10 @@ function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture)
 	// Tell the shader we bound the texture to texture unit 0
 	gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
 
+	   // Set the laser coordinates
+    gl.uniform1f(programInfo.uniformLocations.uLaserX, laserX);
+    gl.uniform1f(programInfo.uniformLocations.uLaserY, laserY);
+
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
@@ -219,4 +240,12 @@ function resizeGLCanvas(canvas) {
 	}
 
 	return false; // indicates no change in size
+}
+
+function updateLaserPosition(x, y) {
+
+	laserX = x / 1872 * gl.canvas.width;
+	laserY = gl.canvas.height - (y / 1404 * gl.canvas.height);
+
+    drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 }
