@@ -43,8 +43,18 @@ eventWorker.postMessage({
 	wsURL: wsURL
 });
 
+let messageTimeout;
+
+function clearLaser() {
+    // Function to call when no message is received for 300 ms
+	updateLaserPosition(-10,-10);
+}
 // Listen for updates from the worker
 eventWorker.onmessage = (event) => {
+	// Reset the timer every time a message is received
+    clearTimeout(messageTimeout);
+    messageTimeout = setTimeout(clearLaser, 300);
+
 	// To hide the message (e.g., when you start drawing in WebGL again)
 	messageDiv.style.display = 'none';
 
@@ -52,6 +62,7 @@ eventWorker.onmessage = (event) => {
 
 	switch (data.type) {
 		case 'clear':
+			updateLaserPosition(-10,-10);
 			//clearLaser();
 			break;
 		case 'update':
