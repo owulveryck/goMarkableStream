@@ -48,6 +48,8 @@ func setMuxer(eventPublisher *pubsub.PubSub) *http.ServeMux {
 
 	wsHandler := eventhttphandler.NewEventHandler(eventPublisher)
 	mux.Handle("/events", wsHandler)
+	gestureHandler := eventhttphandler.NewGestureHandler(eventPublisher)
+	mux.Handle("/gestures", gestureHandler)
 
 	if c.DevMode {
 		rawHandler := stream.NewRawHandler(file, pointerAddr)

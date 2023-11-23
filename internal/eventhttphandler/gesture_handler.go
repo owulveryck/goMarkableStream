@@ -2,6 +2,7 @@ package eventhttphandler
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"syscall"
@@ -10,6 +11,7 @@ import (
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 
+	"github.com/owulveryck/goMarkableStream/internal/events"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 )
 
@@ -21,8 +23,8 @@ const (
 )
 
 // NewGestureHandler creates an event habdler that subscribes from the inputEvents
-func NewGestureHandler(inputEvents *pubsub.PubSub) *EventHandler {
-	return &EventHandler{
+func NewGestureHandler(inputEvents *pubsub.PubSub) *GestureHandler {
+	return &GestureHandler{
 		inputEventBus: inputEvents,
 	}
 }
@@ -30,6 +32,29 @@ func NewGestureHandler(inputEvents *pubsub.PubSub) *EventHandler {
 // GestureHandler is a http.Handler that detect touch gestures
 type GestureHandler struct {
 	inputEventBus *pubsub.PubSub
+}
+
+type gesture struct {
+	leftDistance, rightDistance, upDistance, downDistance int
+}
+
+func (g *gesture) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`{ "left": %v, "right": %v, "up": %v, "down": %v}`, g.leftDistance, g.rightDistance, g.upDistance, g.downDistance)), nil
+}
+
+func (g *gesture) String() string {
+	return fmt.Sprintf("Left: %v, Right: %v, Up: %v, Down: %v", g.leftDistance, g.rightDistance, g.upDistance, g.downDistance)
+}
+
+func (g *gesture) sum() int {
+	return g.leftDistance + g.rightDistance + g.upDistance + g.downDistance
+}
+
+func (g *gesture) reset() {
+	g.leftDistance = 0
+	g.rightDistance = 0
+	g.upDistance = 0
+	g.downDistance = 0
 }
 
 // ServeHTTP implements http.Handler
@@ -44,76 +69,77 @@ func (h *GestureHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.inputEventBus.Unsubscribe(eventC)
 	}()
 	const (
-		evAbs        uint16 = 3
-		codeXAxis    uint16 = 54
-		minSwipeDist int32  = 250
-		maxSwipeTime        = 800 * time.Millisecond
-		maxStepDist  int32  = 25
+		codeXAxis   uint16 = 54
+		codeYAxis   uint16 = 53
+		maxStepDist int32  = 150
+		// a gesture in a set of event separated by 100 millisecond
+		gestureMaxInterval = 50 * time.Millisecond
 	)
 
-	var (
-		startTime  time.Time
-		startValue int32
-		lastValue  int32
-		isSwiping  bool
-		swipeRight bool
-	)
+	tick := time.NewTicker(gestureMaxInterval)
+	defer tick.Stop()
+	currentGesture := &gesture{}
+	lastEventX := events.InputEventFromSource{}
+	lastEventY := events.InputEventFromSource{}
 
 	for {
 		select {
 		case <-r.Context().Done():
 			return
-		case event := <-eventC:
-			if event.Type == evAbs && event.Code == codeXAxis {
-				currentTime := timevalToTime(event.Time)
-				if !isSwiping {
-					startTime = currentTime
-					startValue = event.Value
-					lastValue = event.Value
-					isSwiping = true
-				} else {
-					if abs(event.Value-lastValue) > maxStepDist {
-						isSwiping = false
-						continue
-					}
-
-					if event.Value > lastValue {
-						swipeRight = true
-					} else if event.Value < lastValue {
-						swipeRight = false
-					}
-
-					if abs(event.Value-startValue) >= minSwipeDist && currentTime.Sub(startTime) <= maxSwipeTime {
-						if swipeRight {
-							jsonMessage, err := json.Marshal(SwipeRight)
-							if err != nil {
-								http.Error(w, "cannot send json encode the message "+err.Error(), http.StatusInternalServerError)
-								return
-							}
-							// Send the JSON message to the WebSocket client
-							err = wsutil.WriteServerText(conn, jsonMessage)
-							if err != nil {
-								log.Println(err)
-								return
-							}
-						} else {
-							jsonMessage, err := json.Marshal(SwipeLeft)
-							if err != nil {
-								http.Error(w, "cannot send json encode the message "+err.Error(), http.StatusInternalServerError)
-								return
-							}
-							// Send the JSON message to the WebSocket client
-							err = wsutil.WriteServerText(conn, jsonMessage)
-							if err != nil {
-								log.Println(err)
-								return
-							}
-						}
-						isSwiping = false
-					}
-					lastValue = event.Value
+		case <-tick.C:
+			// TODO send last event
+			if currentGesture.sum() != 0 {
+				jsonMessage, err := json.Marshal(currentGesture)
+				if err != nil {
+					http.Error(w, "cannot send json encode the message "+err.Error(), http.StatusInternalServerError)
+					return
+				}
+				// Send the JSON message to the WebSocket client
+				err = wsutil.WriteServerText(conn, jsonMessage)
+				if err != nil {
+					log.Println(err)
+					return
 				}
 			}
+			currentGesture.reset()
+			lastEventX = events.InputEventFromSource{}
+			lastEventY = events.InputEventFromSource{}
+		case event := <-eventC:
+			if event.Source != events.Touch {
+				continue
+			}
+			if event.Type != events.EvAbs {
+				continue
+			}
+			switch event.Code {
+			case codeXAxis:
+				// This is the initial event, do not compute the distance
+				if lastEventX.Value == 0 {
+					lastEventX = event
+					continue
+				}
+				distance := event.Value - lastEventX.Value
+				if distance < 0 {
+					currentGesture.rightDistance += -int(distance)
+				} else {
+					currentGesture.leftDistance += int(distance)
+				}
+				lastEventX = event
+			case codeYAxis:
+				// This is the initial event, do not compute the distance
+				if lastEventY.Value == 0 {
+					lastEventY = event
+					continue
+				}
+				distance := event.Value - lastEventY.Value
+				if distance < 0 {
+					currentGesture.upDistance += -int(distance)
+				} else {
+					currentGesture.downDistance += int(distance)
+				}
+				lastEventY = event
+			}
+			tick.Reset(gestureMaxInterval)
 		}
 	}
 }
