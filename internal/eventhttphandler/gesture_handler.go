@@ -3,13 +3,9 @@ package eventhttphandler
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"syscall"
 	"time"
-
-	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
 
 	"github.com/owulveryck/goMarkableStream/internal/events"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
@@ -39,7 +35,7 @@ type gesture struct {
 }
 
 func (g *gesture) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`{ "left": %v, "right": %v, "up": %v, "down": %v}`, g.leftDistance, g.rightDistance, g.upDistance, g.downDistance)), nil
+	return []byte(fmt.Sprintf(`{ "left": %v, "right": %v, "up": %v, "down": %v}`+"\n", g.leftDistance, g.rightDistance, g.upDistance, g.downDistance)), nil
 }
 
 func (g *gesture) String() string {
@@ -59,11 +55,6 @@ func (g *gesture) reset() {
 
 // ServeHTTP implements http.Handler
 func (h *GestureHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	conn, _, _, err := ws.UpgradeHTTP(r, w)
-	if err != nil {
-		http.Error(w, "cannot upgrade connection "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	eventC := h.inputEventBus.Subscribe("eventListener")
 	defer func() {
 		h.inputEventBus.Unsubscribe(eventC)
@@ -82,6 +73,9 @@ func (h *GestureHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	lastEventX := events.InputEventFromSource{}
 	lastEventY := events.InputEventFromSource{}
 
+	enc := json.NewEncoder(w)
+	w.Header().Set("Content-Type", "application/x-ndjson")
+
 	for {
 		select {
 		case <-r.Context().Done():
@@ -89,16 +83,13 @@ func (h *GestureHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case <-tick.C:
 			// TODO send last event
 			if currentGesture.sum() != 0 {
-				jsonMessage, err := json.Marshal(currentGesture)
+				err := enc.Encode(currentGesture)
 				if err != nil {
 					http.Error(w, "cannot send json encode the message "+err.Error(), http.StatusInternalServerError)
 					return
 				}
-				// Send the JSON message to the WebSocket client
-				err = wsutil.WriteServerText(conn, jsonMessage)
-				if err != nil {
-					log.Println(err)
-					return
+				if f, ok := w.(http.Flusher); ok {
+					f.Flush()
 				}
 			}
 			currentGesture.reset()
