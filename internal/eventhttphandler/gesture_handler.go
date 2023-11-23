@@ -64,7 +64,7 @@ func (h *GestureHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		codeYAxis   uint16 = 53
 		maxStepDist int32  = 150
 		// a gesture in a set of event separated by 100 millisecond
-		gestureMaxInterval = 50 * time.Millisecond
+		gestureMaxInterval = 150 * time.Millisecond
 	)
 
 	tick := time.NewTicker(gestureMaxInterval)
