@@ -36,24 +36,29 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.inputEventBus.Unsubscribe(eventC)
 	}()
 
-	for event := range eventC {
-		// Serialize the structure as JSON
-		if event.Source != events.Pen {
-			continue
-		}
-		if event.Type != events.EvAbs {
-			continue
-		}
-		jsonMessage, err := json.Marshal(event)
-		if err != nil {
-			http.Error(w, "cannot send json encode the message "+err.Error(), http.StatusInternalServerError)
+	for {
+		select {
+		case <-r.Context().Done():
 			return
-		}
-		// Send the JSON message to the WebSocket client
-		err = wsutil.WriteServerText(conn, jsonMessage)
-		if err != nil {
-			log.Println(err)
-			return
+		case event := <-eventC:
+			// Serialize the structure as JSON
+			if event.Source != events.Pen {
+				continue
+			}
+			if event.Type != events.EvAbs {
+				continue
+			}
+			jsonMessage, err := json.Marshal(event)
+			if err != nil {
+				http.Error(w, "cannot send json encode the message "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			// Send the JSON message to the WebSocket client
+			err = wsutil.WriteServerText(conn, jsonMessage)
+			if err != nil {
+				log.Println(err)
+				return
+			}
 		}
 	}
 }

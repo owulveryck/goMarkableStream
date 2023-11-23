@@ -59,55 +59,60 @@ func (h *GestureHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		swipeRight bool
 	)
 
-	for event := range eventC {
-		if event.Type == evAbs && event.Code == codeXAxis {
-			currentTime := timevalToTime(event.Time)
-			if !isSwiping {
-				startTime = currentTime
-				startValue = event.Value
-				lastValue = event.Value
-				isSwiping = true
-			} else {
-				if abs(event.Value-lastValue) > maxStepDist {
-					isSwiping = false
-					continue
-				}
-
-				if event.Value > lastValue {
-					swipeRight = true
-				} else if event.Value < lastValue {
-					swipeRight = false
-				}
-
-				if abs(event.Value-startValue) >= minSwipeDist && currentTime.Sub(startTime) <= maxSwipeTime {
-					if swipeRight {
-						jsonMessage, err := json.Marshal(SwipeRight)
-						if err != nil {
-							http.Error(w, "cannot send json encode the message "+err.Error(), http.StatusInternalServerError)
-							return
-						}
-						// Send the JSON message to the WebSocket client
-						err = wsutil.WriteServerText(conn, jsonMessage)
-						if err != nil {
-							log.Println(err)
-							return
-						}
-					} else {
-						jsonMessage, err := json.Marshal(SwipeLeft)
-						if err != nil {
-							http.Error(w, "cannot send json encode the message "+err.Error(), http.StatusInternalServerError)
-							return
-						}
-						// Send the JSON message to the WebSocket client
-						err = wsutil.WriteServerText(conn, jsonMessage)
-						if err != nil {
-							log.Println(err)
-							return
-						}
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case event := <-eventC:
+			if event.Type == evAbs && event.Code == codeXAxis {
+				currentTime := timevalToTime(event.Time)
+				if !isSwiping {
+					startTime = currentTime
+					startValue = event.Value
+					lastValue = event.Value
+					isSwiping = true
+				} else {
+					if abs(event.Value-lastValue) > maxStepDist {
+						isSwiping = false
+						continue
 					}
-					isSwiping = false
+
+					if event.Value > lastValue {
+						swipeRight = true
+					} else if event.Value < lastValue {
+						swipeRight = false
+					}
+
+					if abs(event.Value-startValue) >= minSwipeDist && currentTime.Sub(startTime) <= maxSwipeTime {
+						if swipeRight {
+							jsonMessage, err := json.Marshal(SwipeRight)
+							if err != nil {
+								http.Error(w, "cannot send json encode the message "+err.Error(), http.StatusInternalServerError)
+								return
+							}
+							// Send the JSON message to the WebSocket client
+							err = wsutil.WriteServerText(conn, jsonMessage)
+							if err != nil {
+								log.Println(err)
+								return
+							}
+						} else {
+							jsonMessage, err := json.Marshal(SwipeLeft)
+							if err != nil {
+								http.Error(w, "cannot send json encode the message "+err.Error(), http.StatusInternalServerError)
+								return
+							}
+							// Send the JSON message to the WebSocket client
+							err = wsutil.WriteServerText(conn, jsonMessage)
+							if err != nil {
+								log.Println(err)
+								return
+							}
+						}
+						isSwiping = false
+					}
+					lastValue = event.Value
 				}
-				lastValue = event.Value
 			}
 		}
 	}
