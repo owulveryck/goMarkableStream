@@ -21,6 +21,7 @@ const messageDiv = document.getElementById('message');
 // Initialize the worker
 const streamWorker = new Worker('worker_stream_processing.js');
 const eventWorker = new Worker('worker_event_processing.js');
+const gestureWorker = new Worker('worker_gesture_processing.js');
 function getQueryParamOrDefault(param, defaultValue) {
     const urlParams = new URLSearchParams(window.location.search);
     const value = urlParams.get(param);
@@ -49,4 +50,5 @@ window.addEventListener('beforeunload', () => {
 	// Send a termination signal to the worker before the page is unloaded
 	streamWorker.postMessage({ type: 'terminate' });
 	eventWorker.postMessage({ type: 'terminate' });
+	gestureWorker.postMessage({ type: 'terminate' });
 });
