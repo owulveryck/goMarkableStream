@@ -18,32 +18,48 @@ onmessage = (event) => {
 };
 
 async function fetchStream() {
-    const response = await fetch('/gestures');
+	const response = await fetch('/gestures');
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-    let buffer = '';
+	const reader = response.body.getReader();
+	const decoder = new TextDecoder('utf-8');
+	let buffer = '';
 
-    while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
+	while (true) {
+		const { value, done } = await reader.read();
+		if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
+		buffer += decoder.decode(value, { stream: true });
 
-        while (buffer.includes('\n')) {
-            const index = buffer.indexOf('\n');
-            const jsonStr = buffer.slice(0, index);
-            buffer = buffer.slice(index + 1);
+		while (buffer.includes('\n')) {
+			const index = buffer.indexOf('\n');
+			const jsonStr = buffer.slice(0, index);
+			buffer = buffer.slice(index + 1);
 
-            try {
-                const json = JSON.parse(jsonStr);
-                console.log('Received object:', json);
-                // Process the JSON object here
-            } catch (e) {
-                console.error('Error parsing JSON:', e);
-            }
-        }
-    }
+			try {
+				const json = JSON.parse(jsonStr);
+				let swipe = checkSwipeDirection(json);
+				if (swipe != 'none') {
+					postMessage({ type: 'gesture', value: swipe}) ;
+				}
+			} catch (e) {
+				console.error('Error parsing JSON:', e);
+			}
+		}
+	}
 }
 
+
+function checkSwipeDirection(json) {
+	if (json.left > 200 && json.right < 15 && json.up < 15 && json.down < 15) {
+		return 'left';
+	} else if (json.right > 200 && json.left < 15 && json.up < 15 && json.down < 15) {
+		return 'right';
+	} else if (json.up > 200 && json.right < 15 && json.left < 15 && json.down < 15) {
+		return 'up';
+	} else if (json.down > 200 && json.right < 15 && json.up < 15 && json.left < 15) {
+		return 'down';
+	} else {
+		return 'none';
+	}
+}
 

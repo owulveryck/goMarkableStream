@@ -48,6 +48,19 @@ gestureWorker.postMessage({
 	wsURL: wsGestureURL
 });
 
+eventWorker.onmessage = (event) => {
+	const data = event.data;
+
+	switch (data.type) {
+		case 'gesture':
+			console.error(event.data.message);
+			break;
+		case 'error':
+			console.error('Error from worker:', event.data.message);
+			break;
+	}
+
+}
 
 let messageTimeout;
 
