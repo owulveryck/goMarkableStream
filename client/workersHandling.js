@@ -53,10 +53,28 @@ gestureWorker.onmessage = (event) => {
 
 	switch (data.type) {
 		case 'gesture':
-			if (event.data.value == 'left') {
-				document.getElementById('content').contentWindow.postMessage( JSON.stringify({ method: 'left' }), '*' );
-			} else if (event.data.value == 'right') {
-				document.getElementById('content').contentWindow.postMessage( JSON.stringify({ method: 'right' }), '*' );
+
+			switch (event.data.value) {
+				case 'left':
+					document.getElementById('content').contentWindow.postMessage( JSON.stringify({ method: 'left' }), '*' );
+					break;
+				case 'right':
+					document.getElementById('content').contentWindow.postMessage( JSON.stringify({ method: 'right' }), '*' );
+					break;
+				case 'topleft-to-bottomright':
+					document.getElementById('content').contentWindow.postMessage( JSON.stringify({ method: 'right' }), '*' );
+					break;
+				case 'topright-to-bottomleft':
+					document.getElementById('content').contentWindow.postMessage( JSON.stringify({ method: 'left' }), '*' );
+					break;
+				case 'bottomright-to-topleft':
+					iFrame.style.zIndex = 1;
+					break;
+				case 'bottomleft-to-topright':
+					iFrame.style.zIndex = 4;
+					break;
+				default:
+					// Code to execute if none of the above cases match
 			}
 			break;
 		case 'error':
@@ -69,14 +87,14 @@ gestureWorker.onmessage = (event) => {
 let messageTimeout;
 
 function clearLaser() {
-    // Function to call when no message is received for 300 ms
+	// Function to call when no message is received for 300 ms
 	updateLaserPosition(-10,-10);
 }
 // Listen for updates from the worker
 eventWorker.onmessage = (event) => {
 	// Reset the timer every time a message is received
-    clearTimeout(messageTimeout);
-    messageTimeout = setTimeout(clearLaser, 300);
+	clearTimeout(messageTimeout);
+	messageTimeout = setTimeout(clearLaser, 300);
 
 	// To hide the message (e.g., when you start drawing in WebGL again)
 	messageDiv.style.display = 'none';

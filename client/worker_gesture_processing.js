@@ -50,16 +50,23 @@ async function fetchStream() {
 
 
 function checkSwipeDirection(json) {
-	if (json.left > 200 && json.right < 75 && json.up < 100 && json.down < 100) {
+	if (json.left > 400 && json.right < 100 && json.up < 100 && json.down < 100) {
 		return 'left';
-	} else if (json.right > 200 && json.left < 75 && json.up < 100 && json.down < 100) {
+	} else if (json.right > 400 && json.left < 100 && json.up < 100 && json.down < 100) {
 		return 'right';
-	} else if (json.up > 200 && json.right < 100 && json.left < 100 && json.down < 75) {
+	} else if (json.up > 400 && json.right < 100 && json.left < 100 && json.down < 100) {
 		return 'up';
-	} else if (json.down > 200 && json.right < 100 && json.up < 75 && json.left < 100) {
+	} else if (json.down > 400 && json.right < 100 && json.up < 100 && json.left < 100) {
 		return 'down';
+	} else if (json.right > 600 && json.down > 600 && json.up < 50 && json.left < 50 ) {
+		return 'topright-to-bottomleft'
+	} else if (json.left > 600 && json.down > 600 && json.up < 50 && json.right < 50 ) {
+		return 'topleft-to-bottomright'
+	} else if (json.left > 600 && json.up > 600 && json.down < 50 && json.right < 50 ) {
+		return 'bottomleft-to-topright'
+	} else if (json.right > 600 && json.up > 600 && json.down < 50 && json.left < 50 ) {
+		return 'bottomright-to-topleft'
 	} else {
 		return 'none';
 	}
 }
-
