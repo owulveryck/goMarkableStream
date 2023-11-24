@@ -48,12 +48,16 @@ gestureWorker.postMessage({
 	wsURL: wsGestureURL
 });
 
-eventWorker.onmessage = (event) => {
+gestureWorker.onmessage = (event) => {
 	const data = event.data;
 
 	switch (data.type) {
 		case 'gesture':
-			console.error(event.data.message);
+			if (event.data.value == 'left') {
+				document.getElementById('content').contentWindow.postMessage( JSON.stringify({ method: 'left' }), '*' );
+			} else if (event.data.value == 'right') {
+				document.getElementById('content').contentWindow.postMessage( JSON.stringify({ method: 'right' }), '*' );
+			}
 			break;
 		case 'error':
 			console.error('Error from worker:', event.data.message);
