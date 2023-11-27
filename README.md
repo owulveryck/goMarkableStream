@@ -6,7 +6,8 @@
 
 ## Overview
 
-The goMarkableStream is a lightweight and user-friendly application designed specifically for the reMarkable tablet. 
+The goMarkableStream is a lightweight and user-friendly application designed specifically for the reMarkable tablet.
+
 Its primary goal is to enable users to stream their reMarkable tablet screen to a web browser without the need for any hacks or modifications that could void the warranty.
 
 ## Version support
@@ -17,10 +18,16 @@ Its primary goal is to enable users to stream their reMarkable tablet screen to 
 
 ## Features
 
-- No hacks or warranty voiding: The tool operates within the boundaries of the reMarkable tablet's intended functionality and does not require any unauthorized modifications.
-- No subscription required: Unlike other screen streaming solutions, this tool does not impose any subscription fees or recurring charges. It is completely free to use.
-- No client-side installation: Users can access the screen streaming feature directly through their web browser without the need to install any additional software or plugins.
-- Color support
+- **No Warranty Voiding**: Operates within the reMarkable tablet's intended functionality without unauthorized modifications.
+- **No Subscription Required**: Completely free to use, with no subscription fees or recurring charges.
+- **No Client-Side Installation**: Access the screen streaming feature directly through a web browser, with no need for additional software or plugins.
+- **Color Support**: Enhanced streaming experience with color support.
+- **High Performance**: Utilizes WebGL for smooth and efficient performance.
+- **Laser Pointer**: Features a laser pointer that activates on hovering.
+- **Gesture Support**: Full integration with Reveal.js, allowing slide switching directly from the reMarkable.
+- **Overlay Feature**: Allows overlaying over existing websites that support iframe embedding.
+- **Built-in Ngrok**: Enables streaming over different networks easily.
+- **Live Parameter Tweaking**: Side menu for live adjustments, including screen rotation.
 
 ## Quick Start
 
@@ -48,11 +55,33 @@ curl -L -s https://github.com/owulveryck/goMarkableStream/releases/download/$GOR
 
 then go to [https://remarkable.local.:2001](https://remarkable.local.:2001) and login with `admin`/`password` (can be changed through environment variables or disable authentication with `-unsafe`)
 
-_note_: _remarkable.local._ may work from apple devices (mDNS resolution). Please note the `.` at the end. If it does not work, you may need to replace `remarkable.local.` by the IP address of the tablet.
+_note_: _remarkable.local._ may work from apple devices (mDNS resolution).
+Please note the `.` at the end.
+If it does not work, you may need to replace `remarkable.local.` by the IP address of the tablet.
 
 _note 2_: you can use this to update to a new version (ensure that you killed the previous version before with `kill $(pidof goMarkableStream)`)
 
-## ngrok builtin
+## Configurations
+
+### Device Configuration
+Configure the application via environment variables:
+- `RK_SERVER_BIND_ADDR`: (String, default: `:2001`) Server bind address.
+- `RK_SERVER_USERNAME`: (String, default: `admin`) Username for server access.
+- `RK_SERVER_PASSWORD`: (String, default: `password`) Password for server access.
+- `RK_HTTPS`: (True/False, default: `true`) Enable or disable HTTPS.
+- `RK_COMPRESSION`: (True/False, default: `false`) Enable or disable compression.
+- `RK_DEV_MODE`: (True/False, default: `false`) Enable or disable developer mode.
+
+### Endpoint Configuration
+Add query parameters to the URL (`?parameter=value&otherparameter=value`):
+- `color`: (true/false) Enable or disable color.
+- `portrait`: (true/false) Enable or disable portrait mode.
+- `rate`: (integer, 100-...) Set the frame rate.
+
+## Tunneling
+Tunneling with built-in Ngrok allows for streaming across different networks.
+This feature is particularly useful for remote presentations or collaborative sessions.
+To set up tunneling, simply enable Ngrok in the tool's settings and follow the instructions provided in the user interface.
 
 If your reMarkable is on a different network than the displaying device, you can use the `ngrok` builtin feature for automatic tunneling.
 To utilize this tunneling, you need to sign up for an ngrok account and [obtain a token from the dashboard](https://dashboard.ngrok.com/get-started/your-authtoken).
@@ -66,17 +95,10 @@ The app will start, displaying a message similar to:
 
 Then, connect to `https://72e5-22-159-32-48.ngrok-free.app` to view the result.
 
-## Experimental feature: video recording
 
-There is a new exxperimental feature to record the stream in [webm](https://en.wikipedia.org/wiki/WebM) format. This is available on the side menu. 
-
-[See this example with audio](docs/goMarkableStreamRecording.webm)
-
-## Experimental Feature: Embedded Presentations and Videos
-
-### Overview
-
-`goMarkableStream` introduces an innovative experimental feature that allows users to set a presentation or video in the background, enabling live annotations using a reMarkable tablet. This feature is ideal for enhancing presentations or educational content by allowing dynamic, real-time interaction.
+## Presentation Mode
+`goMarkableStream` introduces an innovative experimental feature that allows users to set a presentation or video in the background, enabling live annotations using a reMarkable tablet.
+This feature is ideal for enhancing presentations or educational content by allowing dynamic, real-time interaction.
 
 ### How It Works
 
@@ -86,98 +108,89 @@ There is a new exxperimental feature to record the stream in [webm](https://en.w
 
 ### Usage Example
 
-- **Live Presentation Enhancement**: For instance, using Google Slides, you can leave spaces in your slides or use a blank slide to write additional content live. This feature is perfect for educators, presenters, and anyone looking to make their presentations more interactive and engaging.
+- **Live Presentation Enhancement**: For instance, using Google Slides, you can leave spaces in your slides or use a blank slide to write additional content live.
+This feature is perfect for educators, presenters, and anyone looking to make their presentations more interactive and engaging.
 
 ![](docs/gorgoniaExample.png)
 
 ### Compatibility
 
-- The feature works with any content that can be embedded in an iframe. This includes a variety of presentation and video platforms.
+- The feature works with any content that can be embedded in an iframe.
+This includes a variety of presentation and video platforms.
 - Ensure that the content you wish to embed allows iframe integration.
+
+`goMarkableStream` is fully integrated with Reveal.js, making it a perfect tool for presentations.
+Switch slides or navigate through your presentation directly from your reMarkable tablet.
+This seamless integration enhances the experience of both presenting and viewing, making it ideal for educational and professional environments.
+
+Howto: add the `?present=https://your-reveal-js-presentation`
+
+_note_: due to browser restrictions, the URL mus
 
 ### Limitations and Performance
 
 - **Screen Size**: Currently, the drawing screen size on the tablet is smaller than the presentations, which may affect how content is displayed.
-- **Control**: There is no way to control the underlying presentation directly from the tablet. Users must use the side menu for navigation and control.
+- **Control**: There is no way to control the underlying presentation directly from the tablet.
+Users must use the side menu for navigation and control.
 - This feature operates seamlessly, with no additional load on the reMarkable tablet, as all rendering is done in the client's browser.
 
 ### Feedback and Contributions
 
-- As this is an experimental feature, your feedback is crucial for its development. Please share your experiences, suggestions, and any issues encountered using the GitHub issues section of this repository.
+- As this is an experimental feature, your feedback is crucial for its development.
+Please share your experiences, suggestions, and any issues encountered using the GitHub issues section of this repository.
 
 ---
 
 ## Technical Details
 
+This tool suits my need and is an ongoing development. You can find various informations about the journey on my blog:
+- [Streaming the reMarkable 2](https://blog.owulveryck.info/2021/03/30/streaming-the-remarkable-2.html)
+- [Evolving the Game: A clientless streaming tool for reMarkable 2](https://blog.owulveryck.info/2023/07/25/evolving-the-game-a-clientless-streaming-tool-for-remarkable-2.html)
+
 ### Remarkable HTTP Server
 
-This is a standalone application that runs directly on a Remarkable tablet. It does not have any dependencies on third-party libraries, making it a completely self-sufficient solution. This application exposes an HTTP server with two endpoints:
+This is a standalone application that runs directly on a Remarkable tablet.
+It does not have any dependencies on third-party libraries, making it a completely self-sufficient solution.
+This application exposes an HTTP server with two endpoints:
 ### Endpoints 
-- `/`: This endpoint serves an embedded HTML and JavaScript file containing the necessary logic to display an image from the Remarkable tablet on a client's web browser. 
+
+- `/`: This endpoint serves an embedded HTML and JavaScript file containing the necessary logic to display an image from the Remarkable tablet on a client's web browser.
+
 - `/stream`: This endpoint streams the image data from the Remarkable tablet to the client continuously.
+- `/events`: This endpoint streams the pen input events via websockets
+- `gestures`: This endpoints streams the touch events in binary
+
+**Caution**: the API may change over time
+
 ### Implementation
 
-The image data is read directly from the main process's memory as a byte array. A simple Run-Length Encoding (RLE) compression algorithm is applied on the tablet to reduce the amount of data transferred between the tablet and the browser. 
-The CPU footprint is relatively low, using about 10% of the CPU for a frame every 200 ms. You can increase the frame rate, but it will consume slightly more CPU.
+The image data is read directly from the main process's memory as a byte array.
+A simple Run-Length Encoding (RLE) compression algorithm is applied on the tablet to reduce the amount of data transferred between the tablet and the browser.
 
-On the client side, the streamed byte data is decoded and displayed on an invisible canvas that matches the size of the Remarkable tablet's display. This canvas is then copied to another responsive canvas for viewing.
+The CPU footprint is relatively low, using about 10% of the CPU for a frame every 200 ms.
+You can increase the frame rate, but it will consume slightly more CPU.
 
-Additionally, the application features a side menu which allows users to rotate the displayed image. All image transformations utilize native browser implementations, providing optimized performance.
+On the client side, the streamed byte data is decoded and displayed on a canvas by addressing the backend array through WebGL.
 
-### Performance
+Additionally, the application features a side menu which allows users to rotate the displayed image.
+All image transformations utilize native browser implementations, providing optimized performance.
 
-Despite the continuous streaming and processing of images, this application maintains a minimal impact on the CPU, using only about 10% of its capacity. However, increasing the frame rate will proportionally increase CPU usage.
-On idle (if not browser is opened), the programs goes to idel and therefore does not drain the battery.
-
-### Client-side Operations
-
-All operations, including image rendering and transformations, are performed using the client's native browser capabilities. This ensures the best performance and compatibility across a range of devices.
-
-### Transformations
-
-The application includes features for rotating the displayed image. This is achieved using the browser's native capabilities, ensuring an optimal performance during transformations.
-
-## Getting Started
-
-To use the reMarkable Screen Streaming Tool, follow these steps:
-
-### Installation
-
-1. Ensure that you have a reMarkable tablet and a computer or device with an ssh client.
-2. Get a compiled version from the release or compile it yourself
-3. copy the utility on the tablet
-
-### Run
-
-1. launch the utility by conencting via ssh and launch `./goMarkableStream &`
-2. go to https://IP-OF-REMARKABLE:2001 (you need to accept the self-signed certificate)
-
-The application is configured via environment variables:
-
-```text
-KEY                    TYPE             DEFAULT     REQUIRED    DESCRIPTION
-RK_SERVER_BIND_ADDR    String           :2001       true        
-RK_SERVER_USERNAME     String           admin                   
-RK_SERVER_PASSWORD     String           password                
-RK_HTTPS               True or False    true                    
-```
-
-### Compilation
+## Compilation
 
 `GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build .`
 
-
-
-
 ## Contributing
 
-I welcome contributions from the community to improve and enhance the reMarkable Screen Streaming Tool. If you have any ideas, bug reports, or feature requests, please submit them through the GitHub repository's issue tracker.
+I welcome contributions from the community to improve and enhance the reMarkable Screen Streaming Tool.
+If you have any ideas, bug reports, or feature requests, please submit them through the GitHub repository's issue tracker.
 
 ## License
 
-The reMarkable Screen Streaming Tool is released under the [MIT License](https://opensource.org/licenses/MIT) . Feel free to modify, distribute, and use the tool in accordance with the terms of the license.
+The reMarkable Screen Streaming Tool is released under the [MIT License](https://opensource.org/licenses/MIT) .
+Feel free to modify, distribute, and use the tool in accordance with the terms of the license.
 
 ## Tipping
 
-If you plan to buy a reMarkable 2, you can use my [referal program link](https://remarkable.com/referral/PY5B-PH8U). It will provide a discount for you and also for me.
+If you plan to buy a reMarkable 2, you can use my [referal program link](https://remarkable.com/referral/PY5B-PH8U).
+It will provide a discount for you and also for me.
 
