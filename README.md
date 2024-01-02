@@ -1,5 +1,5 @@
 [![Go](https://github.com/owulveryck/goMarkableStream/actions/workflows/go.yml/badge.svg)](https://github.com/owulveryck/goMarkableStream/actions/workflows/go.yml)
-![Static Badge](https://img.shields.io/badge/reMarkable-Compatible_with_FW_3.8-green)
+![Static Badge](https://img.shields.io/badge/reMarkable-Compatible_with_FW_3.9-green)
 
 # goMarkableStream
 
