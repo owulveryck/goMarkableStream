@@ -178,7 +178,16 @@ All image transformations utilize native browser implementations, providing opti
 
 ## Compilation
 
-`GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build .`
+```bash
+GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -v -trimpath -ldflags="-s -w" .
+```
+
+to install and run, you can then execute:
+
+```bash
+scp goMarkableStream root@remarkable:
+ssh root@remarkable ./goMarkableStream
+```
 
 ## Contributing
 
