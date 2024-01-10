@@ -20,13 +20,13 @@ type EventScanner struct {
 
 // NewEventScanner ...
 func NewEventScanner() *EventScanner {
-	pen, err := os.OpenFile("/dev/input/event1", os.O_RDONLY, 0644)
+	pen, err := os.OpenFile("/dev/input/event1", os.O_RDONLY, 0o644)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to read pen position: %v", err)
 	}
-	touch, err := os.OpenFile("/dev/input/event2", os.O_RDONLY, 0644)
+	touch, err := os.OpenFile("/dev/input/event2", os.O_RDONLY, 0o644)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to read touch position: %v", err)
 	}
 	return &EventScanner{
 		pen:   pen,
