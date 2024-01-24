@@ -37,8 +37,7 @@ var (
 	//go:embed client/*
 	assetsFS embed.FS
 	//go:embed assets/cert.pem assets/key.pem
-	tlsAssets    embed.FS
-	waitingQueue = make(chan struct{}, 2)
+	tlsAssets embed.FS
 )
 
 func main() {
