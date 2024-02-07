@@ -21,7 +21,7 @@ func (s stripFS) Open(name string) (http.File, error) {
 	return s.fs.Open("client" + name)
 }
 
-func setMuxer(eventPublisher *pubsub.PubSub) *http.ServeMux {
+func setMuxer(eventPublisher *pubsub.PubSub, memoryBackend []byte) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	fs := http.FileServer(stripFS{http.FS(assetsFS)})
@@ -40,6 +40,7 @@ func setMuxer(eventPublisher *pubsub.PubSub) *http.ServeMux {
 	})
 
 	streamHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher)
+	streamHandler.Backend = memoryBackend
 	if c.Compression {
 		mux.Handle("/stream", gzMiddleware(stream.ThrottlingMiddleware(streamHandler)))
 	} else {

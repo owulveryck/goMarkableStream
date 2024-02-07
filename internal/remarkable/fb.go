@@ -3,9 +3,10 @@ package remarkable
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
-	"syscall"
-	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 func GetFileAndPointer() (io.ReaderAt, int64, error) {
@@ -24,19 +25,16 @@ func GetFileAndPointer() (io.ReaderAt, int64, error) {
 type Memory struct {
 	Backend []byte
 	memPath string
-	fd      int
+	fd      *os.File
 	addr    uintptr
 }
 
-const length = 1872 * 1404 * 8
+// const length = 1872 * 1404
+const length = 5259264
 
 func (m *Memory) Close() {
-	syscall.Close(m.fd)
-	_, _, errno := syscall.Syscall(syscall.SYS_MUNMAP, m.addr, uintptr(length), 0)
-	var err error
-	if errno != 0 {
-		err = errno
-	}
+	m.fd.Close()
+	err := unix.Munmap(m.Backend)
 	if err != nil {
 		panic(err)
 	}
@@ -44,27 +42,34 @@ func (m *Memory) Close() {
 
 func (m *Memory) Init() error {
 	pid := findXochitlPID()
+	log.Println(pid)
 	var err error
 	m.memPath = fmt.Sprintf("/proc/%s/mem", pid)
-	m.fd, err = syscall.Open(m.memPath, syscall.O_RDONLY, 0)
+	log.Println(m.memPath)
+	// Open the file
+	m.fd, err = os.Open(m.memPath)
 	if err != nil {
 		return err
 	}
-	pointerAddr, err := getFramePointer(pid)
+	offset, err := getFramePointer(pid)
 	if err != nil {
 		return err
 	}
-	// Perform the mmap syscall
-	var errno syscall.Errno
-	m.addr, _, errno = syscall.Syscall6(syscall.SYS_MMAP, 0, uintptr(length), syscall.PROT_READ, syscall.MAP_PRIVATE, uintptr(m.fd), uintptr(pointerAddr))
-	if errno != 0 {
-		err = errno
-	}
-	if err != nil {
-		return err
+	pageSize := unix.Getpagesize()
+	fmt.Printf("The system's memory page size is: %d bytes, offset is %v\n", pageSize, offset)
+	// Check if the offset is aligned to the page size
+	if offset%int64(pageSize) == 0 {
+		fmt.Println("The offset is correctly aligned with the page size.")
+	} else {
+		fmt.Println("The offset is not aligned with the page size.")
 	}
 
-	// Now you can access the memory region through the addr pointer
-	m.Backend = (*[length]byte)(unsafe.Pointer(m.addr))[:length:length] // Create a slice backed by the mmap'ed memory
+	// Perform the mmap syscall
+	// Perform mmap
+	m.Backend, err = unix.Mmap(int(m.fd.Fd()), offset, length, unix.PROT_READ, unix.MAP_PRIVATE)
+	if err != nil {
+		log.Println("cannot mmap", err)
+		return err
+	}
 	return nil
 }

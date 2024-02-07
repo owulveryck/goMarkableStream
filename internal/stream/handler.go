@@ -34,6 +34,7 @@ func NewStreamHandler(file io.ReaderAt, pointerAddr int64, inputEvents *pubsub.P
 
 // StreamHandler is an http.Handler that serves the stream of data to the client
 type StreamHandler struct {
+	Backend        []uint8
 	file           io.ReaderAt
 	pointerAddr    int64
 	inputEventsBus *pubsub.PubSub
@@ -102,12 +103,15 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writing = false
 		case <-ticker.C:
 			if writing {
-				_, err := h.file.ReadAt(rawData, h.pointerAddr)
-				if err != nil {
-					log.Println(err)
-					return
-				}
-				_, err = extractor.Write(rawData)
+				/*
+					_, err := h.file.ReadAt(rawData, h.pointerAddr)
+					if err != nil {
+						log.Println(err)
+						return
+					}
+					_, err = extractor.Write(rawData)
+				*/
+				_, err := extractor.Write(h.Backend)
 				if err != nil {
 					log.Println("Error in writing", err)
 					return

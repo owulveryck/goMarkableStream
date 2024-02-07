@@ -20,7 +20,7 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.ngrok.com/muxado/v2 v2.0.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/term v0.8.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )

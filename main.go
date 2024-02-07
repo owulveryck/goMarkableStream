@@ -65,7 +65,13 @@ func main() {
 	eventScanner := remarkable.NewEventScanner()
 	eventScanner.StartAndPublish(context.Background(), eventPublisher)
 
-	mux := setMuxer(eventPublisher)
+	memory := &remarkable.Memory{}
+	err = memory.Init()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer memory.Close()
+	mux := setMuxer(eventPublisher, memory.Backend)
 
 	//	handler := BasicAuthMiddleware(gzMiddleware(mux))
 	var handler http.Handler
