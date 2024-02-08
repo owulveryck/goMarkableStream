@@ -1,7 +1,6 @@
 package stream
 
 import (
-	"encoding/binary"
 	"io"
 	"sync"
 
@@ -21,8 +20,14 @@ type oneOutOfTwo struct {
 func (oneoutoftwo *oneOutOfTwo) Write(src []byte) (n int, err error) {
 	imageData := imagePool.Get().([]uint8)
 	defer imagePool.Put(imageData) // Return the slice to the pool when done
-	for i := 0; i < remarkable.ScreenHeight*remarkable.ScreenWidth; i++ {
-		imageData[i] = uint8(binary.LittleEndian.Uint16(src[i*2 : i*2+2]))
+	for i := range imageData {
+		imageData[i] = src[i*2] // Directly take the lower byte of each uint16 from src
 	}
+
+	/*
+		for i := 0; i < remarkable.ScreenHeight*remarkable.ScreenWidth; i++ {
+			imageData[i] = uint8(binary.LittleEndian.Uint16(src[i*2 : i*2+2]))
+		}
+	*/
 	return oneoutoftwo.w.Write(imageData)
 }
