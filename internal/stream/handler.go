@@ -81,7 +81,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer rawFrameBuffer.Put(rawData) // Return the slice to the pool when done
 	// the informations are int4, therefore store it in a uint8array to reduce data transfer
 	rleWriter := rle.NewRLE(w)
-	extractor := &oneOutOfTwo{rleWriter}
+	//extractor := &oneOutOfTwo{rleWriter}
 	writing := true
 	stopWriting := time.NewTicker(2 * time.Second)
 	defer stopWriting.Stop()
@@ -107,7 +107,8 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					log.Println(err)
 					return
 				}
-				_, err = extractor.Write(rawData)
+				//_, err = extractor.Write(rawData)
+				_, err = rleWriter.Write(rawData)
 				if err != nil {
 					log.Println("Error in writing", err)
 					return
