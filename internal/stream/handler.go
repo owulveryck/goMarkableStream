@@ -81,7 +81,6 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer rawFrameBuffer.Put(rawData) // Return the slice to the pool when done
 	// the informations are int4, therefore store it in a uint8array to reduce data transfer
 	rleWriter := rle.NewRLE(w)
-	//extractor := &oneOutOfTwo{rleWriter}
 	writing := true
 	stopWriting := time.NewTicker(2 * time.Second)
 	defer stopWriting.Stop()
@@ -102,21 +101,24 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writing = false
 		case <-ticker.C:
 			if writing {
-				_, err := h.file.ReadAt(rawData, h.pointerAddr)
-				if err != nil {
-					log.Println(err)
-					return
-				}
-				//_, err = extractor.Write(rawData)
-				_, err = rleWriter.Write(rawData)
-				if err != nil {
-					log.Println("Error in writing", err)
-					return
-				}
-				if w, ok := w.(http.Flusher); ok {
-					w.Flush()
-				}
+				h.fetchAndSend(rleWriter, rawData)
 			}
 		}
+	}
+}
+
+func (h *StreamHandler) fetchAndSend(w io.Writer, rawData []uint8) {
+	_, err := h.file.ReadAt(rawData, h.pointerAddr)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	_, err = w.Write(rawData)
+	if err != nil {
+		log.Println("Error in writing", err)
+		return
+	}
+	if w, ok := w.(http.Flusher); ok {
+		w.Flush()
 	}
 }
