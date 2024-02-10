@@ -15,8 +15,8 @@ var encodedPool = sync.Pool{
 }
 
 var bufferPool = sync.Pool{
-	New: func() interface{} {
-		return new(bytes.Buffer)
+	New: func() any {
+		return make([]byte, 0, remarkable.ScreenHeight*remarkable.ScreenWidth)
 	},
 }
 
@@ -44,8 +44,7 @@ func (rlewriter *RLE) Write(data []byte) (int, error) {
 	if length == 0 {
 		return 0, nil
 	}
-	buf := bufferPool.Get().(*bytes.Buffer)
-	buf.Reset()
+	buf := bufferPool.Get().([]uint8)
 	defer bufferPool.Put(buf)
 
 	current := data[0]
@@ -56,14 +55,14 @@ func (rlewriter *RLE) Write(data []byte) (int, error) {
 		if count < 254 && datum == current {
 			count++
 		} else {
-			buf.WriteByte(count)
-			buf.WriteByte(current)
+			buf = append(buf, count)
+			buf = append(buf, current)
 			current = datum
 			count = 1
 		}
 	}
-	buf.WriteByte(count)
-	buf.WriteByte(current)
+	buf = append(buf, count)
+	buf = append(buf, current)
 
-	return rlewriter.sub.Write(buf.Bytes())
+	return rlewriter.sub.Write(buf)
 }
