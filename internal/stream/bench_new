@@ -1,0 +1,6 @@
+goos: linux
+goarch: amd64
+pkg: github.com/owulveryck/goMarkableStream/internal/stream
+cpu: 11th Gen Intel(R) Core(TM) i3-1115G4 @ 3.00GHz
+BenchmarkFetchAndSend-4   	signal: killed
+FAIL	github.com/owulveryck/goMarkableStream/internal/stream	21.387s

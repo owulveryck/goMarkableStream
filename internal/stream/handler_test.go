@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"bytes"
 	"io"
 	"math/rand"
 	"net/http"
@@ -73,5 +74,38 @@ func TestStreamHandlerRaceCondition(t *testing.T) {
 	// Wait for all goroutines to finish
 	for i := 0; i < concurrentRequests; i++ {
 		<-doneChan
+	}
+}
+
+func TestStreamHandler_fetchAndSend(t *testing.T) {
+	type fields struct {
+		file           io.ReaderAt
+		pointerAddr    int64
+		inputEventsBus *pubsub.PubSub
+	}
+	type args struct {
+		rawData []uint8
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		wantW  string
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := &StreamHandler{
+				file:           tt.fields.file,
+				pointerAddr:    tt.fields.pointerAddr,
+				inputEventsBus: tt.fields.inputEventsBus,
+			}
+			w := &bytes.Buffer{}
+			h.fetchAndSend(w, tt.args.rawData)
+			if gotW := w.String(); gotW != tt.wantW {
+				t.Errorf("StreamHandler.fetchAndSend() = %v, want %v", gotW, tt.wantW)
+			}
+		})
 	}
 }
