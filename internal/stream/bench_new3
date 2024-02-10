@@ -1,0 +1,16 @@
+goos: linux
+goarch: amd64
+pkg: github.com/owulveryck/goMarkableStream/internal/stream
+cpu: 11th Gen Intel(R) Core(TM) i3-1115G4 @ 3.00GHz
+BenchmarkFetchAndSend-4   	      86	  14446580 ns/op	 7992410 B/op	       1 allocs/op
+BenchmarkFetchAndSend-4   	     100	  12809843 ns/op	 6820878 B/op	       1 allocs/op
+BenchmarkFetchAndSend-4   	      97	  12796436 ns/op	 7053368 B/op	       1 allocs/op
+BenchmarkFetchAndSend-4   	     100	  12317484 ns/op	 6820878 B/op	       1 allocs/op
+BenchmarkFetchAndSend-4   	     100	  13181974 ns/op	 6820878 B/op	       1 allocs/op
+BenchmarkFetchAndSend-4   	      97	  12577923 ns/op	 7031832 B/op	       1 allocs/op
+BenchmarkFetchAndSend-4   	      98	  13408105 ns/op	 6960079 B/op	       1 allocs/op
+BenchmarkFetchAndSend-4   	     100	  13360119 ns/op	 6926064 B/op	       1 allocs/op
+BenchmarkFetchAndSend-4   	     100	  12104609 ns/op	 6820878 B/op	       1 allocs/op
+BenchmarkFetchAndSend-4   	     100	  12607977 ns/op	 6820878 B/op	       1 allocs/op
+PASS
+ok  	github.com/owulveryck/goMarkableStream/internal/stream	14.923s

@@ -16,7 +16,7 @@ var encodedPool = sync.Pool{
 
 var bufferPool = sync.Pool{
 	New: func() any {
-		return make([]byte, 0, remarkable.ScreenHeight*remarkable.ScreenWidth)
+		return make([]byte, 0, remarkable.ScreenHeight*remarkable.ScreenWidth*2)
 	},
 }
 
