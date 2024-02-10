@@ -1,10 +1,14 @@
 package stream
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/owulveryck/goMarkableStream/internal/rle"
+)
 
 func BenchmarkFetchAndSend(b *testing.B) {
 	// Setup: Create a large enough mockReaderAt to test performance
-	width, height := 1872	, 1404                    // Example size; adjust based on your needs
+	width, height := 2872, 2404                  // Example size; adjust based on your needs
 	mockReader := NewMockReaderAt(width, height) // Using the mock from the previous example
 
 	handler := StreamHandler{
@@ -14,10 +18,12 @@ func BenchmarkFetchAndSend(b *testing.B) {
 
 	mockWriter := NewMockResponseWriter()
 
+	rleWriter := rle.NewRLE(mockWriter)
+
 	data := make([]byte, width*height) // Adjust based on your payload size
 
 	b.ResetTimer() // Start timing here
 	for i := 0; i < b.N; i++ {
-		handler.fetchAndSend(mockWriter, data)
+		handler.fetchAndSend(rleWriter, data)
 	}
 }
