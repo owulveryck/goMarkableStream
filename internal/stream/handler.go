@@ -97,7 +97,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case event := <-eventC:
 			if event.Code == 24 {
 				writing = true
-				stopWriting.Reset(1500 * time.Millisecond)
+				stopWriting.Reset(2000 * time.Millisecond)
 			}
 		case <-stopWriting.C:
 			writing = false

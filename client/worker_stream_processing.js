@@ -79,13 +79,19 @@ async function initiateStream() {
 								case 30: // red
 									imageData[offset+3] = 0;
 									break;
-								case 10: // red
+								case 6: // red
 									imageData[offset] = 255;
 									imageData[offset+1] = 0;
 									imageData[offset+2] = 0;
 									imageData[offset+3] = 255;
 									break;
-								case 18: // blue
+								case 8: // red
+									imageData[offset] = 255;
+									imageData[offset+1] = 0;
+									imageData[offset+2] = 0;
+									imageData[offset+3] = 255;
+									break;
+								case 12: // blue
 									imageData[offset] = 0;
 									imageData[offset+1] = 0;
 									imageData[offset+2] = 255;
