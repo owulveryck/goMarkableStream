@@ -2,11 +2,8 @@ package eventhttphandler
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
-
-	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
 
 	"github.com/owulveryck/goMarkableStream/internal/events"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
@@ -26,15 +23,14 @@ type EventHandler struct {
 
 // ServeHTTP implements http.Handler
 func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	conn, _, _, err := ws.UpgradeHTTP(r, w)
-	if err != nil {
-		http.Error(w, "cannot upgrade connection "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	eventC := h.inputEventBus.Subscribe("eventListener")
 	defer func() {
 		h.inputEventBus.Unsubscribe(eventC)
 	}()
+	// Set necessary headers to indicate a stream
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
 
 	for {
 		select {
@@ -53,12 +49,10 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "cannot send json encode the message "+err.Error(), http.StatusInternalServerError)
 				return
 			}
-			// Send the JSON message to the WebSocket client
-			err = wsutil.WriteServerText(conn, jsonMessage)
-			if err != nil {
-				log.Println(err)
-				return
-			}
+			// Send the event
+			fmt.Fprintf(w, "data: %s\n\n", jsonMessage)
+			w.(http.Flusher).Flush() // Ensure client receives the message immediately
+
 		}
 	}
 }

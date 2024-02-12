@@ -1,4 +1,3 @@
-let wsURL;
 // Constants for the maximum values from the WebSocket messages
 const SWIPE_DISTANCE = 200;
 
@@ -7,7 +6,6 @@ onmessage = (event) => {
 
 	switch (data.type) {
 		case 'init':
-			wsURL = event.data.wsURL;
 			fetchStream();
 			break;
 		case 'terminate':

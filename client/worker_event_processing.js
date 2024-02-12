@@ -1,11 +1,10 @@
 let height;
 let width;
-let wsURL;
+let eventURL;
 let portrait;
 let draw; 
 let latestX;
 let latestY;
-// Constants for the maximum values from the WebSocket messages
 const MAX_X_VALUE = 15725;
 const MAX_Y_VALUE = 20966;
 
@@ -16,7 +15,7 @@ onmessage = (event) => {
 		case 'init':
 			height = event.data.height;
 			width = event.data.width;
-			wsURL = event.data.wsURL;
+			eventURL = event.data.eventURL;
 			portrait = event.data.portrait;
 			initiateEventsListener();
 			break;
@@ -33,10 +32,9 @@ onmessage = (event) => {
 
 
 async function initiateEventsListener() {
-	const RETRY_DELAY_MS = 3000; // Delay before retrying the connection (in milliseconds)
-	ws = new WebSocket(wsURL);
+	const eventSource = new EventSource(eventURL);
 	draw = true;
-	ws.onmessage = (event) => {
+	eventSource.onmessage = (event) => {
 		const message = JSON.parse(event.data);
 		if (message.Type === 3) {
 			if (message.Code === 24) {
@@ -70,21 +68,21 @@ async function initiateEventsListener() {
 		}
 	}
 
-	ws.onerror = () => {
+	eventSource.onerror = () => {
 		postMessage({
 			type: 'error',
 			message: "websocket error",
 		});
-		console.error('WebSocket error occurred. Attempting to reconnect...');
+		console.error('EventStrean error occurred. Attempting to reconnect...');
 		//setTimeout(connectWebSocket, 3000); // Reconnect after 3 seconds
 	};
 
-	ws.onclose = () => {
+	eventSource.onclose = () => {
 		postMessage({
 			type: 'error',
 			message: 'closed connection'
 		});
-		console.log('WebSocket connection closed. Attempting to reconnect...');
+		console.log('EventStream connection closed. Attempting to reconnect...');
 		//setTimeout(connectWebSocket, 3000); // Reconnect after 3 seconds
 	};
 }

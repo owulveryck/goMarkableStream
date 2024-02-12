@@ -32,20 +32,17 @@ streamWorker.onmessage = (event) => {
 
 
 // Determine the WebSocket protocol based on the current window protocol
-const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const wsURL = `${wsProtocol}//${window.location.host}/events`;
-const wsGestureURL = `${wsProtocol}//${window.location.host}/gestures`;
+const eventURL = `/events`;
 // Send the OffscreenCanvas to the worker for initialization
 eventWorker.postMessage({ 
 	type: 'init', 
 	width: width, 
 	height: height, 
 	portrait: portrait,
-	wsURL: wsURL
+	eventURL: eventURL
 });
 gestureWorker.postMessage({ 
 	type: 'init', 
-	wsURL: wsGestureURL
 });
 
 gestureWorker.onmessage = (event) => {
