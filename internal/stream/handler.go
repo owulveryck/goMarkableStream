@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/owulveryck/goMarkableStream/internal/events"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 	"github.com/owulveryck/goMarkableStream/internal/rle"
@@ -95,7 +96,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case event := <-eventC:
-			if event.Code == 24 {
+			if event.Code == 24 || event.Source == events.Touch {
 				writing = true
 				stopWriting.Reset(2000 * time.Millisecond)
 			}
@@ -123,4 +124,15 @@ func (h *StreamHandler) fetchAndSend(w io.Writer, rawData []uint8) {
 	if w, ok := w.(http.Flusher); ok {
 		w.Flush()
 	}
+}
+
+func sum(d []uint8) int {
+	val := 0 // Assuming `int` is large enough to avoid overflow
+	// Manual loop unrolling could be done here, but it's typically not recommended
+	// for readability and maintenance reasons unless profiling identifies this loop
+	// as a significant bottleneck.
+	for _, v := range d {
+		val += int(v)
+	}
+	return val
 }
