@@ -94,9 +94,11 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-r.Context().Done():
 			return
-		case <-eventC:
-			writing = true
-			stopWriting.Reset(2 * time.Second)
+		case event := <-eventC:
+			if event.Code == 24 {
+				writing = true
+				stopWriting.Reset(1500 * time.Millisecond)
+			}
 		case <-stopWriting.C:
 			writing = false
 		case <-ticker.C:
