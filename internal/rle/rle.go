@@ -50,8 +50,8 @@ func (rlewriter *RLE) Write(data []byte) (int, error) {
 	current := data[0]
 	count := uint8(0)
 
-	for i := 0; i < remarkable.ScreenWidth*remarkable.ScreenHeight; i++ {
-		datum := data[i*2]
+	for i := 0; i < len(data); i += 2 {
+		datum := data[i]
 		if count < 254 && datum == current {
 			count++
 		} else {
@@ -61,6 +61,19 @@ func (rlewriter *RLE) Write(data []byte) (int, error) {
 			count = 1
 		}
 	}
+	/*
+		for i := 0; i < remarkable.ScreenWidth*remarkable.ScreenHeight; i++ {
+			datum := data[i*2]
+			if count < 254 && datum == current {
+				count++
+			} else {
+				buf = append(buf, count)
+				buf = append(buf, current)
+				current = datum
+				count = 1
+			}
+		}
+	*/
 	buf = append(buf, count)
 	buf = append(buf, current)
 
