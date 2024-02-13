@@ -11,10 +11,13 @@ import (
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 )
 
+// SwipeDirection ...
 type SwipeDirection string
 
 const (
-	SwipeLeft  SwipeDirection = "Swipe Left"
+	// SwipeLeft ...
+	SwipeLeft SwipeDirection = "Swipe Left"
+	// SwipeRight ...
 	SwipeRight SwipeDirection = "Swipe Right"
 )
 
