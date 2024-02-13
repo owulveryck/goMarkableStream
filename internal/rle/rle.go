@@ -10,7 +10,13 @@ import (
 
 var encodedPool = sync.Pool{
 	New: func() interface{} {
-		return make([]uint8, 0, remarkable.ScreenHeight*remarkable.ScreenWidth)
+		return new(bytes.Buffer)
+	},
+}
+
+var bufferPool = sync.Pool{
+	New: func() any {
+		return make([]byte, 0, remarkable.ScreenHeight*remarkable.ScreenWidth*2)
 	},
 }
 
@@ -38,26 +44,38 @@ func (rlewriter *RLE) Write(data []byte) (int, error) {
 	if length == 0 {
 		return 0, nil
 	}
-	encoded := encodedPool.Get().([]uint8) // Borrow a slice from the pool
-	defer encodedPool.Put(encoded)
+	buf := bufferPool.Get().([]uint8)
+	defer bufferPool.Put(buf)
 
 	current := data[0]
-	count := 0
+	count := uint8(0)
 
-	for _, datum := range data {
+	for i := 0; i < remarkable.ScreenHeight*remarkable.ScreenWidth*2; i += 2 {
+		datum := data[i]
 		if count < 254 && datum == current {
 			count++
 		} else {
-			encoded = append(encoded, uint8(count))
-			encoded = append(encoded, uint8(current))
+			buf = append(buf, count)
+			buf = append(buf, current)
 			current = datum
 			count = 1
 		}
 	}
+	/*
+		for i := 0; i < remarkable.ScreenWidth*remarkable.ScreenHeight; i++ {
+			datum := data[i*2]
+			if count < 254 && datum == current {
+				count++
+			} else {
+				buf = append(buf, count)
+				buf = append(buf, current)
+				current = datum
+				count = 1
+			}
+		}
+	*/
+	buf = append(buf, count)
+	buf = append(buf, current)
 
-	encoded = append(encoded, uint8(count))
-	encoded = append(encoded, uint8(current))
-
-	n, err := io.Copy(rlewriter.sub, bytes.NewBuffer(encoded))
-	return int(n), err
+	return rlewriter.sub.Write(buf)
 }

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/owulveryck/goMarkableStream/internal/events"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 	"github.com/owulveryck/goMarkableStream/internal/rle"
@@ -81,7 +82,6 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer rawFrameBuffer.Put(rawData) // Return the slice to the pool when done
 	// the informations are int4, therefore store it in a uint8array to reduce data transfer
 	rleWriter := rle.NewRLE(w)
-	extractor := &oneOutOfTwo{rleWriter}
 	writing := true
 	stopWriting := time.NewTicker(2 * time.Second)
 	defer stopWriting.Stop()
@@ -95,27 +95,44 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-r.Context().Done():
 			return
-		case <-eventC:
-			writing = true
-			stopWriting.Reset(2 * time.Second)
+		case event := <-eventC:
+			if event.Code == 24 || event.Source == events.Touch {
+				writing = true
+				stopWriting.Reset(2000 * time.Millisecond)
+			}
 		case <-stopWriting.C:
 			writing = false
 		case <-ticker.C:
 			if writing {
-				_, err := h.file.ReadAt(rawData, h.pointerAddr)
-				if err != nil {
-					log.Println(err)
-					return
-				}
-				_, err = extractor.Write(rawData)
-				if err != nil {
-					log.Println("Error in writing", err)
-					return
-				}
-				if w, ok := w.(http.Flusher); ok {
-					w.Flush()
-				}
+				h.fetchAndSend(rleWriter, rawData)
 			}
 		}
 	}
+}
+
+func (h *StreamHandler) fetchAndSend(w io.Writer, rawData []uint8) {
+	_, err := h.file.ReadAt(rawData, h.pointerAddr)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	_, err = w.Write(rawData)
+	if err != nil {
+		log.Println("Error in writing", err)
+		return
+	}
+	if w, ok := w.(http.Flusher); ok {
+		w.Flush()
+	}
+}
+
+func sum(d []uint8) int {
+	val := 0 // Assuming `int` is large enough to avoid overflow
+	// Manual loop unrolling could be done here, but it's typically not recommended
+	// for readability and maintenance reasons unless profiling identifies this loop
+	// as a significant bottleneck.
+	for _, v := range d {
+		val += int(v)
+	}
+	return val
 }
