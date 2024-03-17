@@ -62,6 +62,56 @@ If it does not work, you may need to replace `remarkable.local.` by the IP addre
 
 _note 2_: you can use this to update to a new version (ensure that you killed the previous version before with `kill $(pidof goMarkableStream)`)
 
+## Setup goMarkableStream as a systemd service
+
+This section explains how to set up goMarkableStream as a system service that will stay running through
+device restart and sleep. Note, however, this setup script will need to be executed 
+for any reMarkable system update/installation. 
+
+First, we'll write the script, saving it to the home directory. Then, we'll execute the script which performs all
+setup necessary to register goMarkableStream as a system service. It can be executed after every system update.
+Note, this script assumes the goMarkableStream executable exists in the home directory.
+
+```bash
+localhost> ssh root@remarkable
+```
+
+Create a bash script under the home directory:
+```bash
+touch setupGoMarkableStream.sh
+chmod +x setupGoMarkableStream.sh
+```
+
+Then open the file in nano:
+```bash
+nano setupGoMarkableStream.sh
+```
+
+Finally, paste (ctrl-shift-v) the following into the nano editor. Then save and quit (ctrl-X, Y, [enter]).
+```bash
+pushd /etc/systemd/system
+touch goMarkableStream.service
+
+cat <<EOF>goMarkableStream.service
+[Unit]
+Description=Go Remarkable Stream Server
+
+[Service]
+ExecStart=/home/root/goMarkableStream
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable goMarkableStream.service
+systemctl start goMarkableStream.service
+systemctl status goMarkableStream.service
+popd
+```
+
+Executing setupGoMarkableStream.sh will register the goMarkableStream executable as a systemd service!
+
 ## Configurations
 
 ### Device Configuration
