@@ -4,6 +4,8 @@ const height = 1404;
 const rawCanvas = new OffscreenCanvas(width, height); // Define width and height as needed
 let portrait = getQueryParam('portrait');
 portrait = portrait !== null ? portrait === 'true' : false;
+let flip = getQueryParam('flip');
+flip = flip !== null ? flip === 'true' : false;
 let withColor = getQueryParam('color', 'true');
 withColor = withColor !== null ? withColor === 'true' : true;
 let rate = parseInt(getQueryParamOrDefault('rate', '200'), 10);
