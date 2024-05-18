@@ -128,6 +128,7 @@ Add query parameters to the URL (`?parameter=value&otherparameter=value`):
 - `color`: (true/false) Enable or disable color.
 - `portrait`: (true/false) Enable or disable portrait mode.
 - `rate`: (integer, 100-...) Set the frame rate.
+- `flip`: (true/false) Enable or disable flipping 180 degree.
 
 ## Tunneling
 Tunneling with built-in Ngrok allows for streaming across different networks.

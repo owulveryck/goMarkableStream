@@ -28,6 +28,12 @@ function resizeVisibleCanvas() {
 		visibleCanvas.style.width = containerWidth + "px";
 		visibleCanvas.style.height = containerWidth / aspectRatio + "px";
 	}
+
+	if (flip) {
+		visibleCanvas.style.transform = "rotate(180deg)";
+	} else {
+		visibleCanvas.style.transform = "rotate(0deg)";
+	}
 }
 function waiting(message) {
 	// Clear the canvas
