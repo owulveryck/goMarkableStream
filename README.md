@@ -62,6 +62,35 @@ If it does not work, you may need to replace `remarkable.local.` by the IP addre
 
 _note 2_: you can use this to update to a new version (ensure that you killed the previous version before with `kill $(pidof goMarkableStream)`)
 
+### Errors due to missing packages
+
+If you get errors such as `wget: note: TLS certificate validation not implemented` or `-sh: curl: command not found` when running through the process above, then some commands are missing on your Remarkable. To avoid having to install additional packages, you can first download goRemarkableStream to your local computer and then copy it over to your Remarkable as follows:
+
+1. Run this on your local computer to download goRemarkableStream into the current directory:
+
+```bash
+localhost> export GORKVERSION=$(wget -q -O - https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
+wget -q -O - https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/goMarkableStream_${GORKVERSION//v}_linux_arm.tar.gz | tar xzvf - -O goMarkableStream_${GORKVERSION//v}_linux_arm/goMarkableStream > goMarkableStream
+chmod +x goMarkableStream
+```
+
+2. Copy it over to your Remarkable (remarkable is the ip of your Remarkable):
+```bash
+localhost> scp ./goMarkableStream root@remarkable:/home/root/goMarkableStream
+```
+
+3. Login into your Remarkable:
+```bash
+localhost> ssh root@remarkable
+```
+
+4. Start goRemarkableStream (to make it permanent, see section about turning goRemakableStream into a systemd service):
+```bash
+./goRemarkableStream
+```
+
+
+
 ## Setup goMarkableStream as a systemd service
 
 This section explains how to set up goMarkableStream as a system service that will stay running through
