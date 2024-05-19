@@ -74,7 +74,7 @@ wget -q -O - https://github.com/owulveryck/goMarkableStream/releases/download/$G
 chmod +x goMarkableStream
 ```
 
-2. Copy it over to your Remarkable (remarkable is the ip of your Remarkable):
+2. Copy it over to your Remarkable (`remarkable` is the ip of your Remarkable):
 ```bash
 localhost> scp ./goMarkableStream root@remarkable:/home/root/goMarkableStream
 ```
