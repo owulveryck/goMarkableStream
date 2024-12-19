@@ -3,9 +3,9 @@ function resizeVisibleCanvas() {
 	var container = document.getElementById("container");
 
 	if (portrait) {
-		var aspectRatio = 1404 / 1872;
+		var aspectRatio = screenHeight / screenWidth;
 	} else {
-		var aspectRatio = 1872 / 1404;
+		var aspectRatio = screenWidth / screenHeight;
 	}
 
 	var containerWidth = container.offsetWidth;

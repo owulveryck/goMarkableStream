@@ -160,7 +160,7 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
 // Upload the image into the texture.
-let imageData = new ImageData(width, height);
+let imageData = new ImageData(screenWidth, screenHeight);
 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imageData);
 
 // Draw the scene
@@ -209,7 +209,7 @@ drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 // Update texture
 function updateTexture(newRawData, shouldRotate, scaleFactor) {
 	gl.bindTexture(gl.TEXTURE_2D, texture);
-	gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, newRawData);
+	gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, screenWidth, screenHeight, gl.RGBA, gl.UNSIGNED_BYTE, newRawData);
 
 	// Set rotation
 	const uRotationMatrixLocation = gl.getUniformLocation(shaderProgram, 'uRotationMatrix');
@@ -243,9 +243,8 @@ function resizeGLCanvas(canvas) {
 }
 
 function updateLaserPosition(x, y) {
-
-	laserX = x / 1872 * gl.canvas.width;
-	laserY = gl.canvas.height - (y / 1404 * gl.canvas.height);
+	laserX = x / screenWidth * gl.canvas.width;
+	laserY = gl.canvas.height - (y / screenHeight * gl.canvas.height);
 
     drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 }

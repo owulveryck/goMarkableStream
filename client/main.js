@@ -1,7 +1,4 @@
-const width = 1872;
-const height = 1404;
-
-const rawCanvas = new OffscreenCanvas(width, height); // Define width and height as needed
+const rawCanvas = new OffscreenCanvas(screenWidth, screenHeight); // Define width and height as needed
 let portrait = getQueryParam('portrait');
 portrait = portrait !== null ? portrait === 'true' : false;
 let flip = getQueryParam('flip');
@@ -29,7 +26,7 @@ function getQueryParamOrDefault(param, defaultValue) {
     const value = urlParams.get(param);
     return value !== null ? value : defaultValue;
 }
-//let imageData = ctx.createImageData(width, height); // width and height of your canvas
+//let imageData = ctx.createImageData(screenWidth, screenHeight); // width and height of your canvas
 function getQueryParam(name) {
 	const urlParams = new URLSearchParams(window.location.search);
 	return urlParams.get(name);
