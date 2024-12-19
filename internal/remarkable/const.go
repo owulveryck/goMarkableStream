@@ -1,3 +1,5 @@
+//go:build linux && !arm64
+
 package remarkable
 
 const (
@@ -5,4 +7,6 @@ const (
 	ScreenWidth = 1872
 	// ScreenHeight of the remarkable 2
 	ScreenHeight = 1404
+
+	ScreenSize = ScreenWidth * ScreenHeight * 2
 )

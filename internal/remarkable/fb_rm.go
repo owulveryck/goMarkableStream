@@ -1,4 +1,4 @@
-//go:build linux && arm
+//go:build linux && (arm || arm64)
 
 package remarkable
 

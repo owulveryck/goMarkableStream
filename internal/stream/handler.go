@@ -20,7 +20,7 @@ var (
 
 var rawFrameBuffer = sync.Pool{
 	New: func() any {
-		return make([]uint8, remarkable.ScreenWidth*remarkable.ScreenHeight*2) // Adjust the initial capacity as needed
+		return make([]uint8, remarkable.ScreenSize) // Adjust the initial capacity as needed
 	},
 }
 

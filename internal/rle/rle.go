@@ -16,7 +16,7 @@ var encodedPool = sync.Pool{
 
 var bufferPool = sync.Pool{
 	New: func() any {
-		return make([]byte, 0, remarkable.ScreenHeight*remarkable.ScreenWidth*2)
+		return make([]byte, 0, remarkable.ScreenSize)
 	},
 }
 
@@ -50,7 +50,7 @@ func (rlewriter *RLE) Write(data []byte) (int, error) {
 	current := data[0]
 	count := uint8(0)
 
-	for i := 0; i < remarkable.ScreenHeight*remarkable.ScreenWidth*2; i += 2 {
+	for i := 0; i < remarkable.ScreenSize; i += 2 {
 		datum := data[i]
 		if count < 254 && datum == current {
 			count++
