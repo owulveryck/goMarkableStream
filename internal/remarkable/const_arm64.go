@@ -1,4 +1,4 @@
-//go:build linux && arm64
+//go:build arm64
 
 package remarkable
 
@@ -9,4 +9,7 @@ const (
 	ScreenHeight = 1624
 
 	ScreenSize = ScreenWidth * ScreenHeight * 4
+
+	PenInputDevice   = "/dev/input/event2"
+	TouchInputDevice = "/dev/input/event3"
 )
