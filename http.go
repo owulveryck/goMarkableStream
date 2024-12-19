@@ -72,9 +72,13 @@ func newIndexHandler(fs http.FileSystem) http.HandlerFunc {
 	data := struct {
 		ScreenWidth  int
 		ScreenHeight int
+		MaxXValue    int
+		MaxYValue    int
 	}{
 		ScreenWidth:  remarkable.ScreenWidth,
 		ScreenHeight: remarkable.ScreenHeight,
+		MaxXValue:    remarkable.MaxXValue,
+		MaxYValue:    remarkable.MaxYValue,
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {

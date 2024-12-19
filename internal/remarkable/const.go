@@ -10,6 +10,10 @@ const (
 
 	ScreenSize = ScreenWidth * ScreenHeight * 2
 
+	// These values are from Max values of /dev/input/event1 (ABS_X and ABS_Y)
+	MaxXValue = 15725
+	MaxYValue = 20966
+
 	PenInputDevice   = "/dev/input/event1"
 	TouchInputDevice = "/dev/input/event2"
 )

@@ -39,7 +39,9 @@ eventWorker.postMessage({
 	width: screenWidth,
 	height: screenHeight,
 	portrait: portrait,
-	eventURL: eventURL
+	eventURL: eventURL,
+    maxXValue: MaxXValue,
+    maxYValue: MaxYValue,
 });
 gestureWorker.postMessage({ 
 	type: 'init', 
