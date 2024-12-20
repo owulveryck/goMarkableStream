@@ -10,7 +10,7 @@ const (
 	// ScreenHeight of the remarkable 2
 	ScreenHeight = 1404
 
-	ScreenSize = ScreenWidth * ScreenHeight * 2
+	ScreenSizeBytes = ScreenWidth * ScreenHeight * 2
 
 	// These values are from Max values of /dev/input/event1 (ABS_X and ABS_Y)
 	MaxXValue = 15725

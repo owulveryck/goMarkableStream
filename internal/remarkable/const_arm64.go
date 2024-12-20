@@ -10,7 +10,7 @@ const (
 	// ScreenHeight of the remarkable paper pro
 	ScreenHeight = 2154
 
-	ScreenSize = ScreenWidth * ScreenHeight * 4
+	ScreenSizeBytes = ScreenWidth * ScreenHeight * 4
 
 	// These values are from Max values of /dev/input/event2 (ABS_X and ABS_Y)
 	MaxXValue = 11180
