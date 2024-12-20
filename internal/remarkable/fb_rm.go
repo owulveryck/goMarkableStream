@@ -18,5 +18,4 @@ func GetFileAndPointer() (io.ReaderAt, int64, error) {
 		return file, 0, err
 	}
 	return file, pointerAddr, nil
-
 }

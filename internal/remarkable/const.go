@@ -3,6 +3,8 @@
 package remarkable
 
 const (
+	Model = Remarkable2
+
 	// ScreenWidth of the remarkable 2
 	ScreenWidth = 1872
 	// ScreenHeight of the remarkable 2

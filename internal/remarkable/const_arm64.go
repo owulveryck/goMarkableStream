@@ -3,10 +3,12 @@
 package remarkable
 
 const (
+	Model = RemarkablePaperPro
+
 	// ScreenWidth of the remarkable paper pro
-	ScreenWidth = 2154
+	ScreenWidth = 1624
 	// ScreenHeight of the remarkable paper pro
-	ScreenHeight = 1624
+	ScreenHeight = 2154
 
 	ScreenSize = ScreenWidth * ScreenHeight * 4
 

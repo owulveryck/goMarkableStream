@@ -25,11 +25,12 @@ var rawFrameBuffer = sync.Pool{
 }
 
 // NewStreamHandler creates a new stream handler reading from file @pointerAddr
-func NewStreamHandler(file io.ReaderAt, pointerAddr int64, inputEvents *pubsub.PubSub) *StreamHandler {
+func NewStreamHandler(file io.ReaderAt, pointerAddr int64, inputEvents *pubsub.PubSub, useRLE bool) *StreamHandler {
 	return &StreamHandler{
 		file:           file,
 		pointerAddr:    pointerAddr,
 		inputEventsBus: inputEvents,
+		useRLE:         useRLE,
 	}
 }
 
@@ -38,6 +39,7 @@ type StreamHandler struct {
 	file           io.ReaderAt
 	pointerAddr    int64
 	inputEventsBus *pubsub.PubSub
+	useRLE         bool
 }
 
 // ServeHTTP implements http.Handler
@@ -104,7 +106,11 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writing = false
 		case <-ticker.C:
 			if writing {
-				h.fetchAndSend(rleWriter, rawData)
+				if h.useRLE {
+					h.fetchAndSend(rleWriter, rawData)
+				} else {
+					h.fetchAndSend(w, rawData)
+				}
 			}
 		}
 	}
