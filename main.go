@@ -16,13 +16,15 @@ import (
 )
 
 type configuration struct {
-	BindAddr       string `envconfig:"SERVER_BIND_ADDR" default:":2001" required:"true" description:"The server bind address"`
-	Username       string `envconfig:"SERVER_USERNAME" default:"admin"`
-	Password       string `envconfig:"SERVER_PASSWORD" default:"password"`
-	TLS            bool   `envconfig:"HTTPS" default:"true"`
-	Compression    bool   `envconfig:"COMPRESSION" default:"false";`
-	RLECompression bool   `envconfig:"RLE_COMPRESSION" default:"true"`
-	DevMode        bool   `envconfig:"DEV_MODE" default:"false"`
+	BindAddr             string `envconfig:"SERVER_BIND_ADDR" default:":2001" required:"true" description:"The server bind address"`
+	Username             string `envconfig:"SERVER_USERNAME" default:"admin"`
+	Password             string `envconfig:"SERVER_PASSWORD" default:"password"`
+	TLS                  bool   `envconfig:"HTTPS" default:"true"`
+	Compression          bool   `envconfig:"COMPRESSION" default:"false"`
+	RLECompression       bool   `envconfig:"RLE_COMPRESSION" default:"true"`
+	DevMode              bool   `envconfig:"DEV_MODE" default:"false"`
+	ZSTDCompression      bool   `envconfig:"ZSTD_COMPRESSION" default:"false" description:"Enable zstd compression"`
+	ZSTDCompressionLevel int    `envconfig:"ZSTD_COMPRESSION_LEVEL" default:"3" description:"Zstd compression level (1-22, where 1 is fastest and 22 is maximum compression)"`
 }
 
 const (

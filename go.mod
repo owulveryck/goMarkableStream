@@ -4,6 +4,7 @@ go 1.22
 
 require (
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/klauspost/compress v1.17.11
 	golang.ngrok.com/ngrok v1.4.1
 )
 
