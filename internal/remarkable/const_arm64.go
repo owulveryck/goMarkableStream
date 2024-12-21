@@ -6,9 +6,9 @@ const (
 	Model = RemarkablePaperPro
 
 	// ScreenWidth of the remarkable paper pro
-	ScreenWidth = 1620
+	ScreenWidth = 1624
 	// ScreenHeight of the remarkable paper pro
-	ScreenHeight = 2160
+	ScreenHeight = 2154
 
 	ScreenSizeBytes = ScreenWidth * ScreenHeight * 4
 
