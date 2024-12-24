@@ -5,8 +5,8 @@ let portrait;
 let draw; 
 let latestX;
 let latestY;
-const MAX_X_VALUE = 15725;
-const MAX_Y_VALUE = 20966;
+let maxXValue;
+let maxYValue;
 
 onmessage = (event) => {
 	const data = event.data;
@@ -17,6 +17,8 @@ onmessage = (event) => {
 			width = event.data.width;
 			eventURL = event.data.eventURL;
 			portrait = event.data.portrait;
+            maxXValue = event.data.maxXValue;
+            maxYValue = event.data.maxYValue;
 			initiateEventsListener();
 			break;
 		case 'portrait':
@@ -50,16 +52,16 @@ async function initiateEventsListener() {
 			// Code 3: Update and draw laser pointer
 			if (portrait) {
 				if (message.Code === 1) { // Horizontal position
-					latestX = scaleValue(message.Value, MAX_X_VALUE, width);
+					latestX = scaleValue(message.Value, maxXValue, width);
 				} else if (message.Code === 0) { // Vertical position
-					latestY = height - scaleValue(message.Value, MAX_Y_VALUE, height);
+					latestY = height - scaleValue(message.Value, maxYValue, height);
 				}
 			} else {
 				// wrong
 				if (message.Code === 1) { // Horizontal position
-					latestY = scaleValue(message.Value, MAX_X_VALUE, height);
+					latestY = scaleValue(message.Value, maxYValue, height);
 				} else if (message.Code === 0) { // Vertical position
-					latestX = scaleValue(message.Value, MAX_Y_VALUE, width);
+					latestX = scaleValue(message.Value, maxXValue, width);
 				}
 			}
 			if (draw) {

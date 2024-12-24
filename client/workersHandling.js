@@ -1,10 +1,11 @@
 // Send the OffscreenCanvas to the worker for initialization
 streamWorker.postMessage({ 
 	type: 'init', 
-	width: width, 
-	height: height,
+	width: screenWidth,
+	height: screenHeight,
 	rate: rate,
-	withColor: withColor
+	withColor: withColor,
+	useRLE: UseRLE,
 });
 
 
@@ -36,10 +37,12 @@ const eventURL = `/events`;
 // Send the OffscreenCanvas to the worker for initialization
 eventWorker.postMessage({ 
 	type: 'init', 
-	width: width, 
-	height: height, 
+	width: screenWidth,
+	height: screenHeight,
 	portrait: portrait,
-	eventURL: eventURL
+	eventURL: eventURL,
+    maxXValue: MaxXValue,
+    maxYValue: MaxYValue,
 });
 gestureWorker.postMessage({ 
 	type: 'init', 

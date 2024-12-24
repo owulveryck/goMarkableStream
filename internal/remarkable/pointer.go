@@ -1,3 +1,5 @@
+//go:build linux && !arm64
+
 package remarkable
 
 import (
@@ -28,5 +30,5 @@ func getFramePointer(pid string) (int64, error) {
 			scanAddr = true
 		}
 	}
-	return addr, err
+	return addr + 8, err
 }

@@ -131,16 +131,25 @@ const programInfo = {
 const textureCoordBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
 
-const textureCoordinates = [
-//	1.0,  0.0,  // Bottom right
-//	0.0,  0.0,  // Bottom left
-//	1.0,  1.0,  // Top right
-//	0.0,  1.0,  // Top left
-	1.0, 1.0,
-	0.0, 1.0,
-	1.0, 0.0,
-	0.0, 0.0,
-];
+const textureCoordinates = getTextureCoordinates();
+
+function getTextureCoordinates() {
+    if (DeviceModel === "Remarkable2") {
+        return [
+			1.0, 1.0,
+			0.0, 1.0,
+			1.0, 0.0,
+			0.0, 0.0,
+		];
+    } else {
+        return [
+			1.0, 0.0,
+			0.0, 0.0,
+			1.0, 1.0,
+			0.0, 1.0,
+		];
+    };
+};
 
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
 
@@ -160,7 +169,7 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
 // Upload the image into the texture.
-let imageData = new ImageData(width, height);
+let imageData = new ImageData(screenWidth, screenHeight);
 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imageData);
 
 // Draw the scene
@@ -208,8 +217,12 @@ drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 
 // Update texture
 function updateTexture(newRawData, shouldRotate, scaleFactor) {
+	if (useBGRA) {
+        convertBGRAtoRGBA(newRawData);
+    };
+
 	gl.bindTexture(gl.TEXTURE_2D, texture);
-	gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, newRawData);
+	gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, screenWidth, screenHeight, gl.RGBA, gl.UNSIGNED_BYTE, newRawData);
 
 	// Set rotation
 	const uRotationMatrixLocation = gl.getUniformLocation(shaderProgram, 'uRotationMatrix');
@@ -221,6 +234,14 @@ function updateTexture(newRawData, shouldRotate, scaleFactor) {
 	gl.uniform1f(uScaleFactorLocation, scaleFactor);
 
 	drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
+}
+
+function convertBGRAtoRGBA(data) {
+    for (let i = 0; i < data.length; i += 4) {
+        const b = data[i];     // Blue
+        data[i] = data[i + 2]; // Swap Red and Blue
+        data[i + 2] = b;
+    }
 }
 
 // Call `updateTexture` with new data whenever you need to update the image
@@ -243,9 +264,8 @@ function resizeGLCanvas(canvas) {
 }
 
 function updateLaserPosition(x, y) {
-
-	laserX = x / 1872 * gl.canvas.width;
-	laserY = gl.canvas.height - (y / 1404 * gl.canvas.height);
+	laserX = x / screenWidth * gl.canvas.width;
+	laserY = gl.canvas.height - (y / screenHeight * gl.canvas.height);
 
     drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 }

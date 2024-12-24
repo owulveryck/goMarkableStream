@@ -1,4 +1,4 @@
-//go:build linux && arm
+//go:build linux && (arm || arm64)
 
 package remarkable
 
@@ -18,5 +18,4 @@ func GetFileAndPointer() (io.ReaderAt, int64, error) {
 		return file, 0, err
 	}
 	return file, pointerAddr, nil
-
 }

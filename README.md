@@ -11,6 +11,17 @@ The goMarkableStream is a lightweight and user-friendly application designed spe
 
 Its primary goal is to enable users to stream their reMarkable tablet screen to a web browser without the need for any hacks or modifications that could void the warranty.
 
+## Device support
+
+- Remarkable 2
+- Remarkable Paper Pro (see notes below)
+
+### Remarkable Paper Pro
+
+Remarkable Paper Pro is in initial support. The application is not yet fully tested on this device and some features may not work as expected.
+
+When running on the Remarkable Paper Pro, `RLE_COMPRESSION` environment variable must be set to `false` since it's not supported.
+
 ## Version support
 
 - reMarkable with firmware < 3.4 may use goMarkableStream version < 0.8.6
@@ -122,6 +133,9 @@ Configure the application via environment variables:
 - `RK_HTTPS`: (True/False, default: `true`) Enable or disable HTTPS.
 - `RK_COMPRESSION`: (True/False, default: `false`) Enable or disable compression.
 - `RK_DEV_MODE`: (True/False, default: `false`) Enable or disable developer mode.
+- `RLE_COMPRESSION`: (True/False, default: `true`) Enable or disable RLE compression.
+- `ZSTD_COMPRESSION`: (True/False, default: `false`) Enable or disable ZSTD compression.
+- `ZSTD_COMPRESSION_LEVEL`: (Integer, default: `3`) Set the ZSTD compression level.
 
 ### Endpoint Configuration
 Add query parameters to the URL (`?parameter=value&otherparameter=value`):

@@ -1,15 +1,23 @@
-const width = 1872;
-const height = 1404;
-
-const rawCanvas = new OffscreenCanvas(width, height); // Define width and height as needed
+const rawCanvas = new OffscreenCanvas(screenWidth, screenHeight); // Define width and height as needed
 let portrait = getQueryParam('portrait');
 portrait = portrait !== null ? portrait === 'true' : false;
-let flip = getQueryParam('flip');
-flip = flip !== null ? flip === 'true' : false;
+
+defaultFlip = true;
+// If this is the Paper Pro, we don't need to flip the image.
+if (DeviceModel === 'RemarkablePaperPro') {
+	defaultFlip = false;
+}
+let flip = getBoolQueryParam('flip', defaultFlip);
+
 let withColor = getQueryParam('color', 'true');
 withColor = withColor !== null ? withColor === 'true' : true;
 let rate = parseInt(getQueryParamOrDefault('rate', '200'), 10);
 
+// Remarkable Paper Pro uses BGRA format.
+let useBGRA = false;
+if (DeviceModel === 'RemarkablePaperPro') {
+	useBGRA = true;
+};
 
 //let portrait = false;
 // Get the 'present' parameter from the URL
@@ -29,12 +37,22 @@ function getQueryParamOrDefault(param, defaultValue) {
     const value = urlParams.get(param);
     return value !== null ? value : defaultValue;
 }
-//let imageData = ctx.createImageData(width, height); // width and height of your canvas
+
+//let imageData = ctx.createImageData(screenWidth, screenHeight); // width and height of your canvas
 function getQueryParam(name) {
 	const urlParams = new URLSearchParams(window.location.search);
 	return urlParams.get(name);
 }
 
+function getBoolQueryParam(param, defaultValue = false) {
+    value = getQueryParam(param);
+
+    if (value === null) {
+        return defaultValue;
+    }
+
+    return value === 'true';
+}
 
 window.onload = function() {
 	// Function to get the value of a query parameter by name

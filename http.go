@@ -1,15 +1,15 @@
 package main
 
 import (
-	"bytes"
 	"crypto/tls"
-	"io"
+	"html/template"
 	"log"
 	"net"
 	"net/http"
 
 	"github.com/owulveryck/goMarkableStream/internal/eventhttphandler"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
+	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 	"github.com/owulveryck/goMarkableStream/internal/stream"
 )
 
@@ -24,24 +24,14 @@ func (s stripFS) Open(name string) (http.File, error) {
 func setMuxer(eventPublisher *pubsub.PubSub) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	fs := http.FileServer(stripFS{http.FS(assetsFS)})
-
 	// Custom handler to serve index.html for root path
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
-			index, err := assetsFS.ReadFile("client/index.html")
-			if err != nil {
-				log.Fatal(err)
-			}
-			io.Copy(w, bytes.NewReader(index))
-			return
-		}
-		fs.ServeHTTP(w, r)
-	})
+	mux.HandleFunc("/", newIndexHandler(stripFS{http.FS(assetsFS)}))
 
-	streamHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher)
+	streamHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher, c.RLECompression)
 	if c.Compression {
 		mux.Handle("/stream", gzMiddleware(stream.ThrottlingMiddleware(streamHandler)))
+	} else if c.ZSTDCompression {
+		mux.Handle("/stream", zstdMiddleware(stream.ThrottlingMiddleware(streamHandler), c.ZSTDCompressionLevel))
 	} else {
 		mux.Handle("/stream", stream.ThrottlingMiddleware(streamHandler))
 	}
@@ -56,6 +46,60 @@ func setMuxer(eventPublisher *pubsub.PubSub) *http.ServeMux {
 		mux.Handle("/raw", rawHandler)
 	}
 	return mux
+}
+
+func parseIndexTemplate(templatePath string) (*template.Template, error) {
+	indexData, err := assetsFS.ReadFile(templatePath)
+	if err != nil {
+		return nil, err
+	}
+
+	tmpl, err := template.New("index.html").Parse(string(indexData))
+	if err != nil {
+		return nil, err
+	}
+
+	return tmpl, nil
+}
+
+func newIndexHandler(fs http.FileSystem) http.HandlerFunc {
+	tmpl, err := parseIndexTemplate("client/index.html")
+	if err != nil {
+		log.Fatalf("Error parsing index template: %v", err)
+		panic(err)
+	}
+
+	staticFileServer := http.FileServer(fs)
+
+	data := struct {
+		ScreenWidth  int
+		ScreenHeight int
+		MaxXValue    int
+		MaxYValue    int
+		UseRLE       bool
+		DeviceModel  string
+	}{
+		ScreenWidth:  remarkable.ScreenWidth,
+		ScreenHeight: remarkable.ScreenHeight,
+		MaxXValue:    remarkable.MaxXValue,
+		MaxYValue:    remarkable.MaxYValue,
+		UseRLE:       c.RLECompression,
+		DeviceModel:  remarkable.Model.String(),
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			w.Header().Set("Content-Type", "text/html")
+			if err := tmpl.Execute(w, data); err != nil {
+				http.Error(w, "Error rendering template", http.StatusInternalServerError)
+				log.Printf("Error rendering template: %v", err)
+			}
+			return
+		} else {
+
+			staticFileServer.ServeHTTP(w, r)
+		}
+	}
 }
 
 func runTLS(l net.Listener, handler http.Handler) error {

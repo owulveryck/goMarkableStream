@@ -5,6 +5,14 @@
 		<link rel="icon" type="image/x-icon" href="favicon.ico">
 		<!-- Including the CSS stylesheet -->
 		<link rel="stylesheet" href="style.css">
+        <script>
+            const screenWidth = {{ .ScreenWidth }};
+            const screenHeight = {{ .ScreenHeight }};
+			const MaxXValue = {{ .MaxXValue }};
+			const MaxYValue = {{ .MaxYValue }};
+			const UseRLE = {{ .UseRLE }};
+			const DeviceModel = {{ .DeviceModel }};
+        </script>
 	</head>
 	<body>
 		<div id="menuContainer">
