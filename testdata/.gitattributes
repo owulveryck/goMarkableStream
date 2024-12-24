@@ -1,1 +1,2 @@
 *.raw filter=lfs diff=lfs merge=lfs -text
+colorful.raw filter=lfs diff=lfs merge=lfs -text
