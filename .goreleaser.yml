@@ -29,7 +29,7 @@ builds:
       - "7"
 
 archives:
-  - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format_overrides:
       - goos: windows
@@ -38,12 +38,14 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
-snapshot:
-  name_template: "{{ .Tag }}-next"
-
 changelog:
   sort: asc
   filters:
     exclude:
       - "^docs:"
       - "^test:"
+
+release:
+  github:
+    owner: owulveryck
+    name: gomarkablestream
