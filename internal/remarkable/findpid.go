@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 func findXochitlPID() string {
@@ -33,7 +32,7 @@ func findXochitlPID() string {
 				if err != nil {
 					continue
 				}
-				if strings.Contains(orig, "/usr/bin/xochitl") {
+				if orig == "/usr/bin/xochitl" {
 					return pid
 				}
 			}
