@@ -160,7 +160,7 @@ Configure the application via environment variables:
 - `RK_SERVER_USERNAME`: (String, default: `admin`) Username for server access.
 - `RK_SERVER_PASSWORD`: (String, default: `password`) Password for server access.
 - `RK_HTTPS`: (True/False, default: `true`) Enable or disable HTTPS.
-- `RK_COMPRESSION`: (True/False, default: `false`) Enable or disable compression.
+- `RK_COMPRESSION`: (int, default: `0`) Enable or disable compression and set level (0 is disabled).
 - `RK_DEV_MODE`: (True/False, default: `false`) Enable or disable developer mode.
 - `RLE_COMPRESSION`: (True/False, default: `true`) Enable or disable RLE compression.
 - `ZSTD_COMPRESSION`: (True/False, default: `false`) Enable or disable ZSTD compression.

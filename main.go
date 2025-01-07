@@ -20,7 +20,7 @@ type configuration struct {
 	Username             string `envconfig:"SERVER_USERNAME" default:"admin"`
 	Password             string `envconfig:"SERVER_PASSWORD" default:"password"`
 	TLS                  bool   `envconfig:"HTTPS" default:"true"`
-	Compression          bool   `envconfig:"COMPRESSION" default:"false"`
+	Compression          int    `envconfig:"COMPRESSION" default:"0" description:"Compression level, 0 is no compression, and 9 maximum compression"`
 	RLECompression       bool   `envconfig:"RLE_COMPRESSION" default:"true"`
 	DevMode              bool   `envconfig:"DEV_MODE" default:"false"`
 	ZSTDCompression      bool   `envconfig:"ZSTD_COMPRESSION" default:"false" description:"Enable zstd compression"`

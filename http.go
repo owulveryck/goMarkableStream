@@ -28,7 +28,7 @@ func setMuxer(eventPublisher *pubsub.PubSub) *http.ServeMux {
 	mux.HandleFunc("/", newIndexHandler(stripFS{http.FS(assetsFS)}))
 
 	streamHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher, c.RLECompression)
-	if c.Compression {
+	if c.Compression != 0 && c.Compression <= 9 {
 		mux.Handle("/stream", gzMiddleware(stream.ThrottlingMiddleware(streamHandler)))
 	} else if c.ZSTDCompression {
 		mux.Handle("/stream", zstdMiddleware(stream.ThrottlingMiddleware(streamHandler), c.ZSTDCompressionLevel))
@@ -96,7 +96,6 @@ func newIndexHandler(fs http.FileSystem) http.HandlerFunc {
 			}
 			return
 		} else {
-
 			staticFileServer.ServeHTTP(w, r)
 		}
 	}
