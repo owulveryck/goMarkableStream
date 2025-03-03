@@ -39,6 +39,7 @@ uniform sampler2D uSampler;
 uniform float uLaserX;
 uniform float uLaserY;
 uniform bool uDarkMode;
+uniform float uContrastLevel;
 
 // Constants for laser pointer visualization
 const float LASER_RADIUS = 6.0;
@@ -46,9 +47,8 @@ const float LASER_EDGE_SOFTNESS = 2.0;
 const vec3 LASER_COLOR = vec3(1.0, 0.0, 0.0);
 
 // Constants for image processing
-const float CONTRAST = 1.15;  // Slight contrast boost
-const float BRIGHTNESS = 0.05;  // Slight brightness boost
-const float SHARPNESS = 0.5;  // Sharpness level
+const float BRIGHTNESS = 0.05;       // Slight brightness boost
+const float SHARPNESS = 0.5;         // Sharpness level
 
 // Get texture color without any sharpening - better for handwriting
 vec4 getBaseTexture(sampler2D sampler, vec2 texCoord) {
@@ -59,8 +59,8 @@ void main(void) {
     // Get base texture color directly - no sharpening for clearer handwriting
     vec4 texColor = getBaseTexture(uSampler, vTextureCoord);
     
-    // Apply very mild contrast adjustments - avoid distortion
-    vec3 adjusted = (texColor.rgb - 0.5) * 1.05 + 0.5;
+    // Apply contrast adjustments based on the slider value
+    vec3 adjusted = (texColor.rgb - 0.5) * uContrastLevel + 0.5;
     texColor.rgb = clamp(adjusted, 0.0, 1.0);
     
     // Calculate laser pointer effect
@@ -145,6 +145,7 @@ const programInfo = {
         uLaserX: gl.getUniformLocation(shaderProgram, 'uLaserX'),
         uLaserY: gl.getUniformLocation(shaderProgram, 'uLaserY'),
         uDarkMode: gl.getUniformLocation(shaderProgram, 'uDarkMode'),
+        uContrastLevel: gl.getUniformLocation(shaderProgram, 'uContrastLevel'),
 	},
 };
 
@@ -210,8 +211,9 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 let imageData = new ImageData(screenWidth, screenHeight);
 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imageData);
 
-// Variable to track dark mode state, default is false (light mode)
+// Variables to track display state
 let isDarkMode = false;
+let contrastValue = 1.15; // Default contrast value
 
 // Draw the scene
 function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture) {
@@ -263,8 +265,9 @@ function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture)
     gl.uniform1f(programInfo.uniformLocations.uLaserX, laserX);
     gl.uniform1f(programInfo.uniformLocations.uLaserY, laserY);
     
-    // Set the dark mode flag
+    // Set display flags
     gl.uniform1i(programInfo.uniformLocations.uDarkMode, isDarkMode ? 1 : 0);
+    gl.uniform1f(programInfo.uniformLocations.uContrastLevel, contrastValue);
 
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
@@ -371,5 +374,20 @@ function setDarkMode(darkModeEnabled) {
     } else {
         // Just update the scene if already transitioning
         drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
+    }
+}
+
+// Function to set contrast level
+function setContrast(contrastLevel) {
+    // Store the contrast value (between 1.0 and 3.0)
+    contrastValue = parseFloat(contrastLevel);
+    
+    // If the value is valid, update rendering
+    if (!isNaN(contrastValue) && contrastValue >= 1.0 && contrastValue <= 3.0) {
+        // Update the scene with new contrast
+        drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
+        
+        // Save user preference to localStorage
+        localStorage.setItem('contrastLevel', contrastValue);
     }
 }

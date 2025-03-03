@@ -91,4 +91,38 @@ document.getElementById('switchOrderButton').addEventListener('click', function 
     }
 });
 
+// Contrast slider functionality
+document.getElementById('contrastSlider').addEventListener('input', function() {
+    // Get the slider value (between 1.0 and 3.0)
+    const contrastLevel = this.value;
+    
+    // Update renderer if function exists
+    if (typeof setContrast === 'function') {
+        setContrast(contrastLevel);
+    }
+    
+    // Show feedback when user stops moving the slider
+    clearTimeout(this.timeout);
+    this.timeout = setTimeout(() => {
+        showMessage(`Contrast: ${parseFloat(contrastLevel).toFixed(1)}`, 1000);
+    }, 500);
+});
+
+// Load saved contrast value on initialization
+document.addEventListener('DOMContentLoaded', function() {
+    // Check for saved contrast preference
+    const savedContrast = localStorage.getItem('contrastLevel');
+    const contrastSlider = document.getElementById('contrastSlider');
+    
+    if (savedContrast) {
+        // Set the slider to the saved value
+        contrastSlider.value = savedContrast;
+        
+        // Update the contrast setting
+        if (typeof setContrast === 'function') {
+            setContrast(savedContrast);
+        }
+    }
+});
+
 
