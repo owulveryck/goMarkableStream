@@ -19,6 +19,8 @@ const (
 	// MaxYValue represents the maximum Y coordinate value from /dev/input/event1 (ABS_Y)
 	MaxYValue = 20966
 
-	PenInputDevice   = "/dev/input/event1"
+	// PenInputDevice ...
+	PenInputDevice = "/dev/input/event1"
+	// TouchInputDevice ...
 	TouchInputDevice = "/dev/input/event2"
 )

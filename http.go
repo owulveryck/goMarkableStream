@@ -109,7 +109,7 @@ func newIndexHandler(fs http.FileSystem) http.HandlerFunc {
 			}
 			return
 		}
-		
+
 		staticFileServer.ServeHTTP(w, r)
 	}
 }
@@ -141,3 +141,4 @@ func runTLS(l net.Listener, handler http.Handler) error {
 	// Start the server
 	return http.Serve(tlsListener, handler)
 }
+
