@@ -33,3 +33,4 @@ client/htdocs/assets/toEpub.wasm
 goMarkableStream
 testServer.arm
 testdata/36.raw
+./dist
