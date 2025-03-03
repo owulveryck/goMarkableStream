@@ -34,3 +34,4 @@ goMarkableStream
 testServer.arm
 testdata/36.raw
 ./dist
+./testdata
