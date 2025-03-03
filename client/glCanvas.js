@@ -32,6 +32,7 @@ varying highp vec2 vTextureCoord;
 uniform sampler2D uSampler;
 uniform float uLaserX;
 uniform float uLaserY;
+uniform bool uDarkMode;
 
 void main(void) {
     float dx = gl_FragCoord.x - uLaserX;
@@ -42,7 +43,14 @@ void main(void) {
     if(distance < radius) {
         gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Red color for the laser dot
     } else {
-        gl_FragColor = texture2D(uSampler, vTextureCoord);
+        vec4 texColor = texture2D(uSampler, vTextureCoord);
+        
+        if (uDarkMode) {
+            // Invert colors in dark mode, but preserve alpha
+            gl_FragColor = vec4(1.0 - texColor.rgb, texColor.a);
+        } else {
+            gl_FragColor = texColor;
+        }
     }
 }
 `;
@@ -107,6 +115,7 @@ const programInfo = {
 		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
         uLaserX: gl.getUniformLocation(shaderProgram, 'uLaserX'),
         uLaserY: gl.getUniformLocation(shaderProgram, 'uLaserY'),
+        uDarkMode: gl.getUniformLocation(shaderProgram, 'uDarkMode'),
 	},
 };
 
@@ -172,18 +181,25 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 let imageData = new ImageData(screenWidth, screenHeight);
 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imageData);
 
+// Variable to track dark mode state, default is false (light mode)
+let isDarkMode = false;
+
 // Draw the scene
 function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture) {
 	if (resizeGLCanvas(gl.canvas)) {
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 	}
-	gl.clearColor(0.5, 0.5, 0.5, 0.25);  // Gray with 75% transparency
+	
+	// Adjust background color based on dark mode
+	const bgColor = isDarkMode ? [0.2, 0.2, 0.2, 0.25] : [0.5, 0.5, 0.5, 0.25];
+	gl.clearColor(bgColor[0], bgColor[1], bgColor[2], bgColor[3]);
+	
 	gl.clearDepth(1.0);                 // Clear everything
 	gl.enable(gl.DEPTH_TEST);           // Enable depth testing
 	gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
 
 	// Clear the canvas before we start drawing on it.
-		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 	// Tell WebGL to use our program when drawing
 	gl.useProgram(programInfo.program);
@@ -206,9 +222,12 @@ function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture)
 	// Tell the shader we bound the texture to texture unit 0
 	gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
 
-	   // Set the laser coordinates
+	// Set the laser coordinates
     gl.uniform1f(programInfo.uniformLocations.uLaserX, laserX);
     gl.uniform1f(programInfo.uniformLocations.uLaserY, laserY);
+    
+    // Set the dark mode flag
+    gl.uniform1i(programInfo.uniformLocations.uDarkMode, isDarkMode ? 1 : 0);
 
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
@@ -267,5 +286,11 @@ function updateLaserPosition(x, y) {
 	laserX = x / screenWidth * gl.canvas.width;
 	laserY = gl.canvas.height - (y / screenHeight * gl.canvas.height);
 
+    drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
+}
+
+// Function to update dark mode state
+function setDarkMode(darkModeEnabled) {
+    isDarkMode = darkModeEnabled;
     drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 }

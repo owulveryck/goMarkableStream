@@ -73,19 +73,17 @@ async function initiateEventsListener() {
 	eventSource.onerror = () => {
 		postMessage({
 			type: 'error',
-			message: "websocket error",
+			message: "EventSource error",
 		});
-		console.error('EventStrean error occurred. Attempting to reconnect...');
-		//setTimeout(connectWebSocket, 3000); // Reconnect after 3 seconds
+		console.error('EventSource error occurred.');
 	};
 
 	eventSource.onclose = () => {
 		postMessage({
 			type: 'error',
-			message: 'closed connection'
+			message: 'Connection closed'
 		});
-		console.log('EventStream connection closed. Attempting to reconnect...');
-		//setTimeout(connectWebSocket, 3000); // Reconnect after 3 seconds
+		console.log('EventSource connection closed.');
 	};
 }
 
@@ -93,4 +91,3 @@ async function initiateEventsListener() {
 function scaleValue(value, maxValue, canvasSize) {
 	return (value / maxValue) * canvasSize;
 }
-

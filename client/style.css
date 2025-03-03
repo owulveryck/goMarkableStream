@@ -1,182 +1,371 @@
 /* CSS styles for the layout */
+:root {
+    /* Light Mode Colors */
+    --background-color: #f8f9fa;
+    --container-bg: #ffffff;
+    --sidebar-bg: #f0f4f8;
+    --text-color: #333333;
+    --text-secondary: #6c757d;
+    --accent-color: #007AFF;
+    --accent-hover: #0056b3;
+    --border-color: rgba(0, 0, 0, 0.1);
+    --shadow-color: rgba(0, 0, 0, 0.08);
+    --toggle-bg: #e9ecef;
+    --toggle-circle: #ffffff;
+}
+
+/* Dark Mode Colors */
+.dark-mode {
+    --background-color: #1a1a1a;
+    --container-bg: #2d2d2d;
+    --sidebar-bg: #252525;
+    --text-color: #f0f0f0;
+    --text-secondary: #adb5bd;
+    --accent-color: #4dabf7;
+    --accent-hover: #339af0;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --shadow-color: rgba(0, 0, 0, 0.2);
+    --toggle-bg: #495057;
+    --toggle-circle: #343a40;
+}
+
 body, html {
-	margin: 0;
-	padding: 0;
-	height: 100%;
-	background-color: white;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background-color: var(--background-color);
+    font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 #container {
-	width: 100%;
-	height: 100vh;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	overflow: hidden;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-color: var(--container-bg);
+    box-shadow: 0 0 20px var(--shadow-color);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 #canvas {
-	position: absolute;
-	/*
-	 * max-width: 100vh;
-	max-height: 100vw;
-	*/
-	width: 100vw;   /* 100% of the viewport width */
-	height: 100vh;  /* 100% of the viewport height */
-	display: block; /* Remove extra space around the canvas */
-
-	z-index: 2;
+    position: absolute;
+    width: 100vw;   /* 100% of the viewport width */
+    height: 100vh;  /* 100% of the viewport height */
+    display: block; /* Remove extra space around the canvas */
+    z-index: 2;
 }
 
 #content {
-	position: absolute;
-	z-index: 1;
+    position: absolute;
+    z-index: 1;
 }
-canvas.hidden {
-	display: none;
-}
-.sidebar {
-	width: 150px;
-	height: 100vh;
-	background-color: #f5f5f5; /* Light gray */
-	border-right: 1px solid #e0e0e0; /* Slight border to separate from the main content */
-	box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-	position: fixed;
-	top: 0;
-	left: -140px;
-	transition: left 0.3s;
-	z-index: 5;
 
+canvas.hidden {
+    display: none;
+}
+
+.sidebar {
+    width: 200px;
+    height: 100vh;
+    background-color: var(--sidebar-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-right: 1px solid var(--border-color);
+    box-shadow: 2px 0 15px var(--shadow-color);
+    position: fixed;
+    top: 0;
+    left: -170px;
+    transition: all 0.3s ease;
+    z-index: 5;
+    padding-top: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .sidebar.active {
-	left: 0;
+    left: 0;
 }
 
 .menu {
-	list-style: none;
-	padding: 0;
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
 .menu li {
-	padding: 10px;
+    padding: 10px 20px;
+    margin: 5px 0;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.menu li:hover {
+    background-color: rgba(0, 122, 255, 0.1);
 }
 
 .menu li a {
-	text-decoration: none;
-	color: #000;
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 500;
+    transition: color 0.2s ease;
 }
 
 .menu li a:hover {
-	color: #ff0000;
+    color: var(--accent-color);
 }
 .my-button {
-	background-color: #4CAF50;
-	border: none;
-	color: white;
-	padding: 10px 20px;
-	text-align: center;
-	text-decoration: none;
-	display: inline-block;
-	font-size: 16px;
-	cursor: pointer;
-	border-radius: 4px;
+    background-color: var(--accent-color);
+    border: none;
+    color: white;
+    padding: 12px 22px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px var(--shadow-color);
 }
+
+.my-button:hover {
+    background-color: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
 .my-button.toggled {
-	/* Styles for the toggled state */
-	background-color: #2E7D32; /* Darker green for example */
-	color: #f0f0f0; /* Slightly off-white for contrast */
+    background-color: #34C759; 
+    color: #ffffff;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .icon {
-	display: inline-block;
-	width: 16px;
-	height: 16px;
-	margin-right: 5px;
-	background-color: transparent;
-	position: relative;
-	border-radius: 50%;
-	border: 2px solid white; /* White border for record button */
-	background-color: red; /* Red circle for record button */
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    background-color: transparent;
+    position: relative;
+    border-radius: 50%;
+    border: 2px solid white;
+    background-color: red;
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
 }
 
 @keyframes fadeInOut {
-	0%, 100% {
-		opacity: 0.5;
-	}
-	50% {
-		opacity: 1;
-	}
+    0%, 100% {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
 }
 
 .recording {
-	animation: fadeInOut 1s linear infinite;
+    animation: fadeInOut 1.2s ease-in-out infinite;
 }
 
-/* Reset button styles to avoid browser defaults */
+/* Apple-style button */
 .apple-button {
-	display: inline-block;
-	width: 120px; /* Fixed width */
-	line-height: 30px; /* Centers the text vertically */
-	padding: 0; /* Since we've set fixed width and height, padding is set to 0 */
-	border-radius: 8px;
-	border: none;
-	font-family: 'San Francisco', 'Helvetica Neue', sans-serif;
-	font-size: 8px;
-	cursor: pointer;
-	transition: background-color 0.3s;
-	outline: none;
-}
-
-/* Main button styles */
-.apple-button {
-	background-color: #007AFF; /* Default blue Apple uses */
-	color: #fff;
-	border-radius: 8px;
-	padding: 10px 20px;
-	font-size: 16px;
-	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); /* subtle shadow for depth */
+    display: inline-block;
+    width: 140px;
+    padding: 12px 0;
+    border-radius: 10px;
+    border: none;
+    font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+    background-color: var(--accent-color);
+    color: #fff;
+    box-shadow: 0 2px 8px var(--shadow-color);
+    text-align: center;
 }
 
 .apple-button:hover {
-	background-color: #005EDD; /* A bit darker on hover */
+    background-color: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .apple-button:active {
-	background-color: #004ABF; /* Even darker when active (pressed) */
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); /* reduce shadow for pressed state */
+    background-color: var(--accent-hover);
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px var(--shadow-color);
 }
 
-.apple-button:toggled {
-	background-color: #B3C7D6; /* Greyed out when disabled */
-	color: #FFFFFF;
-	cursor: not-allowed;
-	box-shadow: none;
+.dark-mode .apple-button {
+    background-color: var(--accent-color);
+    color: #fff;
 }
 
+.apple-button.toggled {
+    background-color: #34C759; /* Apple's green color */
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(52, 199, 89, 0.25);
+}
 
 /* Base styles for the toggle button */
 .toggle-button {
-	display: inline-block;
-	padding: 10px 20px;
-	border-radius: 8px;
-	border: none;
-	font-family: 'San Francisco', 'Helvetica Neue', sans-serif;
-	font-size: 16px;
-	cursor: pointer;
-	transition: background-color 0.3s;
-	outline: none;
+    display: inline-block;
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+    text-align: center;
 }
 
 /* Style for the "off" state (default) */
 .toggle-button {
-	background-color: #D1D1D1;  /* Gray background */
-	color: #6B6B6B;  /* Dark gray text */
+    background-color: var(--toggle-bg);
+    color: var(--text-secondary);
+    box-shadow: 0 1px 5px var(--shadow-color);
 }
 
 /* Style for the "on" state */
 .toggle-button.active {
-	background-color: #007AFF;  /* Blue background (like our Apple button) */
-	color: #FFFFFF;  /* White text */
+    background-color: var(--accent-color);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+/* Add message styling */
+#message {
+    position: absolute; 
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%);
+    font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 12px 20px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px var(--shadow-color);
+    color: #FF3B30; /* Apple's red */
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 59, 48, 0.2);
+    z-index: 10;
+}
+
+.dark-mode #message {
+    background-color: rgba(45, 45, 45, 0.9);
+    border: 1px solid rgba(255, 59, 48, 0.2);
+}
+
+/* New styles for added elements */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    padding: 20px 15px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 15px;
+    background-color: rgba(0, 122, 255, 0.1);
+}
+
+.sidebar-logo {
+    width: 36px;
+    height: 36px;
+    margin-right: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.sidebar-header h3 {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.sidebar-footer {
+    position: absolute;
+    bottom: 15px;
+    width: 100%;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--sidebar-bg);
+}
+
+.button-icon {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+/* Theme toggle switch */
+.theme-switch-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    margin-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.theme-switch {
+    display: inline-block;
+    height: 24px;
+    position: relative;
+    width: 44px;
+    margin-right: 10px;
+}
+
+.theme-switch input {
+    display: none;
+}
+
+.slider {
+    background-color: var(--toggle-bg);
+    bottom: 0;
+    cursor: pointer;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    background-color: var(--toggle-circle);
+    bottom: 3px;
+    content: "";
+    height: 18px;
+    left: 3px;
+    position: absolute;
+    transition: .4s;
+    width: 18px;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--accent-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(20px);
+}
+
+.theme-switch-label {
+    color: var(--text-color);
+    font-size: 14px;
+    font-weight: 500;
 }
 
