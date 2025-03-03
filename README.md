@@ -38,8 +38,9 @@ When running on the Remarkable Paper Pro, `RLE_COMPRESSION` environment variable
 - **Laser Pointer**: Features a laser pointer that activates on hovering.
 - **Gesture Support**: Full integration with Reveal.js, allowing slide switching directly from the reMarkable.
 - **Overlay Feature**: Allows overlaying over existing websites that support iframe embedding.
-- **Built-in Ngrok**: Enables streaming over different networks easily.
 - **Live Parameter Tweaking**: Side menu for live adjustments, including screen rotation.
+- **Dark Mode**: Toggle between light and dark themes for comfortable viewing in any environment.
+- **Version API**: Check the current version via the `/version` endpoint.
 
 ## Quick Start
 
@@ -173,23 +174,12 @@ Add query parameters to the URL (`?parameter=value&otherparameter=value`):
 - `rate`: (integer, 100-...) Set the frame rate.
 - `flip`: (true/false) Enable or disable flipping 180 degree.
 
-## Tunneling
-Tunneling with built-in Ngrok allows for streaming across different networks.
-This feature is particularly useful for remote presentations or collaborative sessions.
-To set up tunneling, simply enable Ngrok in the tool's settings and follow the instructions provided in the user interface.
-
-If your reMarkable is on a different network than the displaying device, you can use the `ngrok` builtin feature for automatic tunneling.
-To utilize this tunneling, you need to sign up for an ngrok account and [obtain a token from the dashboard](https://dashboard.ngrok.com/get-started/your-authtoken).
-Once you have the token, launch reMarkable using the following command:
-
-`NGROK_AUTHTOKEN=YOURTOKEN RK_SERVER_BIND_ADDR=ngrok ./goMarkableStream`
-
-The app will start, displaying a message similar to:
-
-`2023/09/29 16:49:20 listening on 72e5-22-159-32-48.ngrok-free.app` 
-
-Then, connect to `https://72e5-22-159-32-48.ngrok-free.app` to view the result.
-
+### API Endpoints
+- `/`: Main web interface
+- `/stream`: The image data stream
+- `/events`: WebSocket endpoint for pen input events
+- `/gestures`: Endpoint for touch events
+- `/version`: Returns the current version of goMarkableStream
 
 ## Presentation Mode
 `goMarkableStream` introduces an innovative experimental feature that allows users to set a presentation or video in the background, enabling live annotations using a reMarkable tablet.
@@ -218,9 +208,9 @@ This includes a variety of presentation and video platforms.
 Switch slides or navigate through your presentation directly from your reMarkable tablet.
 This seamless integration enhances the experience of both presenting and viewing, making it ideal for educational and professional environments.
 
-Howto: add the `?present=https://your-reveal-js-presentation`
+How to: add the `?present=https://your-reveal-js-presentation`
 
-_note_: due to browser restrictions, the URL mus
+_note_: due to browser restrictions, the URL must be HTTPS.
 
 ### Limitations and Performance
 
@@ -229,12 +219,12 @@ _note_: due to browser restrictions, the URL mus
 Users must use the side menu for navigation and control.
 - This feature operates seamlessly, with no additional load on the reMarkable tablet, as all rendering is done in the client's browser.
 
-### Feedback and Contributions
+### UI Features
 
-- As this is an experimental feature, your feedback is crucial for its development.
-Please share your experiences, suggestions, and any issues encountered using the GitHub issues section of this repository.
-
----
+- **Dark Mode**: Toggle between light and dark themes using the sun/moon icon in the sidebar
+- **Modern Interface**: Improved UI with better typography and layout
+- **Tooltips**: Helpful tooltips on hover for all buttons
+- **Feedback Messages**: Visual feedback for user actions
 
 ## Technical Details
 
@@ -246,16 +236,7 @@ This tool suits my need and is an ongoing development. You can find various info
 
 This is a standalone application that runs directly on a Remarkable tablet.
 It does not have any dependencies on third-party libraries, making it a completely self-sufficient solution.
-This application exposes an HTTP server with two endpoints:
-### Endpoints 
-
-- `/`: This endpoint serves an embedded HTML and JavaScript file containing the necessary logic to display an image from the Remarkable tablet on a client's web browser.
-
-- `/stream`: This endpoint streams the image data from the Remarkable tablet to the client continuously.
-- `/events`: This endpoint streams the pen input events via websockets
-- `gestures`: This endpoints streams the touch events in binary
-
-**Caution**: the API may change over time
+This application exposes an HTTP server with several endpoints.
 
 ### Implementation
 
@@ -297,4 +278,3 @@ Feel free to modify, distribute, and use the tool in accordance with the terms o
 
 If you plan to buy a reMarkable 2, you can use my [referal program link](https://remarkable.com/referral/PY5B-PH8U).
 It will provide a discount for you and also for me.
-

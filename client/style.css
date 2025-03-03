@@ -1,182 +1,672 @@
 /* CSS styles for the layout */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+    /* Light Mode Colors */
+    --background-color: #f8f9fa;
+    --container-bg: #ffffff;
+    --sidebar-bg: #f0f4f8;
+    --text-color: #333333;
+    --text-secondary: #6c757d;
+    --accent-color: #007AFF;
+    --accent-hover: #0056b3;
+    --border-color: rgba(0, 0, 0, 0.1);
+    --shadow-color: rgba(0, 0, 0, 0.08);
+    --toggle-bg: #e9ecef;
+    --toggle-circle: #ffffff;
+    --button-success: #34C759;
+    --button-success-hover: #28a745;
+    --tooltip-bg: rgba(0, 0, 0, 0.7);
+    --tooltip-color: #ffffff;
+    --menu-hover: rgba(0, 122, 255, 0.1);
+    --sidebar-width: 200px;
+    --sidebar-collapsed-width: 30px;
+}
+
+/* Dark Mode Colors */
+.dark-mode {
+    --background-color: #121212;
+    --container-bg: #1e1e1e;
+    --sidebar-bg: #1a1a1a;
+    --text-color: #f0f0f0;
+    --text-secondary: #adb5bd;
+    --accent-color: #4dabf7;
+    --accent-hover: #339af0;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --shadow-color: rgba(0, 0, 0, 0.2);
+    --toggle-bg: #495057;
+    --toggle-circle: #343a40;
+    --button-success: #2ebd5f;
+    --button-success-hover: #249d4e;
+    --tooltip-bg: rgba(255, 255, 255, 0.8);
+    --tooltip-color: #1a1a1a;
+    --menu-hover: rgba(77, 171, 247, 0.15);
+}
+
 body, html {
-	margin: 0;
-	padding: 0;
-	height: 100%;
-	background-color: white;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background-color: var(--background-color);
+    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    font-size: 16px;
+    line-height: 1.5;
 }
 
 #container {
-	width: 100%;
-	height: 100vh;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	overflow: hidden;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-color: var(--container-bg);
+    box-shadow: 0 0 20px var(--shadow-color);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
 }
 
 #canvas {
-	position: absolute;
-	/*
-	 * max-width: 100vh;
-	max-height: 100vw;
-	*/
-	width: 100vw;   /* 100% of the viewport width */
-	height: 100vh;  /* 100% of the viewport height */
-	display: block; /* Remove extra space around the canvas */
-
-	z-index: 2;
+    position: absolute;
+    width: 100vw;   /* 100% of the viewport width */
+    height: 100vh;  /* 100% of the viewport height */
+    display: block; /* Remove extra space around the canvas */
+    z-index: 2;
+    transition: filter 0.3s ease;
 }
 
 #content {
-	position: absolute;
-	z-index: 1;
+    position: absolute;
+    z-index: 1;
 }
-canvas.hidden {
-	display: none;
-}
-.sidebar {
-	width: 150px;
-	height: 100vh;
-	background-color: #f5f5f5; /* Light gray */
-	border-right: 1px solid #e0e0e0; /* Slight border to separate from the main content */
-	box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-	position: fixed;
-	top: 0;
-	left: -140px;
-	transition: left 0.3s;
-	z-index: 5;
 
+canvas.hidden {
+    display: none;
+}
+
+.sidebar {
+    width: var(--sidebar-width);
+    height: 100vh;
+    background-color: var(--sidebar-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-right: 1px solid var(--border-color);
+    box-shadow: 2px 0 15px var(--shadow-color);
+    position: fixed;
+    top: 0;
+    left: calc(-1 * (var(--sidebar-width) - var(--sidebar-collapsed-width)));
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 5;
+    padding-top: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .sidebar.active {
-	left: 0;
+    left: 0;
+}
+
+.sidebar:after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: var(--sidebar-collapsed-width);
+    height: 100%;
+    background: linear-gradient(90deg, transparent, var(--sidebar-bg));
+    z-index: -1;
+    opacity: 0.8;
 }
 
 .menu {
-	list-style: none;
-	padding: 0;
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+    flex: 1;
 }
 
 .menu li {
-	padding: 10px;
+    padding: 0;
+    margin: 8px 15px;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.menu li:hover {
+    background-color: var(--menu-hover);
+    transform: translateY(-1px);
+}
+
+.menu li button {
+    width: 100%;
+    text-align: left;
+    padding: 12px 16px;
+    border-radius: inherit;
+}
+
+.menu li .button-tooltip {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: var(--tooltip-bg);
+    color: var(--tooltip-color);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    z-index: 10;
+    margin-left: 10px;
+    font-weight: 500;
+    pointer-events: none;
+}
+
+.menu li .button-tooltip:after {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 5px 5px 5px 0;
+    border-style: solid;
+    border-color: transparent var(--tooltip-bg) transparent transparent;
+}
+
+.menu li:hover .button-tooltip {
+    opacity: 1;
+    visibility: visible;
 }
 
 .menu li a {
-	text-decoration: none;
-	color: #000;
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 500;
+    transition: color 0.2s ease;
+    display: block;
+    padding: 10px 15px;
 }
 
 .menu li a:hover {
-	color: #ff0000;
+    color: var(--accent-color);
 }
 .my-button {
-	background-color: #4CAF50;
-	border: none;
-	color: white;
-	padding: 10px 20px;
-	text-align: center;
-	text-decoration: none;
-	display: inline-block;
-	font-size: 16px;
-	cursor: pointer;
-	border-radius: 4px;
+    background-color: var(--accent-color);
+    border: none;
+    color: white;
+    padding: 12px 22px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px var(--shadow-color);
+    font-weight: 500;
 }
+
+.my-button:hover {
+    background-color: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+.my-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.25);
+}
+
 .my-button.toggled {
-	/* Styles for the toggled state */
-	background-color: #2E7D32; /* Darker green for example */
-	color: #f0f0f0; /* Slightly off-white for contrast */
+    background-color: var(--button-success); 
+    color: #ffffff;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .icon {
-	display: inline-block;
-	width: 16px;
-	height: 16px;
-	margin-right: 5px;
-	background-color: transparent;
-	position: relative;
-	border-radius: 50%;
-	border: 2px solid white; /* White border for record button */
-	background-color: red; /* Red circle for record button */
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    background-color: transparent;
+    position: relative;
+    border-radius: 50%;
+    border: 2px solid white;
+    background-color: red;
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
 }
 
 @keyframes fadeInOut {
-	0%, 100% {
-		opacity: 0.5;
-	}
-	50% {
-		opacity: 1;
-	}
+    0%, 100% {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
 }
 
 .recording {
-	animation: fadeInOut 1s linear infinite;
+    animation: fadeInOut 1.2s ease-in-out infinite;
 }
 
-/* Reset button styles to avoid browser defaults */
+/* Apple-style button */
 .apple-button {
-	display: inline-block;
-	width: 120px; /* Fixed width */
-	line-height: 30px; /* Centers the text vertically */
-	padding: 0; /* Since we've set fixed width and height, padding is set to 0 */
-	border-radius: 8px;
-	border: none;
-	font-family: 'San Francisco', 'Helvetica Neue', sans-serif;
-	font-size: 8px;
-	cursor: pointer;
-	transition: background-color 0.3s;
-	outline: none;
-}
-
-/* Main button styles */
-.apple-button {
-	background-color: #007AFF; /* Default blue Apple uses */
-	color: #fff;
-	border-radius: 8px;
-	padding: 10px 20px;
-	font-size: 16px;
-	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); /* subtle shadow for depth */
+    display: inline-flex;
+    align-items: center;
+    width: 100%;
+    padding: 0;
+    border-radius: 10px;
+    border: none;
+    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    outline: none;
+    background-color: transparent;
+    color: var(--text-color);
+    box-shadow: none;
 }
 
 .apple-button:hover {
-	background-color: #005EDD; /* A bit darker on hover */
+    background-color: var(--menu-hover);
+    transform: translateY(-1px);
 }
 
 .apple-button:active {
-	background-color: #004ABF; /* Even darker when active (pressed) */
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); /* reduce shadow for pressed state */
+    transform: translateY(1px);
 }
 
-.apple-button:toggled {
-	background-color: #B3C7D6; /* Greyed out when disabled */
-	color: #FFFFFF;
-	cursor: not-allowed;
-	box-shadow: none;
+.button-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    color: var(--accent-color);
+    transition: transform 0.2s ease;
 }
 
+.apple-button:hover .button-icon {
+    transform: scale(1.1);
+}
+
+.dark-mode .apple-button {
+    color: var(--text-color);
+}
+
+.apple-button.toggled {
+    background-color: var(--menu-hover);
+    font-weight: 600;
+}
+
+.apple-button.toggled .button-icon {
+    color: var(--button-success);
+}
 
 /* Base styles for the toggle button */
 .toggle-button {
-	display: inline-block;
-	padding: 10px 20px;
-	border-radius: 8px;
-	border: none;
-	font-family: 'San Francisco', 'Helvetica Neue', sans-serif;
-	font-size: 16px;
-	cursor: pointer;
-	transition: background-color 0.3s;
-	outline: none;
+    display: inline-block;
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+    text-align: center;
 }
 
 /* Style for the "off" state (default) */
 .toggle-button {
-	background-color: #D1D1D1;  /* Gray background */
-	color: #6B6B6B;  /* Dark gray text */
+    background-color: var(--toggle-bg);
+    color: var(--text-secondary);
+    box-shadow: 0 1px 5px var(--shadow-color);
 }
 
 /* Style for the "on" state */
 .toggle-button.active {
-	background-color: #007AFF;  /* Blue background (like our Apple button) */
-	color: #FFFFFF;  /* White text */
+    background-color: var(--accent-color);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+/* Notification and message styling */
+#message {
+    position: absolute; 
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%);
+    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background-color: rgba(255, 255, 255, 0.92);
+    padding: 16px 24px;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px var(--shadow-color);
+    color: #FF3B30; /* Apple's red */
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 59, 48, 0.2);
+    z-index: 10;
+    max-width: 80%;
+    text-align: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+#message.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.dark-mode #message {
+    background-color: rgba(45, 45, 45, 0.92);
+    border: 1px solid rgba(255, 59, 48, 0.2);
+}
+
+/* Sidebar header styling */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    padding: 24px 16px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 15px;
+    background: linear-gradient(to right, rgba(0, 122, 255, 0.15), rgba(0, 122, 255, 0.05));
+}
+
+.sidebar-logo {
+    width: 38px;
+    height: 38px;
+    margin-right: 12px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px var(--shadow-color);
+    transition: transform 0.3s ease;
+}
+
+.sidebar-header:hover .sidebar-logo {
+    transform: rotate(10deg);
+}
+
+.sidebar-header h3 {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+}
+
+/* Sidebar footer styling */
+.sidebar-footer {
+    position: relative;
+    width: 100%;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 12px;
+    padding: 12px 0;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--sidebar-bg);
+    margin-top: auto;
+}
+
+/* Pulse animation for notifications */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 59, 48, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 59, 48, 0);
+    }
+}
+
+/* Theme toggle switch */
+/* Slider container */
+.slider-container {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 16px;
+    position: relative;
+    width: 100%;
+}
+
+.slider-label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+.slider-label span {
+    margin-left: 8px;
+}
+
+.contrast-slider {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--toggle-bg);
+    outline: none;
+    border-radius: 2px;
+    cursor: pointer;
+    margin-top: 5px;
+}
+
+.contrast-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.contrast-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    transition: background 0.2s;
+}
+
+.contrast-slider:hover::-webkit-slider-thumb {
+    background: var(--accent-hover);
+}
+
+.contrast-slider:hover::-moz-range-thumb {
+    background: var(--accent-hover);
+}
+
+.dark-mode .contrast-slider {
+    background: #444;
+}
+
+.dark-mode .contrast-slider::-webkit-slider-thumb {
+    background: var(--accent-color);
+}
+
+.dark-mode .contrast-slider::-moz-range-thumb {
+    background: var(--accent-color);
+}
+
+.theme-switch-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    margin-top: 10px;
+    border-top: 1px solid var(--border-color);
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0));
+    transition: background-color 0.3s ease;
+}
+
+.dark-mode .theme-switch-wrapper {
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+}
+
+.theme-switch {
+    display: inline-block;
+    height: 26px;
+    position: relative;
+    width: 50px;
+    margin-right: 12px;
+}
+
+.theme-switch input {
+    display: none;
+}
+
+.slider {
+    background-color: var(--toggle-bg);
+    bottom: 0;
+    cursor: pointer;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: .4s;
+    border-radius: 34px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.slider:before {
+    background-color: var(--toggle-circle);
+    bottom: 3px;
+    content: "";
+    height: 20px;
+    left: 3px;
+    position: absolute;
+    transition: .4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    width: 20px;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.slider:after {
+    content: "☀️";
+    position: absolute;
+    left: 7px;
+    top: 5px;
+    font-size: 12px;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+input:checked + .slider:after {
+    content: "🌙";
+    left: 30px;
+}
+
+input:checked + .slider {
+    background-color: var(--accent-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.25);
+}
+
+.theme-switch-label {
+    color: var(--text-color);
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.theme-switch-wrapper:hover .theme-switch-label {
+    color: var(--accent-color);
+}
+
+/* Tooltip styles */
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+}
+
+[data-tooltip]:before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 12px;
+    background-color: var(--tooltip-bg);
+    color: var(--tooltip-color);
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+}
+
+[data-tooltip]:hover:before {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Loading animation */
+.loading-dots {
+    display: inline-block;
+    position: relative;
+    width: 40px;
+    height: 16px;
+}
+
+.loading-dots:after {
+    content: '...';
+    position: absolute;
+    left: 0;
+    animation: loading 1.5s infinite;
+    font-size: 20px;
+    line-height: 10px;
+    letter-spacing: 2px;
+}
+
+@keyframes loading {
+    0% { content: '.'; }
+    33% { content: '..'; }
+    66% { content: '...'; }
+}
+
+/* Toast notification styles */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    background-color: var(--tooltip-bg);
+    color: var(--tooltip-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    z-index: 1000;
+}
+
+.toast.visible {
+    transform: translateY(0);
+    opacity: 1;
 }
 
