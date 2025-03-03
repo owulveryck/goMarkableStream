@@ -5,9 +5,11 @@ import (
 	"embed"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"runtime/debug"
 
 	"github.com/kelseyhightower/envconfig"
 
@@ -55,6 +57,7 @@ func validateConfiguration(c *configuration) error {
 }
 
 func main() {
+	fmt.Println(debug.BuildInfo.Main.Version)
 	var err error
 
 	ifaces()

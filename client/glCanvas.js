@@ -1,9 +1,12 @@
 // WebGL initialization
-//const gl = visibleCanvas.getContext('webgl');
-//const gl = canvas.getContext('webgl', { antialias: true, preserveDrawingBuffer: true  });
-let laserX = 0; // Initialize with default values
-let laserY = 0;
-const gl = canvas.getContext('webgl', { antialias: true });
+// Use -10,-10 as the default laser coordinate (off-screen) to hide the pointer initially
+let laserX = -10; 
+let laserY = -10;
+const gl = canvas.getContext('webgl', { 
+    antialias: true,
+    preserveDrawingBuffer: true,  // Important for proper rendering
+    alpha: true                   // Enable transparency
+});
 
 
 if (!gl) {
@@ -19,14 +22,17 @@ uniform float uScaleFactor;
 varying highp vec2 vTextureCoord;
 
 void main(void) {
-	gl_Position = uRotationMatrix * vec4(aVertexPosition.xy * uScaleFactor, aVertexPosition.zw);
-	vTextureCoord = aTextureCoord;
+    // Apply scaling and rotation transformations
+    gl_Position = uRotationMatrix * vec4(aVertexPosition.xy * uScaleFactor, aVertexPosition.zw);
+    
+    // Pass texture coordinates to fragment shader
+    vTextureCoord = aTextureCoord;
 }
 `;
 
 // Fragment shader program
 const fsSource = `
-precision mediump float;
+precision highp float;
 
 varying highp vec2 vTextureCoord;
 uniform sampler2D uSampler;
@@ -34,23 +40,46 @@ uniform float uLaserX;
 uniform float uLaserY;
 uniform bool uDarkMode;
 
+// Constants for laser pointer visualization
+const float LASER_RADIUS = 6.0;
+const float LASER_EDGE_SOFTNESS = 2.0;
+const vec3 LASER_COLOR = vec3(1.0, 0.0, 0.0);
+
+// Constants for image processing
+const float CONTRAST = 1.15;  // Slight contrast boost
+const float BRIGHTNESS = 0.05;  // Slight brightness boost
+const float SHARPNESS = 0.5;  // Sharpness level
+
+// Get texture color without any sharpening - better for handwriting
+vec4 getBaseTexture(sampler2D sampler, vec2 texCoord) {
+    return texture2D(sampler, texCoord);
+}
+
 void main(void) {
+    // Get base texture color directly - no sharpening for clearer handwriting
+    vec4 texColor = getBaseTexture(uSampler, vTextureCoord);
+    
+    // Apply very mild contrast adjustments - avoid distortion
+    vec3 adjusted = (texColor.rgb - 0.5) * 1.05 + 0.5;
+    texColor.rgb = clamp(adjusted, 0.0, 1.0);
+    
+    // Calculate laser pointer effect
     float dx = gl_FragCoord.x - uLaserX;
     float dy = gl_FragCoord.y - uLaserY;
     float distance = sqrt(dx * dx + dy * dy);
-    float radius = 5.0; // Radius of the dot, adjust as needed
-
-    if(distance < radius) {
-        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Red color for the laser dot
+    
+    if (uDarkMode) {
+        // Invert colors in dark mode, but preserve alpha
+        texColor.rgb = 1.0 - texColor.rgb;
+    }
+    
+    // Simple laser pointer - more reliable rendering
+    if (distance < 8.0 && uLaserX > 0.0 && uLaserY > 0.0) {
+        // Create solid circle with slight fade at edge
+        float fade = 1.0 - smoothstep(6.0, 8.0, distance);
+        gl_FragColor = vec4(1.0, 0.0, 0.0, fade); // Red with fade at edge
     } else {
-        vec4 texColor = texture2D(uSampler, vTextureCoord);
-        
-        if (uDarkMode) {
-            // Invert colors in dark mode, but preserve alpha
-            gl_FragColor = vec4(1.0 - texColor.rgb, texColor.a);
-        } else {
-            gl_FragColor = texColor;
-        }
+        gl_FragColor = texColor;
     }
 }
 `;
@@ -186,17 +215,25 @@ let isDarkMode = false;
 
 // Draw the scene
 function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture) {
+	// Handle canvas resize for proper rendering
 	if (resizeGLCanvas(gl.canvas)) {
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 	}
 	
 	// Adjust background color based on dark mode
-	const bgColor = isDarkMode ? [0.2, 0.2, 0.2, 0.25] : [0.5, 0.5, 0.5, 0.25];
+	const bgColor = isDarkMode 
+		? [0.12, 0.12, 0.13, 0.25]  // Darker, more neutral dark mode bg
+		: [0.98, 0.98, 0.98, 0.25]; // Nearly white light mode bg
 	gl.clearColor(bgColor[0], bgColor[1], bgColor[2], bgColor[3]);
 	
-	gl.clearDepth(1.0);                 // Clear everything
-	gl.enable(gl.DEPTH_TEST);           // Enable depth testing
-	gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
+	// Enable alpha blending for transparency
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	
+	// Setup depth buffer
+	gl.clearDepth(1.0);
+	gl.enable(gl.DEPTH_TEST);
+	gl.depthFunc(gl.LEQUAL);
 
 	// Clear the canvas before we start drawing on it.
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -282,15 +319,57 @@ function resizeGLCanvas(canvas) {
 	return false; // indicates no change in size
 }
 
+// Direct laser pointer position - no animation for more reliability
 function updateLaserPosition(x, y) {
-	laserX = x / screenWidth * gl.canvas.width;
-	laserY = gl.canvas.height - (y / screenHeight * gl.canvas.height);
-
+    // If x and y are valid positive values
+    if (x > 0 && y > 0) {
+        // Position is now directly proportional to canvas size
+        laserX = x * (gl.canvas.width / screenWidth);
+        laserY = gl.canvas.height - (y * (gl.canvas.height / screenHeight));
+    } else {
+        // Hide the pointer by moving it off-screen
+        laserX = -10;
+        laserY = -10;
+    }
+    
+    // Redraw immediately
     drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 }
 
-// Function to update dark mode state
+// Function to update dark mode state with transition effect
+let darkModeTransition = 0; // 0 = light mode, 1 = dark mode
+let transitionActive = false;
+
 function setDarkMode(darkModeEnabled) {
     isDarkMode = darkModeEnabled;
-    drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
+    
+    // If not already transitioning, start a smooth transition
+    if (!transitionActive) {
+        transitionActive = true;
+        const startTime = performance.now();
+        const duration = 300; // transition duration in ms
+        
+        function animateDarkModeTransition(timestamp) {
+            const elapsed = timestamp - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Update transition value (0 to 1 for light to dark)
+            darkModeTransition = darkModeEnabled ? progress : 1 - progress;
+            
+            // Render with current transition value
+            drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
+            
+            // Continue animation if not complete
+            if (progress < 1) {
+                requestAnimationFrame(animateDarkModeTransition);
+            } else {
+                transitionActive = false;
+            }
+        }
+        
+        requestAnimationFrame(animateDarkModeTransition);
+    } else {
+        // Just update the scene if already transitioning
+        drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
+    }
 }
