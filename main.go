@@ -57,7 +57,12 @@ func validateConfiguration(c *configuration) error {
 }
 
 func main() {
-	fmt.Println(debug.BuildInfo.Main.Version)
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		fmt.Println("not ok")
+		return
+	}
+	fmt.Printf("Version: %s\n", bi.Main.Version)
 	var err error
 
 	ifaces()

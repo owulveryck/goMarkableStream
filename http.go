@@ -2,10 +2,12 @@ package main
 
 import (
 	"crypto/tls"
+	"fmt"
 	"html/template"
 	"log"
 	"net"
 	"net/http"
+	"runtime/debug"
 
 	"github.com/owulveryck/goMarkableStream/internal/eventhttphandler"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
@@ -40,6 +42,17 @@ func setMuxer(eventPublisher *pubsub.PubSub) *http.ServeMux {
 	mux.Handle("/events", wsHandler)
 	gestureHandler := eventhttphandler.NewGestureHandler(eventPublisher)
 	mux.Handle("/gestures", gestureHandler)
+
+	// Version endpoint
+	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+		bi, ok := debug.ReadBuildInfo()
+		if !ok {
+			http.Error(w, "Unable to read build info", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		fmt.Fprintf(w, "%s", bi.Main.Version)
+	})
 
 	if c.DevMode {
 		rawHandler := stream.NewRawHandler(file, pointerAddr)

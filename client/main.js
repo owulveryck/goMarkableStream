@@ -54,7 +54,7 @@ function getBoolQueryParam(param, defaultValue = false) {
     return value === 'true';
 }
 
-window.onload = function() {
+window.onload = async function() {
 	// Function to get the value of a query parameter by name
 	// Get the 'present' parameter from the URL
 	const presentURL = getQueryParam('present');
@@ -62,6 +62,13 @@ window.onload = function() {
 	// Set the iframe source if the URL is available
 	if (presentURL) {
 		document.getElementById('content').src = presentURL;
+	}
+	
+	// Update version in the sidebar footer
+	const version = await fetchVersion();
+	const versionElement = document.querySelector('.sidebar-footer small');
+	if (versionElement) {
+		versionElement.textContent = `goMarkableStream ${version}`;
 	}
 };
 

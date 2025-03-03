@@ -2,31 +2,30 @@ name: Go
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.22
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.24.0
 
-    - name: Build
-      run: go build -v ./...
+      - name: Build
+        run: go build -v ./...
 
-    - name: Test
-      run: go test -v ./...
+      - name: Test
+        run: go test -v ./...
 
-    - name: GoGitOps Step  
-      id: gogitops  
-      uses: beaujr/gogitops-action@v0.2
-      with:
-        github-actions-user: owulveryck
-        github-actions-token: ${{secrets.GITHUB_TOKEN}}
+      - name: GoGitOps Step
+        id: gogitops
+        uses: beaujr/gogitops-action@v0.2
+        with:
+          github-actions-user: owulveryck
+          github-actions-token: ${{secrets.GITHUB_TOKEN}}

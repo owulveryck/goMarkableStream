@@ -27,4 +27,19 @@ function waiting(message) {
 	messageDiv.classList.add('visible');
 }
 
+// Function to fetch app version from the server
+async function fetchVersion() {
+	try {
+		const response = await fetch('/version');
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+		const version = await response.text();
+		return version;
+	} catch (error) {
+		console.error('Error fetching version:', error);
+		return 'unknown';
+	}
+}
+
 
