@@ -47,6 +47,9 @@ document.getElementById('rotate').addEventListener('click', function () {
     this.classList.toggle('toggled');
     eventWorker.postMessage({ type: 'portrait', portrait: portrait });
     resizeVisibleCanvas();
+    
+    // Show confirmation message
+    showMessage(`Display ${portrait ? 'portrait' : 'landscape'} mode activated`, 2000);
 });
 
 // Colors button functionality
@@ -54,6 +57,9 @@ document.getElementById('colors').addEventListener('click', function () {
     withColor = !withColor;
     this.classList.toggle('toggled');
     streamWorker.postMessage({ type: 'withColorChanged', withColor: withColor });
+    
+    // Show confirmation message
+    showMessage(`${withColor ? 'Color' : 'Grayscale'} mode enabled`, 2000);
 });
 
 // Sidebar hover effect
@@ -72,11 +78,17 @@ resizeVisibleCanvas();
 // Mask drawing button functionality
 document.getElementById('switchOrderButton').addEventListener('click', function () {
     // Swap z-index values
-    if (iFrame.style.zIndex == 1) {
+    const isLayerSwitched = iFrame.style.zIndex != 1;
+    
+    if (isLayerSwitched) {
+        iFrame.style.zIndex = 1;
+        this.classList.remove('toggled');
+        showMessage('Drawing layer on top', 2000);
+    } else {
         iFrame.style.zIndex = 4;
-        return;
+        this.classList.add('toggled');
+        showMessage('Content layer on top', 2000);
     }
-    iFrame.style.zIndex = 1;
 });
 
 

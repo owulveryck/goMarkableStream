@@ -1,4 +1,6 @@
 /* CSS styles for the layout */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 :root {
     /* Light Mode Colors */
     --background-color: #f8f9fa;
@@ -12,13 +14,20 @@
     --shadow-color: rgba(0, 0, 0, 0.08);
     --toggle-bg: #e9ecef;
     --toggle-circle: #ffffff;
+    --button-success: #34C759;
+    --button-success-hover: #28a745;
+    --tooltip-bg: rgba(0, 0, 0, 0.7);
+    --tooltip-color: #ffffff;
+    --menu-hover: rgba(0, 122, 255, 0.1);
+    --sidebar-width: 200px;
+    --sidebar-collapsed-width: 30px;
 }
 
 /* Dark Mode Colors */
 .dark-mode {
-    --background-color: #1a1a1a;
-    --container-bg: #2d2d2d;
-    --sidebar-bg: #252525;
+    --background-color: #121212;
+    --container-bg: #1e1e1e;
+    --sidebar-bg: #1a1a1a;
     --text-color: #f0f0f0;
     --text-secondary: #adb5bd;
     --accent-color: #4dabf7;
@@ -27,6 +36,11 @@
     --shadow-color: rgba(0, 0, 0, 0.2);
     --toggle-bg: #495057;
     --toggle-circle: #343a40;
+    --button-success: #2ebd5f;
+    --button-success-hover: #249d4e;
+    --tooltip-bg: rgba(255, 255, 255, 0.8);
+    --tooltip-color: #1a1a1a;
+    --menu-hover: rgba(77, 171, 247, 0.15);
 }
 
 body, html {
@@ -34,9 +48,11 @@ body, html {
     padding: 0;
     height: 100%;
     background-color: var(--background-color);
-    font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     color: var(--text-color);
     transition: background-color 0.3s ease, color 0.3s ease;
+    font-size: 16px;
+    line-height: 1.5;
 }
 
 #container {
@@ -49,6 +65,7 @@ body, html {
     background-color: var(--container-bg);
     box-shadow: 0 0 20px var(--shadow-color);
     transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
 }
 
 #canvas {
@@ -57,6 +74,7 @@ body, html {
     height: 100vh;  /* 100% of the viewport height */
     display: block; /* Remove extra space around the canvas */
     z-index: 2;
+    transition: filter 0.3s ease;
 }
 
 #content {
@@ -69,7 +87,7 @@ canvas.hidden {
 }
 
 .sidebar {
-    width: 200px;
+    width: var(--sidebar-width);
     height: 100vh;
     background-color: var(--sidebar-bg);
     backdrop-filter: blur(10px);
@@ -78,33 +96,93 @@ canvas.hidden {
     box-shadow: 2px 0 15px var(--shadow-color);
     position: fixed;
     top: 0;
-    left: -170px;
-    transition: all 0.3s ease;
+    left: calc(-1 * (var(--sidebar-width) - var(--sidebar-collapsed-width)));
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     z-index: 5;
     padding-top: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .sidebar.active {
     left: 0;
 }
 
+.sidebar:after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: var(--sidebar-collapsed-width);
+    height: 100%;
+    background: linear-gradient(90deg, transparent, var(--sidebar-bg));
+    z-index: -1;
+    opacity: 0.8;
+}
+
 .menu {
     list-style: none;
     padding: 0;
-    margin: 0;
+    margin: 10px 0;
+    flex: 1;
 }
 
 .menu li {
-    padding: 10px 20px;
-    margin: 5px 0;
-    border-radius: 8px;
-    transition: background-color 0.2s ease;
+    padding: 0;
+    margin: 8px 15px;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    position: relative;
 }
 
 .menu li:hover {
-    background-color: rgba(0, 122, 255, 0.1);
+    background-color: var(--menu-hover);
+    transform: translateY(-1px);
+}
+
+.menu li button {
+    width: 100%;
+    text-align: left;
+    padding: 12px 16px;
+    border-radius: inherit;
+}
+
+.menu li .button-tooltip {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: var(--tooltip-bg);
+    color: var(--tooltip-color);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    z-index: 10;
+    margin-left: 10px;
+    font-weight: 500;
+    pointer-events: none;
+}
+
+.menu li .button-tooltip:after {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 5px 5px 5px 0;
+    border-style: solid;
+    border-color: transparent var(--tooltip-bg) transparent transparent;
+}
+
+.menu li:hover .button-tooltip {
+    opacity: 1;
+    visibility: visible;
 }
 
 .menu li a {
@@ -112,6 +190,8 @@ canvas.hidden {
     color: var(--text-color);
     font-weight: 500;
     transition: color 0.2s ease;
+    display: block;
+    padding: 10px 15px;
 }
 
 .menu li a:hover {
@@ -127,9 +207,10 @@ canvas.hidden {
     display: inline-block;
     font-size: 15px;
     cursor: pointer;
-    border-radius: 8px;
+    border-radius: 10px;
     transition: all 0.2s ease;
     box-shadow: 0 2px 5px var(--shadow-color);
+    font-weight: 500;
 }
 
 .my-button:hover {
@@ -138,8 +219,13 @@ canvas.hidden {
     box-shadow: 0 4px 8px var(--shadow-color);
 }
 
+.my-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.25);
+}
+
 .my-button.toggled {
-    background-color: #34C759; 
+    background-color: var(--button-success); 
     color: #ffffff;
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
 }
@@ -174,44 +260,56 @@ canvas.hidden {
 
 /* Apple-style button */
 .apple-button {
-    display: inline-block;
-    width: 140px;
-    padding: 12px 0;
+    display: inline-flex;
+    align-items: center;
+    width: 100%;
+    padding: 0;
     border-radius: 10px;
     border: none;
-    font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
     font-size: 15px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     outline: none;
-    background-color: var(--accent-color);
-    color: #fff;
-    box-shadow: 0 2px 8px var(--shadow-color);
-    text-align: center;
+    background-color: transparent;
+    color: var(--text-color);
+    box-shadow: none;
 }
 
 .apple-button:hover {
-    background-color: var(--accent-hover);
+    background-color: var(--menu-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .apple-button:active {
-    background-color: var(--accent-hover);
     transform: translateY(1px);
-    box-shadow: 0 1px 3px var(--shadow-color);
+}
+
+.button-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    color: var(--accent-color);
+    transition: transform 0.2s ease;
+}
+
+.apple-button:hover .button-icon {
+    transform: scale(1.1);
 }
 
 .dark-mode .apple-button {
-    background-color: var(--accent-color);
-    color: #fff;
+    color: var(--text-color);
 }
 
 .apple-button.toggled {
-    background-color: #34C759; /* Apple's green color */
-    color: #FFFFFF;
-    box-shadow: 0 2px 8px rgba(52, 199, 89, 0.25);
+    background-color: var(--menu-hover);
+    font-weight: 600;
+}
+
+.apple-button.toggled .button-icon {
+    color: var(--button-success);
 }
 
 /* Base styles for the toggle button */
@@ -220,7 +318,7 @@ canvas.hidden {
     padding: 12px 24px;
     border-radius: 10px;
     border: none;
-    font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
     font-size: 15px;
     font-weight: 500;
     cursor: pointer;
@@ -243,88 +341,118 @@ canvas.hidden {
     box-shadow: 0 2px 8px var(--shadow-color);
 }
 
-/* Add message styling */
+/* Notification and message styling */
 #message {
     position: absolute; 
     top: 50%; 
     left: 50%; 
     transform: translate(-50%, -50%);
-    font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-    background-color: rgba(255, 255, 255, 0.9);
-    padding: 12px 20px;
-    border-radius: 10px;
-    box-shadow: 0 5px 15px var(--shadow-color);
+    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background-color: rgba(255, 255, 255, 0.92);
+    padding: 16px 24px;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px var(--shadow-color);
     color: #FF3B30; /* Apple's red */
     font-weight: 500;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 59, 48, 0.2);
     z-index: 10;
+    max-width: 80%;
+    text-align: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+#message.visible {
+    opacity: 1;
+    visibility: visible;
 }
 
 .dark-mode #message {
-    background-color: rgba(45, 45, 45, 0.9);
+    background-color: rgba(45, 45, 45, 0.92);
     border: 1px solid rgba(255, 59, 48, 0.2);
 }
 
-/* New styles for added elements */
+/* Sidebar header styling */
 .sidebar-header {
     display: flex;
     align-items: center;
-    padding: 20px 15px;
+    padding: 24px 16px;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 15px;
-    background-color: rgba(0, 122, 255, 0.1);
+    background: linear-gradient(to right, rgba(0, 122, 255, 0.15), rgba(0, 122, 255, 0.05));
 }
 
 .sidebar-logo {
-    width: 36px;
-    height: 36px;
-    margin-right: 10px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px var(--shadow-color);
+    width: 38px;
+    height: 38px;
+    margin-right: 12px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px var(--shadow-color);
+    transition: transform 0.3s ease;
+}
+
+.sidebar-header:hover .sidebar-logo {
+    transform: rotate(10deg);
 }
 
 .sidebar-header h3 {
     margin: 0;
     color: var(--text-color);
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 600;
+    letter-spacing: -0.2px;
 }
 
+/* Sidebar footer styling */
 .sidebar-footer {
-    position: absolute;
-    bottom: 15px;
+    position: relative;
     width: 100%;
     text-align: center;
     color: var(--text-secondary);
     font-size: 12px;
-    padding: 10px 0;
+    padding: 12px 0;
     border-top: 1px solid var(--border-color);
     background-color: var(--sidebar-bg);
+    margin-top: auto;
 }
 
-.button-icon {
-    display: inline-block;
-    vertical-align: middle;
-    margin-right: 8px;
+/* Pulse animation for notifications */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 59, 48, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 59, 48, 0);
+    }
 }
 
 /* Theme toggle switch */
 .theme-switch-wrapper {
     display: flex;
     align-items: center;
-    padding: 10px 20px;
-    margin-top: 15px;
+    padding: 16px 20px;
+    margin-top: 10px;
     border-top: 1px solid var(--border-color);
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0));
+    transition: background-color 0.3s ease;
+}
+
+.dark-mode .theme-switch-wrapper {
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
 }
 
 .theme-switch {
     display: inline-block;
-    height: 24px;
+    height: 26px;
     position: relative;
-    width: 44px;
-    margin-right: 10px;
+    width: 50px;
+    margin-right: 12px;
 }
 
 .theme-switch input {
@@ -341,18 +469,35 @@ canvas.hidden {
     top: 0;
     transition: .4s;
     border-radius: 34px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .slider:before {
     background-color: var(--toggle-circle);
     bottom: 3px;
     content: "";
-    height: 18px;
+    height: 20px;
     left: 3px;
     position: absolute;
-    transition: .4s;
-    width: 18px;
+    transition: .4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    width: 20px;
     border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.slider:after {
+    content: "☀️";
+    position: absolute;
+    left: 7px;
+    top: 5px;
+    font-size: 12px;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+input:checked + .slider:after {
+    content: "🌙";
+    left: 30px;
 }
 
 input:checked + .slider {
@@ -360,12 +505,95 @@ input:checked + .slider {
 }
 
 input:checked + .slider:before {
-    transform: translateX(20px);
+    transform: translateX(24px);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.25);
 }
 
 .theme-switch-label {
     color: var(--text-color);
     font-size: 14px;
     font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.theme-switch-wrapper:hover .theme-switch-label {
+    color: var(--accent-color);
+}
+
+/* Tooltip styles */
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+}
+
+[data-tooltip]:before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 12px;
+    background-color: var(--tooltip-bg);
+    color: var(--tooltip-color);
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+}
+
+[data-tooltip]:hover:before {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Loading animation */
+.loading-dots {
+    display: inline-block;
+    position: relative;
+    width: 40px;
+    height: 16px;
+}
+
+.loading-dots:after {
+    content: '...';
+    position: absolute;
+    left: 0;
+    animation: loading 1.5s infinite;
+    font-size: 20px;
+    line-height: 10px;
+    letter-spacing: 2px;
+}
+
+@keyframes loading {
+    0% { content: '.'; }
+    33% { content: '..'; }
+    66% { content: '...'; }
+}
+
+/* Toast notification styles */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    background-color: var(--tooltip-bg);
+    color: var(--tooltip-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    z-index: 1000;
+}
+
+.toast.visible {
+    transform: translateY(0);
+    opacity: 1;
 }
 
