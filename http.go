@@ -108,10 +108,9 @@ func newIndexHandler(fs http.FileSystem) http.HandlerFunc {
 				log.Printf("Error rendering template: %v", err)
 			}
 			return
-		} else {
-
-			staticFileServer.ServeHTTP(w, r)
 		}
+		
+		staticFileServer.ServeHTTP(w, r)
 	}
 }
 

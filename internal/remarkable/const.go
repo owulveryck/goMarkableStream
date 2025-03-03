@@ -3,6 +3,7 @@
 package remarkable
 
 const (
+	// Model defines the current device model being used
 	Model = Remarkable2
 
 	// ScreenWidth of the remarkable 2
@@ -10,10 +11,12 @@ const (
 	// ScreenHeight of the remarkable 2
 	ScreenHeight = 1404
 
+	// ScreenSizeBytes is the total memory size of the screen buffer in bytes
 	ScreenSizeBytes = ScreenWidth * ScreenHeight * 2
 
-	// These values are from Max values of /dev/input/event1 (ABS_X and ABS_Y)
+	// MaxXValue represents the maximum X coordinate value from /dev/input/event1 (ABS_X)
 	MaxXValue = 15725
+	// MaxYValue represents the maximum Y coordinate value from /dev/input/event1 (ABS_Y)
 	MaxYValue = 20966
 
 	PenInputDevice   = "/dev/input/event1"
