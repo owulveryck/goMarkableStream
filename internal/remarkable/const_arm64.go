@@ -6,7 +6,7 @@ const (
 	Model = RemarkablePaperPro
 
 	// ScreenWidth of the remarkable paper pro
-	ScreenWidth = 1624
+	ScreenWidth = 1632
 	// ScreenHeight of the remarkable paper pro
 	ScreenHeight = 2154
 

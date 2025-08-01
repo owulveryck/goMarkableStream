@@ -65,7 +65,7 @@ func saveImage(img *image.RGBA, output string) error {
 func main() {
 	ip := flag.String("ip", "127.0.0.1", "Server IP address")
 	port := flag.String("port", "2001", "Server port")
-	width := flag.Int("width", 1624, "Image width")
+	width := flag.Int("width", 1632, "Image width")
 	height := flag.Int("height", 2154, "Image height")
 	output := flag.String("output", "screenshot.png", "Output image file")
 	username := flag.String("username", "admin", "Basic auth username")
