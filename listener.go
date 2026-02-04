@@ -8,15 +8,62 @@ import (
 	"golang.ngrok.com/ngrok/config"
 )
 
-func setupListener(ctx context.Context, s *configuration) (net.Listener, error) {
-	if s.BindAddr == "ngrok" {
+// ListenerResult encapsulates listeners with their cleanup function and TLS state
+type ListenerResult struct {
+	Listeners []net.Listener
+	Cleanup   func() error
+	UseTLS    bool // Whether caller should apply TLS
+}
+
+func setupListener(ctx context.Context, s *configuration) (*ListenerResult, error) {
+	switch s.BindAddr {
+	case "ngrok":
 		l, err := ngrok.Listen(ctx,
 			config.HTTPEndpoint(),
 			ngrok.WithAuthtokenFromEnv(),
 		)
+		if err != nil {
+			return nil, err
+		}
 		s.BindAddr = l.Addr().String()
-		c.TLS = false
-		return l, err
+		return &ListenerResult{
+			Listeners: []net.Listener{l},
+			Cleanup:   func() error { return l.Close() },
+			UseTLS:    false, // ngrok handles TLS
+		}, nil
+
+	case "tailscale":
+		tm := NewTailscaleManager(s)
+		tsListener, err := tm.Start(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		// Also create local listener for LAN access
+		localListener, err := net.Listen("tcp", ":2001")
+		if err != nil {
+			tm.Close()
+			return nil, err
+		}
+
+		return &ListenerResult{
+			Listeners: []net.Listener{tsListener, localListener},
+			Cleanup: func() error {
+				localListener.Close()
+				return tm.Close()
+			},
+			UseTLS: false, // WireGuard encrypts Tailscale; local is plain HTTP
+		}, nil
+
+	default:
+		l, err := net.Listen("tcp", s.BindAddr)
+		if err != nil {
+			return nil, err
+		}
+		return &ListenerResult{
+			Listeners: []net.Listener{l},
+			Cleanup:   func() error { return l.Close() },
+			UseTLS:    s.TLS,
+		}, nil
 	}
-	return net.Listen("tcp", s.BindAddr)
 }

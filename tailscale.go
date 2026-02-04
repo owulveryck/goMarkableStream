@@ -1,0 +1,159 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"net"
+	"os"
+	"path/filepath"
+
+	"tailscale.com/ipn/ipnstate"
+	"tailscale.com/tsnet"
+)
+
+// TailscaleManager encapsulates tsnet.Server lifecycle management
+type TailscaleManager struct {
+	server  *tsnet.Server
+	config  *configuration
+	started bool
+}
+
+// NewTailscaleManager creates a new TailscaleManager with the given configuration
+func NewTailscaleManager(cfg *configuration) *TailscaleManager {
+	return &TailscaleManager{
+		config: cfg,
+	}
+}
+
+// Start initializes the Tailscale server and returns a listener
+func (tm *TailscaleManager) Start(ctx context.Context) (net.Listener, error) {
+	// Create state directory with proper permissions
+	if err := tm.ensureStateDir(); err != nil {
+		return nil, fmt.Errorf("failed to create state directory: %w", err)
+	}
+
+	// Create and configure tsnet.Server
+	tm.server = &tsnet.Server{
+		Hostname: tm.config.TailscaleHostname,
+		Dir:      tm.config.TailscaleStateDir,
+	}
+
+	// Configure auth key for headless operation
+	if tm.config.TailscaleAuthKey != "" {
+		tm.server.AuthKey = tm.config.TailscaleAuthKey
+	}
+
+	// Configure ephemeral mode
+	if tm.config.TailscaleEphemeral {
+		tm.server.Ephemeral = true
+	}
+
+	// Configure logging
+	if !tm.config.TailscaleVerbose {
+		tm.server.Logf = func(string, ...any) {}
+	}
+
+	// Wait for Tailscale network to be ready
+	log.Println("Waiting for Tailscale network to be ready...")
+	status, err := tm.server.Up(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start Tailscale: %w", err)
+	}
+	tm.started = true
+
+	// Log connection information
+	tm.logConnectionInfo(status)
+
+	// Create the appropriate listener
+	return tm.createListener()
+}
+
+// ensureStateDir creates the state directory with proper permissions
+func (tm *TailscaleManager) ensureStateDir() error {
+	dir := tm.config.TailscaleStateDir
+	if dir == "" {
+		return fmt.Errorf("state directory not configured")
+	}
+
+	// Create parent directories if needed
+	parentDir := filepath.Dir(dir)
+	if err := os.MkdirAll(parentDir, 0700); err != nil {
+		return fmt.Errorf("failed to create parent directory %s: %w", parentDir, err)
+	}
+
+	// Create state directory
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return fmt.Errorf("failed to create state directory %s: %w", dir, err)
+	}
+
+	return nil
+}
+
+// logConnectionInfo logs the Tailscale connection information
+func (tm *TailscaleManager) logConnectionInfo(status *ipnstate.Status) {
+	if status == nil || status.Self == nil {
+		return
+	}
+
+	log.Printf("Tailscale connected as: %s", tm.config.TailscaleHostname)
+
+	// Log all Tailscale IPs
+	for _, ip := range status.Self.TailscaleIPs {
+		log.Printf("Tailscale IP: %s", ip)
+	}
+
+	// Log the MagicDNS name if available
+	dnsName := status.Self.DNSName
+	if dnsName != "" {
+		log.Printf("Tailscale DNS name: %s", dnsName)
+	}
+
+	// Log the access URL
+	port := ":2001" // Default port
+	if tm.config.TailscaleFunnel {
+		log.Printf("Funnel URL: https://%s%s", dnsName, port)
+	} else if tm.config.TailscaleUseTLS {
+		log.Printf("Access URL: https://%s%s", dnsName, port)
+	} else {
+		log.Printf("Access URL: http://%s%s", dnsName, port)
+	}
+}
+
+// createListener creates the appropriate listener based on configuration
+func (tm *TailscaleManager) createListener() (net.Listener, error) {
+	addr := ":2001" // Default port
+
+	if tm.config.TailscaleFunnel {
+		// Funnel provides public internet access with TLS
+		log.Println("Starting Tailscale Funnel listener...")
+		return tm.server.ListenFunnel("tcp", addr)
+	}
+
+	if tm.config.TailscaleUseTLS {
+		// Use Tailscale's automatic TLS certificates
+		log.Println("Starting Tailscale TLS listener...")
+		return tm.server.ListenTLS("tcp", addr)
+	}
+
+	// Plain listener (Tailscale still encrypts via WireGuard)
+	log.Println("Starting Tailscale listener (WireGuard encrypted)...")
+	return tm.server.Listen("tcp", addr)
+}
+
+// Close shuts down the Tailscale server gracefully
+func (tm *TailscaleManager) Close() error {
+	if tm.server != nil && tm.started {
+		log.Println("Shutting down Tailscale server...")
+		return tm.server.Close()
+	}
+	return nil
+}
+
+// UseTLS returns whether the caller should apply TLS
+// When using Tailscale, never apply additional TLS:
+// - If TailscaleUseTLS=true, tsnet handles TLS via ListenTLS()
+// - If TailscaleUseTLS=false, WireGuard encrypts, no TLS needed
+func (tm *TailscaleManager) UseTLS() bool {
+	return false
+}
