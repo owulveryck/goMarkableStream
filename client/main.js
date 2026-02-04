@@ -1,4 +1,5 @@
 const rawCanvas = new OffscreenCanvas(screenWidth, screenHeight); // Define width and height as needed
+let laserEnabled = true;
 let portrait = getQueryParam('portrait');
 portrait = portrait !== null ? portrait === 'true' : false;
 

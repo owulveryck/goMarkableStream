@@ -290,6 +290,13 @@ function resizeGLCanvas(canvas) {
 
 // Direct laser pointer position - no animation for more reliability
 function updateLaserPosition(x, y) {
+    // Check if laser is disabled
+    if (!laserEnabled) {
+        laserX = -10;
+        laserY = -10;
+        return;
+    }
+
     // If x and y are valid positive values
     if (x > 0 && y > 0) {
         // Position is now directly proportional to canvas size
@@ -300,8 +307,15 @@ function updateLaserPosition(x, y) {
         laserX = -10;
         laserY = -10;
     }
-    
+
     // Redraw immediately
+    drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
+}
+
+// Clear laser pointer (hide it off-screen)
+function clearLaser() {
+    laserX = -10;
+    laserY = -10;
     drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 }
 

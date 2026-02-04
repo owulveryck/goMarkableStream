@@ -47,7 +47,7 @@ resizeVisibleCanvas();
 document.getElementById('switchOrderButton').addEventListener('click', function () {
     // Swap z-index values
     const isLayerSwitched = iFrame.style.zIndex != 1;
-    
+
     if (isLayerSwitched) {
         iFrame.style.zIndex = 1;
         this.classList.remove('toggled');
@@ -57,5 +57,15 @@ document.getElementById('switchOrderButton').addEventListener('click', function 
         this.classList.add('toggled');
         showMessage('Content layer on top', 2000);
     }
+});
+
+// Laser toggle button functionality
+document.getElementById('laserToggle').addEventListener('click', function () {
+    laserEnabled = !laserEnabled;
+    this.classList.toggle('toggled');
+    if (!laserEnabled) {
+        clearLaser();
+    }
+    showMessage(`Laser pointer ${laserEnabled ? 'enabled' : 'disabled'}`, 2000);
 });
 
