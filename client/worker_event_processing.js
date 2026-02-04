@@ -8,6 +8,12 @@ let latestY;
 let maxXValue;
 let maxYValue;
 
+// Throttling variables for laser pointer updates
+let pendingUpdate = false;
+let lastSentX = -1;
+let lastSentY = -1;
+const MIN_DELTA = 2; // minimum pixel change to trigger update
+
 onmessage = (event) => {
 	const data = event.data;
 
@@ -67,7 +73,21 @@ async function initiateEventsListener() {
 				}
 			}
 			if (draw) {
-				postMessage({ type: 'update', X: latestX, Y: latestY });
+				// Skip if position hasn't changed meaningfully
+				const dx = Math.abs(latestX - lastSentX);
+				const dy = Math.abs(latestY - lastSentY);
+				if (dx < MIN_DELTA && dy < MIN_DELTA) return;
+
+				if (!pendingUpdate) {
+					pendingUpdate = true;
+					// Align with display refresh (~60fps = 16ms)
+					setTimeout(() => {
+						postMessage({ type: 'update', X: latestX, Y: latestY });
+						lastSentX = latestX;
+						lastSentY = latestY;
+						pendingUpdate = false;
+					}, 16);
+				}
 			}
 		}
 	}
