@@ -139,7 +139,7 @@ canvas.hidden {
     padding: 6px 12px;
     border-radius: 6px;
     font-size: 14px;
-    white-space: nowrap;
+    white-space: pre-line;
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.2s ease, visibility 0.2s ease;
@@ -147,6 +147,21 @@ canvas.hidden {
     margin-left: 10px;
     font-weight: 500;
     pointer-events: none;
+    max-width: 220px;
+    line-height: 1.4;
+}
+
+/* Keyboard shortcut styling */
+.button-tooltip kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    margin-left: 6px;
+    vertical-align: middle;
 }
 
 .menu li .button-tooltip:after {
@@ -223,21 +238,6 @@ canvas.hidden {
     box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
 }
 
-@keyframes fadeInOut {
-    0%, 100% {
-        opacity: 0.5;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 1;
-        transform: scale(1.1);
-    }
-}
-
-.recording {
-    animation: fadeInOut 1.2s ease-in-out infinite;
-}
-
 /* Apple-style button */
 .apple-button {
     display: inline-flex;
@@ -280,12 +280,26 @@ canvas.hidden {
 }
 
 .apple-button.toggled {
-    background-color: var(--menu-hover);
+    background-color: rgba(52, 199, 89, 0.15);
     font-weight: 600;
+    position: relative;
 }
 
 .apple-button.toggled .button-icon {
     color: var(--button-success);
+}
+
+/* Active state dot indicator */
+.apple-button.toggled::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 6px;
+    height: 6px;
+    background-color: var(--button-success);
+    border-radius: 50%;
+    box-shadow: 0 0 4px var(--button-success);
 }
 
 /* Base styles for the toggle button */
@@ -504,5 +518,406 @@ canvas.hidden {
     word-break: break-all;
     font-size: 10px;
     padding: 0 8px;
+}
+
+/* Connection Status Indicator - Pill-shaped with label */
+.status-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 6px 12px;
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 20px;
+    box-shadow: 0 2px 8px var(--shadow-color);
+    border: 1px solid var(--border-color);
+    z-index: 100;
+    opacity: 1;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-indicator.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.status-indicator.collapsed,
+.status-indicator.connected {
+    padding: 6px;
+    border-radius: 50%;
+}
+
+.status-indicator.collapsed .status-label,
+.status-indicator.connected .status-label {
+    display: none;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--text-secondary);
+    transition: background-color 0.3s ease;
+    display: block;
+    flex-shrink: 0;
+}
+
+.status-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    transition: color 0.3s ease;
+}
+
+.status-indicator.connected .status-dot {
+    background-color: var(--button-success);
+}
+
+.status-indicator.connected .status-label {
+    color: var(--button-success);
+}
+
+.status-indicator.paused .status-dot {
+    background-color: #FF9500;
+}
+
+.status-indicator.paused .status-label {
+    color: #FF9500;
+}
+
+.status-indicator.rate-limited .status-dot {
+    background-color: #FF9500;
+}
+
+.status-indicator.rate-limited .status-label {
+    color: #FF9500;
+}
+
+.status-indicator.reconnecting .status-dot {
+    background-color: #FF9500;
+    animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+.status-indicator.reconnecting .status-label {
+    color: #FF9500;
+}
+
+.status-indicator.disconnected .status-dot {
+    background-color: #FF3B30;
+}
+
+.status-indicator.disconnected .status-label {
+    color: #FF3B30;
+}
+
+@keyframes pulse-dot {
+    0%, 100% {
+        opacity: 0.5;
+        transform: scale(0.9);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+}
+
+/* Connection Error Message */
+.connection-error {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 24px 32px;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border-color);
+    z-index: 200;
+    text-align: center;
+    max-width: 400px;
+}
+
+.connection-error h3 {
+    margin: 0 0 12px 0;
+    color: #FF3B30;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.connection-error p {
+    margin: 0 0 16px 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.connection-error button {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.connection-error button:hover {
+    background-color: var(--accent-hover);
+}
+
+.connection-error .dismiss-btn {
+    background-color: transparent;
+    color: var(--text-secondary);
+    margin-left: 8px;
+}
+
+.connection-error .dismiss-btn:hover {
+    color: var(--text-color);
+    background-color: var(--toggle-bg);
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(0, 122, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--accent-color);
+    animation: spin 0.8s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Message with spinner */
+#message .loading-spinner {
+    border-color: rgba(0, 122, 255, 0.3);
+    border-top-color: #007AFF;
+}
+
+/* Reconnection Banner */
+.reconnect-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #FF9500 0%, #FF6B00 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    z-index: 1000;
+    transform: translateY(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.reconnect-banner.visible {
+    transform: translateY(0);
+}
+
+.reconnect-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 0.8s linear infinite;
+}
+
+.reconnect-text {
+    font-weight: 500;
+    font-size: 14px;
+}
+
+/* Help Overlay */
+.help-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.help-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.help-content {
+    background-color: var(--container-bg);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.help-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.help-close:hover {
+    background-color: var(--toggle-bg);
+    color: var(--text-color);
+}
+
+.help-content h2 {
+    margin: 0 0 24px 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.help-section {
+    margin-bottom: 24px;
+}
+
+.help-section:last-child {
+    margin-bottom: 0;
+}
+
+.help-section h3 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--accent-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.help-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.help-item {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background-color: var(--sidebar-bg);
+    border-radius: 8px;
+}
+
+.help-grid.shortcuts .help-item {
+    grid-template-columns: 50px 1fr;
+}
+
+.gesture-icon {
+    font-size: 20px;
+    text-align: center;
+    color: var(--accent-color);
+}
+
+.help-item span {
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.help-desc {
+    color: var(--text-secondary) !important;
+    font-weight: 400 !important;
+    font-size: 13px;
+}
+
+.help-content kbd {
+    display: inline-block;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+    background-color: var(--toggle-bg);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-weight: 500;
+    min-width: 30px;
+    text-align: center;
+}
+
+/* Onboarding Hint */
+.onboarding-hint {
+    position: fixed;
+    top: 50%;
+    left: 20px;
+    transform: translateY(-50%);
+    background-color: var(--accent-color);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 20px rgba(0, 122, 255, 0.4);
+    z-index: 50;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, visibility 0.4s ease, transform 0.4s ease;
+    cursor: pointer;
+}
+
+.onboarding-hint.visible {
+    opacity: 1;
+    visibility: visible;
+    animation: hint-bounce 2s ease-in-out infinite;
+}
+
+.onboarding-arrow {
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+    border-right: 8px solid var(--accent-color);
+}
+
+@keyframes hint-bounce {
+    0%, 100% { transform: translateY(-50%) translateX(0); }
+    50% { transform: translateY(-50%) translateX(5px); }
 }
 
