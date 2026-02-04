@@ -3,7 +3,9 @@
 
 # goMarkableStream
 
-![poster](docs/goMarkableStream.png)
+[Screen recording 2026-02-04 11.24.44.webm](https://github.com/user-attachments/assets/facdf1c5-41b2-4b82-bb84-2dd169858a80)
+
+
 
 ## Overview
 
