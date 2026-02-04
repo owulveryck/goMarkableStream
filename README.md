@@ -1,5 +1,5 @@
 [![Go](https://github.com/owulveryck/goMarkableStream/actions/workflows/go.yml/badge.svg)](https://github.com/owulveryck/goMarkableStream/actions/workflows/go.yml)
-![Static Badge](https://img.shields.io/badge/reMarkable-Compatible_with_FW_3.9-green)
+![Static Badge](https://img.shields.io/badge/reMarkable_2-Firmware_3.24+-green)
 
 # goMarkableStream
 
@@ -11,22 +11,22 @@ The goMarkableStream is a lightweight and user-friendly application designed spe
 
 Its primary goal is to enable users to stream their reMarkable tablet screen to a web browser without the need for any hacks or modifications that could void the warranty.
 
-## Device support
+## Device Support
 
-- Remarkable 2
-- Remarkable Paper Pro (see notes below)
+**Actively supported and tested:**
+- reMarkable 2 with firmware 3.24+
 
-### Remarkable Paper Pro
+**Experimental (not actively tested):**
+- reMarkable Paper Pro - initial support, some features may not work as expected
 
-Remarkable Paper Pro is in initial support. The application is not yet fully tested on this device and some features may not work as expected.
+## Version Support
 
-When running on the Remarkable Paper Pro, `RLE_COMPRESSION` environment variable must be set to `false` since it's not supported.
+The latest version of goMarkableStream is actively developed and tested on reMarkable 2 with firmware 3.24+.
 
-## Version support
-
-- reMarkable with firmware < 3.4 may use goMarkableStream version < 0.8.6
-- reMarkable with firmware >= 3.4 and < 3.6 may use version >= 0.8.6 and < 0.11.0
-- reMarkable with firmware >= 3.6 may use version >= 0.11.0
+For older firmware versions:
+- Firmware < 3.4: use goMarkableStream version < 0.8.6
+- Firmware >= 3.4 and < 3.6: use version >= 0.8.6 and < 0.11.0
+- Firmware >= 3.6 and < 3.24: use version >= 0.11.0 (may work, but not actively tested)
 
 ## Features
 
@@ -161,11 +161,8 @@ Configure the application via environment variables:
 - `RK_SERVER_USERNAME`: (String, default: `admin`) Username for server access.
 - `RK_SERVER_PASSWORD`: (String, default: `password`) Password for server access.
 - `RK_HTTPS`: (True/False, default: `true`) Enable or disable HTTPS.
-- `RK_COMPRESSION`: (True/False, default: `false`) Enable or disable compression.
 - `RK_DEV_MODE`: (True/False, default: `false`) Enable or disable developer mode.
-- `RLE_COMPRESSION`: (True/False, default: `true`) Enable or disable RLE compression.
-- `ZSTD_COMPRESSION`: (True/False, default: `false`) Enable or disable ZSTD compression.
-- `ZSTD_COMPRESSION_LEVEL`: (Integer, default: `3`) Set the ZSTD compression level.
+- `RK_DELTA_THRESHOLD`: (Float, default: `0.30`) Change ratio threshold (0.0-1.0) above which a full frame is sent instead of delta.
 
 ### Endpoint Configuration
 Add query parameters to the URL (`?parameter=value&otherparameter=value`):
@@ -240,13 +237,17 @@ This application exposes an HTTP server with several endpoints.
 
 ### Implementation
 
-The image data is read directly from the main process's memory as a byte array.
-A simple Run-Length Encoding (RLE) compression algorithm is applied on the tablet to reduce the amount of data transferred between the tablet and the browser.
+The image data is read directly from the main process's memory as a BGRA byte array.
+
+**Delta Compression**: The streaming uses delta encoding to minimize bandwidth:
+- Only changed pixels are sent between frames (typically 1-5% for e-ink usage)
+- Full frames are gzip-compressed (~5-10x reduction) and sent when >30% of pixels change or on first connection
+- Delta frames encode runs of changed pixels with their positions
 
 The CPU footprint is relatively low, using about 10% of the CPU for a frame every 200 ms.
 You can increase the frame rate, but it will consume slightly more CPU.
 
-On the client side, the streamed byte data is decoded and displayed on a canvas by addressing the backend array through WebGL.
+On the client side, the streamed byte data is decoded (with automatic gzip decompression for full frames using the browser's native DecompressionStream API) and displayed on a canvas through WebGL.
 
 Additionally, the application features a side menu which allows users to rotate the displayed image.
 All image transformations utilize native browser implementations, providing optimized performance.

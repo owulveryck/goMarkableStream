@@ -4,6 +4,8 @@
 package delta
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/binary"
 	"io"
 	"unsafe"
@@ -11,8 +13,9 @@ import (
 
 const (
 	// Frame type constants for wire protocol
-	FrameTypeFull  = 0x00
-	FrameTypeDelta = 0x01
+	FrameTypeFull           = 0x00 // Deprecated: uncompressed full frame
+	FrameTypeDelta          = 0x01
+	FrameTypeFullCompressed = 0x02 // Gzip-compressed full frame
 
 	// DefaultThreshold is the default change ratio above which a full frame is sent
 	DefaultThreshold = 0.30
@@ -188,12 +191,20 @@ func (e *Encoder) calculateDeltaSize(runs []changeRun) int {
 	return size
 }
 
-// writeFullFrame writes a full frame with header.
+// writeFullFrame writes a gzip-compressed full frame with header.
 func (e *Encoder) writeFullFrame(data []byte, w io.Writer) error {
+	// Compress data with gzip (BestSpeed for minimal CPU overhead)
+	var buf bytes.Buffer
+	gz, _ := gzip.NewWriterLevel(&buf, gzip.BestSpeed)
+	gz.Write(data)
+	gz.Close()
+	compressed := buf.Bytes()
+
+	// Write header with compressed type
 	header := make([]byte, 4)
-	header[0] = FrameTypeFull
+	header[0] = FrameTypeFullCompressed
 	// Payload length in 24-bit little-endian
-	payloadLen := len(data)
+	payloadLen := len(compressed)
 	header[1] = byte(payloadLen & 0xFF)
 	header[2] = byte((payloadLen >> 8) & 0xFF)
 	header[3] = byte((payloadLen >> 16) & 0xFF)
@@ -201,7 +212,7 @@ func (e *Encoder) writeFullFrame(data []byte, w io.Writer) error {
 	if _, err := w.Write(header); err != nil {
 		return err
 	}
-	_, err := w.Write(data)
+	_, err := w.Write(compressed)
 	return err
 }
 

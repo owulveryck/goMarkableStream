@@ -2,7 +2,9 @@ package delta
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/binary"
+	"io"
 	"testing"
 )
 
@@ -44,20 +46,28 @@ func TestEncode_FullFrame_NoPrevious(t *testing.T) {
 
 	result := buf.Bytes()
 
-	// Check header
-	if result[0] != FrameTypeFull {
-		t.Errorf("expected full frame type, got %d", result[0])
+	// Check header - now expecting compressed full frame
+	if result[0] != FrameTypeFullCompressed {
+		t.Errorf("expected compressed full frame type (0x02), got %d", result[0])
 	}
 
 	// Check payload length (24-bit LE)
 	payloadLen := int(result[1]) | int(result[2])<<8 | int(result[3])<<16
-	if payloadLen != len(frame) {
-		t.Errorf("expected payload length %d, got %d", len(frame), payloadLen)
+
+	// Decompress and verify payload
+	compressedPayload := result[4 : 4+payloadLen]
+	gz, err := gzip.NewReader(bytes.NewReader(compressedPayload))
+	if err != nil {
+		t.Fatalf("failed to create gzip reader: %v", err)
+	}
+	decompressed, err := io.ReadAll(gz)
+	gz.Close()
+	if err != nil {
+		t.Fatalf("failed to decompress payload: %v", err)
 	}
 
-	// Check payload
-	if !bytes.Equal(result[4:], frame) {
-		t.Error("payload does not match frame data")
+	if !bytes.Equal(decompressed, frame) {
+		t.Error("decompressed payload does not match frame data")
 	}
 }
 
@@ -81,8 +91,8 @@ func TestEncode_FullFrame_SizeChange(t *testing.T) {
 	}
 
 	result := buf2.Bytes()
-	if result[0] != FrameTypeFull {
-		t.Errorf("expected full frame for size change, got %d", result[0])
+	if result[0] != FrameTypeFullCompressed {
+		t.Errorf("expected compressed full frame for size change (0x02), got %d", result[0])
 	}
 }
 
@@ -146,9 +156,9 @@ func TestEncode_FullFrame_ExceedsThreshold(t *testing.T) {
 
 	result := buf2.Bytes()
 
-	// Should be full frame since change exceeds threshold
-	if result[0] != FrameTypeFull {
-		t.Errorf("expected full frame when threshold exceeded, got %d", result[0])
+	// Should be compressed full frame since change exceeds threshold
+	if result[0] != FrameTypeFullCompressed {
+		t.Errorf("expected compressed full frame when threshold exceeded (0x02), got %d", result[0])
 	}
 }
 
@@ -176,9 +186,9 @@ func TestEncode_Reset(t *testing.T) {
 
 	result := buf2.Bytes()
 
-	// Should be full frame after reset
-	if result[0] != FrameTypeFull {
-		t.Errorf("expected full frame after reset, got %d", result[0])
+	// Should be compressed full frame after reset
+	if result[0] != FrameTypeFullCompressed {
+		t.Errorf("expected compressed full frame after reset (0x02), got %d", result[0])
 	}
 }
 

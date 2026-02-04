@@ -8,8 +8,9 @@ let previousFrame = null;
 let pendingBuffer = new Uint8Array(0);
 
 // Frame type constants (must match server)
-const FRAME_TYPE_FULL = 0x00;
+const FRAME_TYPE_FULL = 0x00;  // Deprecated: uncompressed full frame
 const FRAME_TYPE_DELTA = 0x01;
+const FRAME_TYPE_FULL_COMPRESSED = 0x02;  // Gzip-compressed full frame
 
 onmessage = (event) => {
 	const data = event.data;
@@ -55,7 +56,7 @@ async function initiateStream() {
 
 				const uint8Array = new Uint8Array(value);
 
-				processDeltaData(uint8Array, imageData, pixelDataSize);
+				await processDeltaData(uint8Array, imageData, pixelDataSize);
 
 				const nextChunk = await reader.read();
 				processData(nextChunk);
@@ -80,7 +81,7 @@ async function initiateStream() {
 }
 
 // Process delta-encoded data with frame header parsing
-function processDeltaData(chunkData, imageData, pixelDataSize) {
+async function processDeltaData(chunkData, imageData, pixelDataSize) {
 	// Append new data to pending buffer
 	const newBuffer = new Uint8Array(pendingBuffer.length + chunkData.length);
 	newBuffer.set(pendingBuffer);
@@ -99,32 +100,61 @@ function processDeltaData(chunkData, imageData, pixelDataSize) {
 			return;
 		}
 
-		// Extract payload
-		const payload = pendingBuffer.subarray(4, 4 + payloadLen);
+		// Extract payload (make a copy since we'll modify pendingBuffer)
+		const payload = pendingBuffer.slice(4, 4 + payloadLen);
+
+		// Remove processed bytes from buffer before async operations
+		pendingBuffer = pendingBuffer.slice(4 + payloadLen);
 
 		if (frameType === FRAME_TYPE_FULL) {
-			handleFullFrame(payload, imageData, pixelDataSize);
+			await handleFullFrame(payload, imageData, pixelDataSize, false);
+		} else if (frameType === FRAME_TYPE_FULL_COMPRESSED) {
+			await handleFullFrame(payload, imageData, pixelDataSize, true);
 		} else if (frameType === FRAME_TYPE_DELTA) {
 			handleDeltaFrame(payload, imageData, pixelDataSize);
 		}
-
-		// Remove processed bytes from buffer
-		pendingBuffer = pendingBuffer.slice(4 + payloadLen);
 	}
 }
 
-// Handle full frame: copy to previousFrame and render
-function handleFullFrame(payload, imageData, pixelDataSize) {
-	if (payload.length !== pixelDataSize) {
-		console.error('Full frame size mismatch:', payload.length, 'expected:', pixelDataSize);
+// Handle full frame: decompress if needed, copy to previousFrame and render
+async function handleFullFrame(payload, imageData, pixelDataSize, isCompressed) {
+	let frameData = payload;
+
+	if (isCompressed) {
+		// Decompress using DecompressionStream API
+		const ds = new DecompressionStream('gzip');
+		const writer = ds.writable.getWriter();
+		writer.write(payload);
+		writer.close();
+
+		const reader = ds.readable.getReader();
+		const chunks = [];
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			chunks.push(value);
+		}
+
+		// Concatenate chunks
+		const totalLen = chunks.reduce((acc, c) => acc + c.length, 0);
+		frameData = new Uint8Array(totalLen);
+		let offset = 0;
+		for (const chunk of chunks) {
+			frameData.set(chunk, offset);
+			offset += chunk.length;
+		}
+	}
+
+	if (frameData.length !== pixelDataSize) {
+		console.error('Full frame size mismatch:', frameData.length, 'expected:', pixelDataSize);
 		return;
 	}
 
 	// Store as previous frame
-	previousFrame.set(payload);
+	previousFrame.set(frameData);
 
 	// Copy to imageData for rendering
-	imageData.set(payload);
+	imageData.set(frameData);
 
 	// Send frame update
 	postMessage({ type: 'update', data: imageData });

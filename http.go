@@ -30,11 +30,7 @@ func setMuxer(eventPublisher *pubsub.PubSub) *http.ServeMux {
 	mux.HandleFunc("/", newIndexHandler(stripFS{http.FS(assetsFS)}))
 
 	streamHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher, c.DeltaThreshold)
-	if c.Compression {
-		mux.Handle("/stream", gzMiddleware(stream.ThrottlingMiddleware(streamHandler)))
-	} else {
-		mux.Handle("/stream", stream.ThrottlingMiddleware(streamHandler))
-	}
+	mux.Handle("/stream", stream.ThrottlingMiddleware(streamHandler))
 
 	wsHandler := eventhttphandler.NewEventHandler(eventPublisher)
 	mux.Handle("/events", wsHandler)

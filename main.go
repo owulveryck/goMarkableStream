@@ -21,7 +21,6 @@ type configuration struct {
 	Username       string  `envconfig:"SERVER_USERNAME" default:"admin"`
 	Password       string  `envconfig:"SERVER_PASSWORD" default:"password"`
 	TLS            bool    `envconfig:"HTTPS" default:"true"`
-	Compression    bool    `envconfig:"COMPRESSION" default:"false"`
 	DevMode        bool    `envconfig:"DEV_MODE" default:"false"`
 	DeltaThreshold float64 `envconfig:"DELTA_THRESHOLD" default:"0.30" description:"Change ratio threshold (0.0-1.0) above which full frame is sent"`
 }
@@ -83,7 +82,6 @@ func main() {
 
 	mux := setMuxer(eventPublisher)
 
-	//	handler := BasicAuthMiddleware(gzMiddleware(mux))
 	var handler http.Handler
 	handler = BasicAuthMiddleware(mux)
 	if *unsafe {
