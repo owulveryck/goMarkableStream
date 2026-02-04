@@ -13,11 +13,8 @@ let withColor = getQueryParam('color', 'true');
 withColor = withColor !== null ? withColor === 'true' : true;
 let rate = parseInt(getQueryParamOrDefault('rate', '200'), 10);
 
-// Remarkable Paper Pro uses BGRA format.
-let useBGRA = false;
-if (DeviceModel === 'RemarkablePaperPro') {
-	useBGRA = true;
-};
+// Use BGRA format flag from server (Paper Pro or RM2 firmware 3.24+)
+let useBGRA = UseBGRA;
 
 //let portrait = false;
 // Get the 'present' parameter from the URL

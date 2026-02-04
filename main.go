@@ -47,9 +47,9 @@ var (
 )
 
 func validateConfiguration(c *configuration) error {
-	if remarkable.Model == remarkable.RemarkablePaperPro {
+	if remarkable.Model == remarkable.RemarkablePaperPro || remarkable.Config.UseBGRA {
 		if c.RLECompression {
-			return errors.New("RLE compression is not supported on the Remarkable Paper Pro. Disable it by setting RLE_COMPRESSION=false")
+			return errors.New("RLE compression is not supported with BGRA format (Paper Pro or RM2 firmware 3.24+). Disable it by setting RLE_COMPRESSION=false")
 		}
 	}
 

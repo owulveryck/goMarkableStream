@@ -173,22 +173,24 @@ gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
 const textureCoordinates = getTextureCoordinates();
 
 function getTextureCoordinates() {
-    if (DeviceModel === "Remarkable2") {
+    if (TextureFlipped) {
+        // Paper Pro style or RM2 firmware 3.24+ (portrait orientation)
         return [
-			1.0, 1.0,
-			0.0, 1.0,
 			1.0, 0.0,
 			0.0, 0.0,
+			1.0, 1.0,
+			0.0, 1.0,
 		];
     } else {
+        // Legacy RM2 style (pre-3.24, landscape orientation)
         return [
-			1.0, 0.0,
-			0.0, 0.0,
 			1.0, 1.0,
 			0.0, 1.0,
+			1.0, 0.0,
+			0.0, 0.0,
 		];
-    };
-};
+    }
+}
 
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
 
