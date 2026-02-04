@@ -127,7 +127,7 @@ func (tm *TailscaleManager) logConnectionInfo(status *ipnstate.Status) {
 	}
 
 	// Log the access URL
-	port := ":8443" // Default port
+	port := tm.config.TailscalePort
 	if tm.config.TailscaleFunnel {
 		log.Printf("Funnel URL: https://%s%s", dnsName, port)
 	} else if tm.config.TailscaleUseTLS {
@@ -139,7 +139,7 @@ func (tm *TailscaleManager) logConnectionInfo(status *ipnstate.Status) {
 
 // createListener creates the appropriate listener based on configuration
 func (tm *TailscaleManager) createListener() (net.Listener, error) {
-	addr := ":8443" // Default port
+	addr := tm.config.TailscalePort
 
 	if tm.config.TailscaleFunnel {
 		// Funnel provides public internet access with TLS
@@ -199,7 +199,9 @@ func (tm *TailscaleManager) GetFunnelInfo() (enabled bool, url string, err error
 	}
 
 	dnsName := strings.TrimSuffix(status.Self.DNSName, ".")
-	url = fmt.Sprintf("https://%s:8443", dnsName)
+	// Extract port number from TailscalePort (e.g., ":8443" -> "8443")
+	portNum := strings.TrimPrefix(tm.config.TailscalePort, ":")
+	url = fmt.Sprintf("https://%s:%s", dnsName, portNum)
 	return tm.funnelEnabled, url, nil
 }
 
@@ -218,7 +220,7 @@ func (tm *TailscaleManager) ToggleFunnel(enable bool) (net.Listener, error) {
 	}
 
 	// Create new listener
-	addr := ":8443"
+	addr := tm.config.TailscalePort
 	var newListener net.Listener
 	var err error
 	if enable {

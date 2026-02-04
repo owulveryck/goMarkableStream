@@ -4,9 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-
-	"golang.ngrok.com/ngrok"
-	"golang.ngrok.com/ngrok/config"
 )
 
 // ListenerResult encapsulates listeners with their cleanup function and TLS state
@@ -18,58 +15,46 @@ type ListenerResult struct {
 }
 
 func setupListener(ctx context.Context, s *configuration) (*ListenerResult, error) {
-	switch s.BindAddr {
-	case "ngrok":
-		l, err := ngrok.Listen(ctx,
-			config.HTTPEndpoint(),
-			ngrok.WithAuthtokenFromEnv(),
-		)
-		if err != nil {
-			return nil, err
-		}
-		s.BindAddr = l.Addr().String()
-		return &ListenerResult{
-			Listeners: []net.Listener{l},
-			Cleanup:   func() error { return l.Close() },
-			UseTLS:    false, // ngrok handles TLS
-		}, nil
+	var listeners []net.Listener
+	var tm *TailscaleManager
+	var cleanup func() error
 
-	case "tailscale":
-		tm := NewTailscaleManager(s)
+	// Always create local listener using BindAddr
+	localListener, err := net.Listen("tcp", s.BindAddr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create local listener on %s: %w", s.BindAddr, err)
+	}
+	listeners = append(listeners, localListener)
+
+	// If Tailscale is enabled, create additional Tailscale listener
+	if s.TailscaleEnabled {
+		tm = NewTailscaleManager(s)
 		if tm == nil {
+			localListener.Close()
 			return nil, fmt.Errorf("Tailscale support not compiled in. Build with: go build -tags tailscale")
 		}
+
 		tsListener, err := tm.Start(ctx)
 		if err != nil {
-			return nil, err
+			localListener.Close()
+			return nil, fmt.Errorf("failed to start Tailscale: %w", err)
 		}
 
-		// Also create local listener for LAN access (different port to avoid conflict)
-		localListener, err := net.Listen("tcp", ":8443")
-		if err != nil {
-			tm.Close()
-			return nil, err
-		}
+		// Prepend Tailscale listener (index 0 is used for Tailscale detection in main.go)
+		listeners = append([]net.Listener{tsListener}, listeners...)
 
-		return &ListenerResult{
-			Listeners: []net.Listener{tsListener, localListener},
-			Cleanup: func() error {
-				localListener.Close()
-				return tm.Close()
-			},
-			UseTLS:           false, // WireGuard encrypts Tailscale; local is plain HTTP
-			TailscaleManager: tm,
-		}, nil
-
-	default:
-		l, err := net.Listen("tcp", s.BindAddr)
-		if err != nil {
-			return nil, err
+		cleanup = func() error {
+			localListener.Close()
+			return tm.Close()
 		}
-		return &ListenerResult{
-			Listeners: []net.Listener{l},
-			Cleanup:   func() error { return l.Close() },
-			UseTLS:    s.TLS,
-		}, nil
+	} else {
+		cleanup = func() error { return localListener.Close() }
 	}
+
+	return &ListenerResult{
+		Listeners:        listeners,
+		Cleanup:          cleanup,
+		UseTLS:           s.TLS && !s.TailscaleEnabled,
+		TailscaleManager: tm,
+	}, nil
 }

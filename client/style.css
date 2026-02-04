@@ -20,7 +20,7 @@
     --tooltip-color: #ffffff;
     --menu-hover: rgba(0, 122, 255, 0.1);
     --sidebar-width: 200px;
-    --sidebar-collapsed-width: 30px;
+    --sidebar-collapsed-width: 12px;
 }
 
 body, html {
@@ -344,6 +344,12 @@ canvas.hidden {
 #message.visible {
     opacity: 1;
     visibility: visible;
+}
+
+#message.info {
+    color: #007AFF;  /* Apple's blue - informational, not error */
+    background-color: rgba(240, 248, 255, 0.95);  /* Light blue tint */
+    border-color: rgba(0, 122, 255, 0.2);  /* Blue border to match */
 }
 
 /* Sidebar header styling */
