@@ -9,7 +9,7 @@
 
 ## Overview
 
-The goMarkableStream is a lightweight and user-friendly application designed specifically for the reMarkable tablet.
+goMarkableStream is a lightweight and user-friendly application designed specifically for the reMarkable tablet.
 
 Its primary goal is to enable users to stream their reMarkable tablet screen to a web browser without the need for any hacks or modifications that could void the warranty.
 
@@ -44,63 +44,81 @@ For older firmware versions:
 - **Dark Mode**: Toggle between light and dark themes for comfortable viewing in any environment.
 - **Version API**: Check the current version via the `/version` endpoint.
 
+## Available Binaries
+
+Each release provides four binary variants:
+
+| Binary | Device | Tailscale Support |
+|--------|--------|-------------------|
+| `gomarkablestream-RMPRO` | reMarkable Paper Pro (arm64) | Yes |
+| `gomarkablestream-RM2` | reMarkable 2 (arm) | Yes |
+| `gomarkablestream-RMPRO-lite` | reMarkable Paper Pro (arm64) | No |
+| `gomarkablestream-RM2-lite` | reMarkable 2 (arm) | No |
+
+**Which binary should I use?**
+- Use `RMPRO` variants for reMarkable Paper Pro
+- Use `RM2` variants for reMarkable 2
+- Use `-lite` variants if you don't need Tailscale remote access (smaller binary size)
+
 ## Quick Start
 
 ```bash
 localhost> ssh root@remarkable
 ```
 
-For version >= 3.6 
+**For reMarkable 2:**
 
 ```bash
 export GORKVERSION=$(wget -q -O - https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
-wget -q -O - https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/goMarkableStream_${GORKVERSION//v}_linux_arm.tar.gz | tar xzvf - -O goMarkableStream_${GORKVERSION//v}_linux_arm/goMarkableStream > goMarkableStream
+wget -O goMarkableStream https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/gomarkablestream-RM2
 chmod +x goMarkableStream
 ./goMarkableStream
 ```
 
-for version < 3.6
+**For reMarkable Paper Pro:**
 
 ```bash
-export GORKVERSION=$(curl -s https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
-curl -L -s https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/goMarkableStream_${GORKVERSION//v}_linux_arm.tar.gz | tar xzvf - -O goMarkableStream_${GORKVERSION//v}_linux_arm/goMarkableStream > goMarkableStream
-~/chmod +x goMarkableStream
+export GORKVERSION=$(wget -q -O - https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
+wget -O goMarkableStream https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/gomarkablestream-RMPRO
+chmod +x goMarkableStream
 ./goMarkableStream
 ```
 
-then go to [https://remarkable.local.:2001](https://remarkable.local.:2001) and login with `admin`/`password` (can be changed through environment variables or disable authentication with `-unsafe`)
+**For lite versions (without Tailscale):** Replace `gomarkablestream-RM2` or `gomarkablestream-RMPRO` with `gomarkablestream-RM2-lite` or `gomarkablestream-RMPRO-lite` respectively.
 
-_note_: _remarkable.local._ may work from apple devices (mDNS resolution).
+Then go to [https://remarkable.local.:2001](https://remarkable.local.:2001) and log in with `admin`/`password` (can be changed through environment variables or disable authentication with `-unsafe`)
+
+_Note_: _remarkable.local._ may work from Apple devices (mDNS resolution).
 Please note the `.` at the end.
-If it does not work, you may need to replace `remarkable.local.` by the IP address of the tablet.
+If it does not work, you may need to replace `remarkable.local.` with the IP address of the tablet.
 
-_note 2_: you can use this to update to a new version (ensure that you killed the previous version before with `kill $(pidof goMarkableStream)`)
+_Note 2_: You can use this to update to a new version (ensure that you killed the previous version before with `kill $(pidof goMarkableStream)`)
 
 ### Errors due to missing packages
 
-If you get errors such as `wget: note: TLS certificate validation not implemented` or `-sh: curl: command not found` when running through the process above, then some commands are missing on your Remarkable. To avoid having to install additional packages, you can first download goRemarkableStream to your local computer and then copy it over to your Remarkable as follows:
+If you get errors such as `wget: note: TLS certificate validation not implemented` when running through the process above, you can first download goMarkableStream to your local computer and then copy it over to your reMarkable as follows:
 
-1. Run this on your local computer to download goRemarkableStream into the current directory:
+1. Run this on your local computer to download goMarkableStream into the current directory (use `gomarkablestream-RM2` for reMarkable 2 or `gomarkablestream-RMPRO` for reMarkable Paper Pro):
 
 ```bash
 localhost> export GORKVERSION=$(wget -q -O - https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
-wget -q -O - https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/goMarkableStream_${GORKVERSION//v}_linux_arm.tar.gz | tar xzvf - -O goMarkableStream_${GORKVERSION//v}_linux_arm/goMarkableStream > goMarkableStream
+wget -O goMarkableStream https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/gomarkablestream-RM2
 chmod +x goMarkableStream
 ```
 
-2. Copy it over to your Remarkable (`remarkable` is the ip of your Remarkable):
+2. Copy it over to your reMarkable (`remarkable` is the IP of your reMarkable):
 ```bash
 localhost> scp ./goMarkableStream root@remarkable:/home/root/goMarkableStream
 ```
 
-3. Login into your Remarkable:
+3. Log in to your reMarkable:
 ```bash
 localhost> ssh root@remarkable
 ```
 
-4. Start goRemarkableStream (to make it permanent, see section about turning goRemakableStream into a systemd service):
+4. Start goMarkableStream (to make it permanent, see section about turning goMarkableStream into a systemd service):
 ```bash
-./goRemarkableStream
+./goMarkableStream
 ```
 
 
@@ -216,7 +234,7 @@ Add query parameters to the URL (`?parameter=value&otherparameter=value`):
 - `color`: (true/false) Enable or disable color.
 - `portrait`: (true/false) Enable or disable portrait mode.
 - `rate`: (integer, 100-...) Set the frame rate.
-- `flip`: (true/false) Enable or disable flipping 180 degree.
+- `flip`: (true/false) Enable or disable flipping 180 degrees.
 
 ### API Endpoints
 - `/`: Main web interface
@@ -254,7 +272,7 @@ This seamless integration enhances the experience of both presenting and viewing
 
 How to: add the `?present=https://your-reveal-js-presentation`
 
-_note_: due to browser restrictions, the URL must be HTTPS.
+_Note_: Due to browser restrictions, the URL must be HTTPS.
 
 ### Limitations and Performance
 
@@ -272,13 +290,13 @@ Users must use the side menu for navigation and control.
 
 ## Technical Details
 
-This tool suits my need and is an ongoing development. You can find various informations about the journey on my blog:
+This tool suits my needs and is an ongoing development. You can find various information about the journey on my blog:
 - [Streaming the reMarkable 2](https://blog.owulveryck.info/2021/03/30/streaming-the-remarkable-2.html)
 - [Evolving the Game: A clientless streaming tool for reMarkable 2](https://blog.owulveryck.info/2023/07/25/evolving-the-game-a-clientless-streaming-tool-for-remarkable-2.html)
 
-### Remarkable HTTP Server
+### reMarkable HTTP Server
 
-This is a standalone application that runs directly on a Remarkable tablet.
+This is a standalone application that runs directly on a reMarkable tablet.
 It does not have any dependencies on third-party libraries, making it a completely self-sufficient solution.
 This application exposes an HTTP server with several endpoints.
 
@@ -305,7 +323,7 @@ All image transformations utilize native browser implementations, providing opti
 GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -v -trimpath -ldflags="-s -w" .
 ```
 
-to install and run, you can then execute:
+To install and run, you can then execute:
 
 ```bash
 scp goMarkableStream root@remarkable:
@@ -324,5 +342,5 @@ Feel free to modify, distribute, and use the tool in accordance with the terms o
 
 ## Tipping
 
-If you plan to buy a reMarkable 2, you can use my [referal program link](https://remarkable.com/referral/PY5B-PH8U).
+If you plan to buy a reMarkable 2, you can use my [referral program link](https://remarkable.com/referral/PY5B-PH8U).
 It will provide a discount for you and also for me.
