@@ -61,12 +61,8 @@ window.onload = async function() {
 		document.getElementById('layersMenuItem').style.display = '';  // Show layers menu
 	}
 
-	// Update version in the sidebar footer
-	const version = await fetchVersion();
-	const footerElement = document.querySelector('.sidebar-footer small');
-	if (footerElement) {
-		footerElement.textContent = `goMarkableStream ${version}`;
-	}
+	// Show onboarding hint for first-time users
+	showOnboardingHint();
 
 	// Check Funnel availability and status
 	try {

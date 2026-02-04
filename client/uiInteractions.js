@@ -1,5 +1,63 @@
 // UI interactions module
 
+// Help overlay functionality
+function toggleHelpOverlay(show) {
+    const overlay = document.getElementById('helpOverlay');
+    if (!overlay) return;
+
+    if (show === undefined) {
+        overlay.classList.toggle('visible');
+    } else if (show) {
+        overlay.classList.add('visible');
+    } else {
+        overlay.classList.remove('visible');
+    }
+}
+
+// Help button click handler
+document.getElementById('helpButton').addEventListener('click', function() {
+    toggleHelpOverlay(true);
+});
+
+// Help close button click handler
+document.getElementById('helpCloseBtn').addEventListener('click', function() {
+    toggleHelpOverlay(false);
+});
+
+// Close help overlay when clicking outside content
+document.getElementById('helpOverlay').addEventListener('click', function(e) {
+    if (e.target === this) {
+        toggleHelpOverlay(false);
+    }
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Don't trigger shortcuts when typing in input fields
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return;
+    }
+
+    switch (e.key.toLowerCase()) {
+        case 'r':
+            // Rotate toggle
+            document.getElementById('rotate').click();
+            break;
+        case 'l':
+            // Laser toggle
+            document.getElementById('laserToggle').click();
+            break;
+        case '?':
+            // Help overlay
+            toggleHelpOverlay(true);
+            break;
+        case 'escape':
+            // Close help overlay
+            toggleHelpOverlay(false);
+            break;
+    }
+});
+
 // Rotate button functionality
 document.getElementById('rotate').addEventListener('click', function () {
     portrait = !portrait;
@@ -9,7 +67,7 @@ document.getElementById('rotate').addEventListener('click', function () {
     redrawScene(portrait, 1);
 
     // Show confirmation message
-    showMessage(`Display ${portrait ? 'portrait' : 'landscape'} mode activated`, 2000);
+    showMessage(`Display ${portrait ? 'portrait' : 'landscape'} mode activated`, MessageDuration.QUICK);
 });
 
 // Sidebar hover effect
@@ -33,11 +91,11 @@ document.getElementById('switchOrderButton').addEventListener('click', function 
     if (isLayerSwitched) {
         iFrame.style.zIndex = 1;
         this.classList.remove('toggled');
-        showMessage('Drawing layer on top', 2000);
+        showMessage('Drawing layer on top', MessageDuration.QUICK);
     } else {
         iFrame.style.zIndex = 4;
         this.classList.add('toggled');
-        showMessage('Content layer on top', 2000);
+        showMessage('Content layer on top', MessageDuration.QUICK);
     }
 });
 
@@ -48,7 +106,7 @@ document.getElementById('laserToggle').addEventListener('click', function () {
     if (!laserEnabled) {
         clearLaser();
     }
-    showMessage(`Laser pointer ${laserEnabled ? 'enabled' : 'disabled'}`, 2000);
+    showMessage(`Laser pointer ${laserEnabled ? 'enabled' : 'disabled'}`, MessageDuration.QUICK);
 });
 
 // Funnel toggle and URL copy
@@ -60,7 +118,7 @@ document.getElementById('funnelButton').addEventListener('click', async function
         let data = await response.json();
 
         if (!data.available) {
-            showMessage('Tailscale mode not active', 2000);
+            showMessage('Tailscale mode not active', MessageDuration.NORMAL);
             return;
         }
 
@@ -70,7 +128,8 @@ document.getElementById('funnelButton').addEventListener('click', async function
         // If enabling Funnel, stop local stream first to free the connection
         if (newState) {
             streamWorker.postMessage({ type: 'terminate' });
-            showMessage('Stopping local stream for Funnel...', 2000);
+            updateConnectionStatus(ConnectionState.PAUSED);
+            showMessage('Enabling public sharing...', MessageDuration.NORMAL);
         }
 
         response = await fetch('/funnel', {
@@ -113,6 +172,8 @@ document.getElementById('funnelButton').addEventListener('click', async function
             } catch (clipboardErr) {
                 console.warn('Clipboard access denied:', clipboardErr);
             }
+            // Update status indicator to show paused state
+            updateConnectionStatus(ConnectionState.PAUSED);
             // Show persistent status message
             showStatusMessage('Local stream paused - Funnel sharing active');
         } else {
@@ -122,16 +183,17 @@ document.getElementById('funnelButton').addEventListener('click', async function
                 qrContainer.style.display = 'none';
             }
 
-            // Restore version in footer
+            // Restore footer text
             if (footerElement) {
-                fetchVersion().then(version => {
-                    footerElement.textContent = `goMarkableStream ${version}`;
-                    footerElement.title = '';
-                });
+                footerElement.textContent = 'goMarkableStream';
+                footerElement.title = '';
             }
 
             // Hide persistent status message before restarting stream
             hideStatusMessage();
+
+            // Update status to connecting
+            updateConnectionStatus(ConnectionState.CONNECTING);
 
             // Recreate and reinitialize stream worker
             streamWorker = new Worker('worker_stream_processing.js');
@@ -139,7 +201,7 @@ document.getElementById('funnelButton').addEventListener('click', async function
         }
     } catch (error) {
         console.error('Funnel toggle error:', error);
-        showMessage('Failed to toggle Funnel', 2000);
+        showMessage('Failed to toggle public sharing', MessageDuration.IMPORTANT);
     }
 });
 
