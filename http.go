@@ -73,6 +73,10 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 			}
 
 			log.Printf("Funnel toggle: requested enable=%v", req.Enable)
+
+			// Cancel active streams before toggling listener
+			stream.CancelActiveStreams()
+
 			_, err := tm.ToggleFunnel(req.Enable)
 			if err != nil {
 				log.Printf("Funnel toggle: failed: %v", err)
