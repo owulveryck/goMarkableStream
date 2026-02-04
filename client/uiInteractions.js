@@ -1,14 +1,5 @@
 // UI interactions module
 
-// Check user preference on page load
-document.addEventListener('DOMContentLoaded', function() {
-    // Ensure colors button starts toggled since colors are on by default
-    const colorsButton = document.getElementById('colors');
-    if (!colorsButton.classList.contains('toggled')) {
-        colorsButton.classList.add('toggled');
-    }
-});
-
 // Rotate button functionality
 document.getElementById('rotate').addEventListener('click', function () {
     portrait = !portrait;
@@ -18,16 +9,6 @@ document.getElementById('rotate').addEventListener('click', function () {
     
     // Show confirmation message
     showMessage(`Display ${portrait ? 'portrait' : 'landscape'} mode activated`, 2000);
-});
-
-// Colors button functionality
-document.getElementById('colors').addEventListener('click', function () {
-    withColor = !withColor;
-    this.classList.toggle('toggled');
-    streamWorker.postMessage({ type: 'withColorChanged', withColor: withColor });
-    
-    // Show confirmation message
-    showMessage(`${withColor ? 'Color' : 'Grayscale'} mode enabled`, 2000);
 });
 
 // Sidebar hover effect

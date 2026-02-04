@@ -251,7 +251,7 @@ function updateTexture(newRawData, shouldRotate, scaleFactor) {
 
 	// Set rotation
 	const uRotationMatrixLocation = gl.getUniformLocation(shaderProgram, 'uRotationMatrix');
-	const rotationMatrix = shouldRotate ? makeRotationZMatrix(270) : makeRotationZMatrix(0);
+	const rotationMatrix = shouldRotate ? makeRotationZMatrix(90) : makeRotationZMatrix(0);
 	gl.uniformMatrix4fv(uRotationMatrixLocation, false, rotationMatrix);
 
 	// Set scaling

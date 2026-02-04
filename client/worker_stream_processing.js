@@ -1,4 +1,3 @@
-let withColor = true;
 let height;
 let width;
 let rate;
@@ -19,12 +18,8 @@ onmessage = (event) => {
 		case 'init':
 			height = event.data.height;
 			width = event.data.width;
-			withColor = event.data.withColor;
 			rate = event.data.rate;
 			initiateStream();
-			break;
-		case 'withColorChanged':
-			withColor = event.data.withColor;
 			break;
 		case 'terminate':
 			console.log("terminating worker");
