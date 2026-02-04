@@ -4,6 +4,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net"
@@ -33,6 +35,13 @@ func NewTailscaleManager(cfg *configuration) *TailscaleManager {
 	}
 }
 
+// generateRandomSuffix creates a short random hex string for ephemeral hostnames
+func generateRandomSuffix() string {
+	b := make([]byte, 3) // 3 bytes = 6 hex chars
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
 // Start initializes the Tailscale server and returns a listener
 func (tm *TailscaleManager) Start(ctx context.Context) (net.Listener, error) {
 	// Create state directory with proper permissions
@@ -40,9 +49,15 @@ func (tm *TailscaleManager) Start(ctx context.Context) (net.Listener, error) {
 		return nil, fmt.Errorf("failed to create state directory: %w", err)
 	}
 
+	// Determine hostname - add random suffix for ephemeral nodes
+	hostname := tm.config.TailscaleHostname
+	if tm.config.TailscaleEphemeral {
+		hostname = fmt.Sprintf("%s-%s", hostname, generateRandomSuffix())
+	}
+
 	// Create and configure tsnet.Server
 	tm.server = &tsnet.Server{
-		Hostname: tm.config.TailscaleHostname,
+		Hostname: hostname,
 		Dir:      tm.config.TailscaleStateDir,
 	}
 
@@ -113,7 +128,7 @@ func (tm *TailscaleManager) logConnectionInfo(status *ipnstate.Status) {
 		return
 	}
 
-	log.Printf("Tailscale connected as: %s", tm.config.TailscaleHostname)
+	log.Printf("Tailscale connected as: %s", tm.server.Hostname)
 
 	// Log all Tailscale IPs
 	for _, ip := range status.Self.TailscaleIPs {

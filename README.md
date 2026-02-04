@@ -180,7 +180,7 @@ Tailscale allows secure remote access to your reMarkable tablet from anywhere on
 - `RK_TAILSCALE_HOSTNAME`: (String, default: `gomarkablestream`) Device name in your tailnet.
 - `RK_TAILSCALE_STATE_DIR`: (String, default: `/home/root/.tailscale/gomarkablestream`) State directory for Tailscale.
 - `RK_TAILSCALE_AUTHKEY`: (String, default: empty) Auth key for headless setup. If unset, Tailscale will display a login URL in the console for interactive authentication.
-- `RK_TAILSCALE_EPHEMERAL`: (True/False, default: `false`) Register as ephemeral node (removed when disconnected).
+- `RK_TAILSCALE_EPHEMERAL`: (True/False, default: `false`) Register as ephemeral node (removed when disconnected). **Recommended for most users.** When enabled, a random suffix is appended to the hostname (e.g., `gomarkablestream-a1b2c3`) to avoid naming conflicts if multiple instances are started.
 - `RK_TAILSCALE_FUNNEL`: (True/False, default: `false`) Enable public internet access via Tailscale Funnel.
 - `RK_TAILSCALE_USE_TLS`: (True/False, default: `false`) Use Tailscale's automatic TLS certificates.
 - `RK_TAILSCALE_VERBOSE`: (True/False, default: `false`) Verbose Tailscale logging.
@@ -193,6 +193,9 @@ RK_TAILSCALE_ENABLED=true ./goMarkableStream
 
 # Enable Tailscale with auth key (headless setup)
 RK_TAILSCALE_ENABLED=true RK_TAILSCALE_AUTHKEY=tskey-auth-xxx ./goMarkableStream
+
+# Recommended: ephemeral mode with auth key (node removed on disconnect, random hostname suffix)
+RK_TAILSCALE_ENABLED=true RK_TAILSCALE_EPHEMERAL=true RK_TAILSCALE_AUTHKEY=tskey-auth-xxx ./goMarkableStream
 
 # Access via Tailscale: https://gomarkablestream.your-tailnet.ts.net:8443
 # Access locally: https://remarkable.local.:2001
