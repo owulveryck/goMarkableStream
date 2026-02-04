@@ -94,20 +94,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	eventPublisher := pubsub.NewPubSub()
-	eventScanner := remarkable.NewEventScanner()
-	eventScanner.StartAndPublish(context.Background(), eventPublisher)
 
-	mux := setMuxer(eventPublisher)
-
-	var handler http.Handler
-	handler = BasicAuthMiddleware(mux)
-	if *unsafe {
-		handler = mux
-	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Setup listener first to get TailscaleManager
 	listenerResult, err := setupListener(ctx, &c)
 	if err != nil {
 		log.Fatal(err)
@@ -124,6 +115,22 @@ func main() {
 		log.Printf("listening on %v", l.Addr())
 	}
 
+	eventPublisher := pubsub.NewPubSub()
+	eventScanner := remarkable.NewEventScanner()
+	eventScanner.StartAndPublish(ctx, eventPublisher)
+
+	// Channel to signal Tailscale listener restart
+	restartCh := make(chan bool, 1)
+
+	// Pass TailscaleManager and restart channel to setMuxer
+	mux := setMuxer(eventPublisher, listenerResult.TailscaleManager, restartCh)
+
+	var handler http.Handler
+	handler = BasicAuthMiddleware(mux)
+	if *unsafe {
+		handler = mux
+	}
+
 	// Create HTTP server for graceful shutdown
 	server := &http.Server{
 		Handler: handler,
@@ -134,16 +141,38 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	// Start server goroutines for each listener
-	serverErr := make(chan error, len(listenerResult.Listeners))
-	for _, listener := range listenerResult.Listeners {
-		go func(l net.Listener) {
-			log.Printf("Serving on %v", l.Addr())
-			if listenerResult.UseTLS {
-				serverErr <- runTLS(l, handler)
-			} else {
-				serverErr <- server.Serve(l)
+	serverErr := make(chan error, len(listenerResult.Listeners)+1)
+	for i, listener := range listenerResult.Listeners {
+		isTailscale := i == 0 && listenerResult.TailscaleManager != nil
+		go func(l net.Listener, isTailscale bool) {
+			for {
+				log.Printf("Serving on %v", l.Addr())
+				var serveErr error
+				if listenerResult.UseTLS {
+					serveErr = runTLS(l, handler)
+				} else {
+					serveErr = server.Serve(l)
+				}
+
+				if serveErr == http.ErrServerClosed {
+					return
+				}
+
+				// If Tailscale listener, wait for restart signal
+				if isTailscale && listenerResult.TailscaleManager != nil {
+					select {
+					case <-restartCh:
+						l = listenerResult.TailscaleManager.GetListener()
+						continue
+					case <-ctx.Done():
+						return
+					}
+				}
+
+				serverErr <- serveErr
+				return
 			}
-		}(listener)
+		}(listener, isTailscale)
 	}
 
 	// Wait for shutdown signal or server error

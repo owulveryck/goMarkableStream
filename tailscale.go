@@ -1,3 +1,5 @@
+//go:build tailscale
+
 package main
 
 import (
@@ -7,6 +9,8 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 
 	"tailscale.com/ipn/ipnstate"
 	"tailscale.com/tsnet"
@@ -14,9 +18,12 @@ import (
 
 // TailscaleManager encapsulates tsnet.Server lifecycle management
 type TailscaleManager struct {
-	server  *tsnet.Server
-	config  *configuration
-	started bool
+	server        *tsnet.Server
+	config        *configuration
+	started       bool
+	funnelEnabled bool         // Current Funnel state
+	tsListener    net.Listener // Current Tailscale listener
+	mu            sync.Mutex   // Protect concurrent access
 }
 
 // NewTailscaleManager creates a new TailscaleManager with the given configuration
@@ -66,7 +73,17 @@ func (tm *TailscaleManager) Start(ctx context.Context) (net.Listener, error) {
 	tm.logConnectionInfo(status)
 
 	// Create the appropriate listener
-	return tm.createListener()
+	listener, err := tm.createListener()
+	if err != nil {
+		return nil, err
+	}
+
+	tm.mu.Lock()
+	tm.tsListener = listener
+	tm.funnelEnabled = tm.config.TailscaleFunnel
+	tm.mu.Unlock()
+
+	return listener, nil
 }
 
 // ensureStateDir creates the state directory with proper permissions
@@ -110,7 +127,7 @@ func (tm *TailscaleManager) logConnectionInfo(status *ipnstate.Status) {
 	}
 
 	// Log the access URL
-	port := ":2001" // Default port
+	port := ":8443" // Default port
 	if tm.config.TailscaleFunnel {
 		log.Printf("Funnel URL: https://%s%s", dnsName, port)
 	} else if tm.config.TailscaleUseTLS {
@@ -122,7 +139,7 @@ func (tm *TailscaleManager) logConnectionInfo(status *ipnstate.Status) {
 
 // createListener creates the appropriate listener based on configuration
 func (tm *TailscaleManager) createListener() (net.Listener, error) {
-	addr := ":2001" // Default port
+	addr := ":8443" // Default port
 
 	if tm.config.TailscaleFunnel {
 		// Funnel provides public internet access with TLS
@@ -156,4 +173,74 @@ func (tm *TailscaleManager) Close() error {
 // - If TailscaleUseTLS=false, WireGuard encrypts, no TLS needed
 func (tm *TailscaleManager) UseTLS() bool {
 	return false
+}
+
+// GetFunnelInfo returns current funnel status and URL
+func (tm *TailscaleManager) GetFunnelInfo() (enabled bool, url string, err error) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	if !tm.started || tm.server == nil {
+		return false, "", nil
+	}
+
+	lc, err := tm.server.LocalClient()
+	if err != nil {
+		return false, "", err
+	}
+
+	status, err := lc.Status(context.Background())
+	if err != nil {
+		return false, "", err
+	}
+
+	if status == nil || status.Self == nil {
+		return false, "", nil
+	}
+
+	dnsName := strings.TrimSuffix(status.Self.DNSName, ".")
+	url = fmt.Sprintf("https://%s:8443", dnsName)
+	return tm.funnelEnabled, url, nil
+}
+
+// ToggleFunnel enables or disables Funnel, returning new listener
+func (tm *TailscaleManager) ToggleFunnel(enable bool) (net.Listener, error) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	if !tm.started || tm.server == nil {
+		return nil, fmt.Errorf("Tailscale not started")
+	}
+
+	// Close existing Tailscale listener
+	if tm.tsListener != nil {
+		tm.tsListener.Close()
+	}
+
+	// Create new listener
+	addr := ":8443"
+	var newListener net.Listener
+	var err error
+	if enable {
+		log.Println("Enabling Tailscale Funnel...")
+		newListener, err = tm.server.ListenFunnel("tcp", addr)
+	} else {
+		log.Println("Disabling Tailscale Funnel...")
+		newListener, err = tm.server.Listen("tcp", addr)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	tm.tsListener = newListener
+	tm.funnelEnabled = enable
+	return newListener, nil
+}
+
+// GetListener returns current Tailscale listener
+func (tm *TailscaleManager) GetListener() net.Listener {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	return tm.tsListener
 }

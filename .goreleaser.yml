@@ -5,6 +5,7 @@ before:
     - go mod download
 
 builds:
+  # With Tailscale
   - env:
       - CGO_ENABLED=0
     id: "Remarkable Paper Pro"
@@ -14,8 +15,9 @@ builds:
       - linux
     goarch:
       - arm64
-    goarm:
-      - "7"
+    tags:
+      - tailscale
+
   - env:
       - CGO_ENABLED=0
     id: "Remarkable 2"
@@ -27,13 +29,35 @@ builds:
       - arm
     goarm:
       - "7"
+    tags:
+      - tailscale
+
+  # Without Tailscale (lighter binary)
+  - env:
+      - CGO_ENABLED=0
+    id: "Remarkable Paper Pro - No Tailscale"
+    main: .
+    binary: goMarkableStream-lite
+    goos:
+      - linux
+    goarch:
+      - arm64
+
+  - env:
+      - CGO_ENABLED=0
+    id: "Remarkable 2 - No Tailscale"
+    main: .
+    binary: goMarkableStream-lite
+    goos:
+      - linux
+    goarch:
+      - arm
+    goarm:
+      - "7"
 
 archives:
   - name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
-    format_overrides:
-      - goos: windows
-        format: zip
 
 checksum:
   name_template: "checksums.txt"

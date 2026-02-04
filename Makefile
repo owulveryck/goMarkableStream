@@ -13,4 +13,4 @@ build-remarkable-paper-pro: build
 .PHONY: build
 build:
 	@echo "Building for GOOS=${GOOS}, GOARCH=${GOARCH}, CGO_ENABLED=${CGO_ENABLED}"
-	go build -v -trimpath -ldflags="-s -w" .
+	go build -v -trimpath -tags tailscale -ldflags="-s -w" .

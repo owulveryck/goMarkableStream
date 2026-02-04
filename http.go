@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -23,7 +24,7 @@ func (s stripFS) Open(name string) (http.File, error) {
 	return s.fs.Open("client" + name)
 }
 
-func setMuxer(eventPublisher *pubsub.PubSub) *http.ServeMux {
+func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh chan<- bool) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// Custom handler to serve index.html for root path
@@ -46,6 +47,62 @@ func setMuxer(eventPublisher *pubsub.PubSub) *http.ServeMux {
 		}
 		w.Header().Set("Content-Type", "text/plain")
 		fmt.Fprintf(w, "%s", bi.Main.Version)
+	})
+
+	// Funnel status and toggle endpoint
+	mux.HandleFunc("/funnel", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		if tm == nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"available": false,
+				"enabled":   false,
+				"url":       "",
+			})
+			return
+		}
+
+		if r.Method == "POST" {
+			var req struct {
+				Enable bool `json:"enable"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				log.Printf("Funnel toggle: failed to decode request: %v", err)
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			log.Printf("Funnel toggle: requested enable=%v", req.Enable)
+			_, err := tm.ToggleFunnel(req.Enable)
+			if err != nil {
+				log.Printf("Funnel toggle: failed: %v", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			log.Printf("Funnel toggle: success, enabled=%v", req.Enable)
+
+			// Signal main to restart Tailscale server goroutine
+			if restartCh != nil {
+				select {
+				case restartCh <- req.Enable:
+					log.Println("Funnel toggle: restart signal sent")
+				default:
+					log.Println("Funnel toggle: restart channel full, skipping signal")
+				}
+			}
+		}
+
+		enabled, url, err := tm.GetFunnelInfo()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"available": true,
+			"enabled":   enabled,
+			"url":       url,
+		})
 	})
 
 	if c.DevMode {
