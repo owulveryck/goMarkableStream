@@ -10,7 +10,7 @@ builds:
       - CGO_ENABLED=0
     id: "Remarkable Paper Pro"
     main: .
-    binary: goMarkableStream
+    binary: gomarkablestream-RMPRO
     goos:
       - linux
     goarch:
@@ -22,7 +22,7 @@ builds:
       - CGO_ENABLED=0
     id: "Remarkable 2"
     main: .
-    binary: goMarkableStream
+    binary: gomarkablestream-RM2
     goos:
       - linux
     goarch:
@@ -37,7 +37,7 @@ builds:
       - CGO_ENABLED=0
     id: "Remarkable Paper Pro - No Tailscale"
     main: .
-    binary: goMarkableStream-lite
+    binary: gomarkablestream-RMPRO-lite
     goos:
       - linux
     goarch:
@@ -47,7 +47,7 @@ builds:
       - CGO_ENABLED=0
     id: "Remarkable 2 - No Tailscale"
     main: .
-    binary: goMarkableStream-lite
+    binary: gomarkablestream-RM2-lite
     goos:
       - linux
     goarch:
@@ -56,8 +56,9 @@ builds:
       - "7"
 
 archives:
-  - name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}"
-    wrap_in_directory: true
+  - formats:
+      - binary
+    name_template: "{{ .Binary }}"
 
 checksum:
   name_template: "checksums.txt"
