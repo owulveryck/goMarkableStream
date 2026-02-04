@@ -9,6 +9,8 @@ import (
 	"encoding/binary"
 	"io"
 	"unsafe"
+
+	"github.com/owulveryck/goMarkableStream/internal/debug"
 )
 
 const (
@@ -54,6 +56,13 @@ type changeRun struct {
 // Encode writes the current frame to w, using delta encoding if beneficial.
 // Returns nil on success, or an error if writing fails.
 func (e *Encoder) Encode(current []byte, w io.Writer) error {
+	_, err := e.EncodeWithSize(current, w)
+	return err
+}
+
+// EncodeWithSize writes the current frame to w, using delta encoding if beneficial.
+// Returns the number of bytes written and nil on success, or 0 and an error if writing fails.
+func (e *Encoder) EncodeWithSize(current []byte, w io.Writer) (int, error) {
 	frameSize := len(current)
 
 	// First frame or no previous: send full frame
@@ -61,6 +70,7 @@ func (e *Encoder) Encode(current []byte, w io.Writer) error {
 		e.prevFrame = make([]byte, frameSize)
 		copy(e.prevFrame, current)
 		e.hasPrev = true
+		debug.Log("Delta: first frame, sending full")
 		return e.writeFullFrame(current, w)
 	}
 
@@ -82,11 +92,13 @@ func (e *Encoder) Encode(current []byte, w io.Writer) error {
 	// If change ratio exceeds threshold OR delta is larger than full frame, send full frame
 	if changeRatio > e.threshold || deltaSize >= frameSize {
 		copy(e.prevFrame, current)
+		debug.Log("Delta: changeRatio=%.2f%%, runs=%d, sending full", changeRatio*100, len(runs))
 		return e.writeFullFrame(current, w)
 	}
 
 	// Send delta frame
 	copy(e.prevFrame, current)
+	debug.Log("Delta: changeRatio=%.2f%%, runs=%d, sending delta", changeRatio*100, len(runs))
 	return e.writeDeltaFrame(runs, deltaSize, w)
 }
 
@@ -192,7 +204,8 @@ func (e *Encoder) calculateDeltaSize(runs []changeRun) int {
 }
 
 // writeFullFrame writes a gzip-compressed full frame with header.
-func (e *Encoder) writeFullFrame(data []byte, w io.Writer) error {
+// Returns the total number of bytes written.
+func (e *Encoder) writeFullFrame(data []byte, w io.Writer) (int, error) {
 	// Compress data with gzip (BestSpeed for minimal CPU overhead)
 	var buf bytes.Buffer
 	gz, _ := gzip.NewWriterLevel(&buf, gzip.BestSpeed)
@@ -210,14 +223,18 @@ func (e *Encoder) writeFullFrame(data []byte, w io.Writer) error {
 	header[3] = byte((payloadLen >> 16) & 0xFF)
 
 	if _, err := w.Write(header); err != nil {
-		return err
+		return 0, err
 	}
-	_, err := w.Write(compressed)
-	return err
+	n, err := w.Write(compressed)
+	if err != nil {
+		return 4, err
+	}
+	return 4 + n, nil
 }
 
 // writeDeltaFrame writes a delta frame with header and change runs.
-func (e *Encoder) writeDeltaFrame(runs []changeRun, payloadSize int, w io.Writer) error {
+// Returns the total number of bytes written.
+func (e *Encoder) writeDeltaFrame(runs []changeRun, payloadSize int, w io.Writer) (int, error) {
 	header := make([]byte, 4)
 	header[0] = FrameTypeDelta
 	// Payload length in 24-bit little-endian
@@ -226,7 +243,7 @@ func (e *Encoder) writeDeltaFrame(runs []changeRun, payloadSize int, w io.Writer
 	header[3] = byte((payloadSize >> 16) & 0xFF)
 
 	if _, err := w.Write(header); err != nil {
-		return err
+		return 0, err
 	}
 
 	// Write each change run
@@ -234,17 +251,17 @@ func (e *Encoder) writeDeltaFrame(runs []changeRun, payloadSize int, w io.Writer
 		if run.offset <= maxShortOffset && run.length <= maxShortLength {
 			// Short run format
 			if err := e.writeShortRun(run, w); err != nil {
-				return err
+				return 0, err
 			}
 		} else {
 			// Long run format
 			if err := e.writeLongRun(run, w); err != nil {
-				return err
+				return 0, err
 			}
 		}
 	}
 
-	return nil
+	return 4 + payloadSize, nil
 }
 
 // writeShortRun writes a short run (offset < 64KB, length <= 127 pixels).

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/owulveryck/goMarkableStream/internal/debug"
 	"github.com/owulveryck/goMarkableStream/internal/delta"
 	"github.com/owulveryck/goMarkableStream/internal/events"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
@@ -44,6 +45,11 @@ type StreamHandler struct {
 
 // ServeHTTP implements http.Handler
 func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	debug.Log("Stream: new connection from %s", r.RemoteAddr)
+
+	// Reset delta encoder to force a full frame for the new client
+	h.deltaEncoder.Reset()
+
 	// Parse query parameters
 	query := r.URL.Query()
 	rateStr := query.Get("rate")
@@ -63,6 +69,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "rate value is too low", http.StatusBadRequest)
 		return
 	}
+	debug.Log("Stream: rate=%dms", rate)
 
 	// Set CORS headers for the preflight request
 	if r.Method == http.MethodOptions {
@@ -76,6 +83,8 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	eventC := h.inputEventsBus.Subscribe("stream")
 	defer h.inputEventsBus.Unsubscribe(eventC)
+	debug.Log("Stream: subscribed to events")
+
 	ticker := time.NewTicker(rate * time.Millisecond)
 	ticker.Reset(rate * time.Millisecond)
 	defer ticker.Stop()
@@ -94,13 +103,20 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case <-r.Context().Done():
+			debug.Log("Stream: client disconnected (%s)", r.RemoteAddr)
 			return
 		case event := <-eventC:
 			if event.Code == 24 || event.Source == events.Touch {
+				if !writing {
+					debug.Log("Stream: writing resumed (input event code=%d, source=%v)", event.Code, event.Source)
+				}
 				writing = true
 				stopWriting.Reset(2000 * time.Millisecond)
 			}
 		case <-stopWriting.C:
+			if writing {
+				debug.Log("Stream: writing paused (no input for 2s)")
+			}
 			writing = false
 		case <-ticker.C:
 			if writing {
@@ -116,11 +132,12 @@ func (h *StreamHandler) fetchAndSendDelta(w io.Writer, rawData []uint8) {
 		log.Println(err)
 		return
 	}
-	err = h.deltaEncoder.Encode(rawData, w)
+	frameSize, err := h.deltaEncoder.EncodeWithSize(rawData, w)
 	if err != nil {
 		log.Println("Error in delta encoding", err)
 		return
 	}
+	debug.Log("Stream: sent frame (%d bytes)", frameSize)
 	if f, ok := w.(http.Flusher); ok {
 		f.Flush()
 	}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 
+	dbg "github.com/owulveryck/goMarkableStream/internal/debug"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 )
@@ -23,6 +24,7 @@ type configuration struct {
 	TLS            bool    `envconfig:"HTTPS" default:"true"`
 	DevMode        bool    `envconfig:"DEV_MODE" default:"false"`
 	DeltaThreshold float64 `envconfig:"DELTA_THRESHOLD" default:"0.30" description:"Change ratio threshold (0.0-1.0) above which full frame is sent"`
+	Debug          bool    `envconfig:"DEBUG" default:"false" description:"Enable debug logging"`
 }
 
 const (
@@ -71,6 +73,8 @@ func main() {
 	if err := validateConfiguration(&c); err != nil {
 		panic(err)
 	}
+
+	dbg.Enabled = c.Debug
 
 	file, pointerAddr, err = remarkable.GetFileAndPointer()
 	if err != nil {
