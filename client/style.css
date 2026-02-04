@@ -1,38 +1,77 @@
-/* CSS styles for the layout */
+/* CSS styles for the layout - Glassmorphism UI */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+/* ============================================
+   Design System: Glassmorphism Dark Theme
+   ============================================ */
+
 :root {
-    /* Light Mode Colors */
-    --background-color: #f8f9fa;
-    --container-bg: #ffffff;
-    --sidebar-bg: #f0f4f8;
-    --text-color: #333333;
-    --text-secondary: #6c757d;
-    --accent-color: #007AFF;
-    --accent-hover: #0056b3;
-    --border-color: rgba(0, 0, 0, 0.1);
-    --shadow-color: rgba(0, 0, 0, 0.08);
-    --toggle-bg: #e9ecef;
-    --toggle-circle: #ffffff;
-    --button-success: #34C759;
-    --button-success-hover: #28a745;
-    --tooltip-bg: rgba(0, 0, 0, 0.7);
-    --tooltip-color: #ffffff;
-    --menu-hover: rgba(0, 122, 255, 0.1);
+    /* Base Colors */
+    --bg-base: #0a0a0f;
+    --bg-gradient-end: #1a1a2e;
+
+    /* Glass Surfaces */
+    --glass-bg: rgba(255, 255, 255, 0.08);
+    --glass-bg-hover: rgba(255, 255, 255, 0.12);
+    --glass-bg-active: rgba(255, 255, 255, 0.16);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-border-hover: rgba(255, 255, 255, 0.18);
+
+    /* Text Hierarchy */
+    --text-primary: rgba(255, 255, 255, 0.95);
+    --text-secondary: rgba(255, 255, 255, 0.65);
+    --text-tertiary: rgba(255, 255, 255, 0.45);
+
+    /* Accent Colors */
+    --accent-color: #6366f1;
+    --accent-hover: #818cf8;
+    --accent-glow: rgba(99, 102, 241, 0.4);
+
+    /* Semantic Colors */
+    --color-success: #22c55e;
+    --color-success-glow: rgba(34, 197, 94, 0.4);
+    --color-warning: #f59e0b;
+    --color-warning-glow: rgba(245, 158, 11, 0.4);
+    --color-error: #ef4444;
+    --color-error-glow: rgba(239, 68, 68, 0.4);
+
+    /* Blur Values */
+    --blur-sm: 8px;
+    --blur-md: 16px;
+    --blur-lg: 24px;
+    --blur-xl: 40px;
+
+    /* Shadows */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
+
+    /* Layout */
     --sidebar-width: 200px;
     --sidebar-collapsed-width: 12px;
+
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-slow: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* ============================================
+   Base Styles
+   ============================================ */
 
 body, html {
     margin: 0;
     padding: 0;
     height: 100%;
-    background-color: var(--background-color);
+    background: linear-gradient(135deg, var(--bg-base) 0%, var(--bg-gradient-end) 100%);
     font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    color: var(--text-color);
-    transition: background-color 0.3s ease, color 0.3s ease;
+    color: var(--text-primary);
     font-size: 16px;
     line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 #container {
@@ -42,19 +81,17 @@ body, html {
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    background-color: var(--container-bg);
-    box-shadow: 0 0 20px var(--shadow-color);
-    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    background: transparent;
     position: relative;
 }
 
 #canvas {
     position: absolute;
-    width: 100vw;   /* 100% of the viewport width */
-    height: 100vh;  /* 100% of the viewport height */
-    display: block; /* Remove extra space around the canvas */
+    width: 100vw;
+    height: 100vh;
+    display: block;
     z-index: 2;
-    transition: filter 0.3s ease;
+    transition: filter var(--transition-normal);
 }
 
 #content {
@@ -66,18 +103,28 @@ canvas.hidden {
     display: none;
 }
 
+/* ============================================
+   Sidebar
+   ============================================ */
+
 .sidebar {
     width: var(--sidebar-width);
     height: 100vh;
-    background-color: var(--sidebar-bg);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-right: 1px solid var(--border-color);
-    box-shadow: 2px 0 15px var(--shadow-color);
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.05) 100%
+    );
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+    border-right: 1px solid var(--glass-border);
+    box-shadow:
+        var(--shadow-lg),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
     position: fixed;
     top: 0;
     left: calc(-1 * (var(--sidebar-width) - var(--sidebar-collapsed-width)));
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all var(--transition-normal);
     z-index: 5;
     padding-top: 0;
     overflow-y: auto;
@@ -88,19 +135,96 @@ canvas.hidden {
 
 .sidebar.active {
     left: 0;
+    box-shadow:
+        var(--shadow-xl),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
 }
 
-.sidebar:after {
+.sidebar::after {
     content: '';
     position: absolute;
     top: 0;
     right: 0;
     width: var(--sidebar-collapsed-width);
     height: 100%;
-    background: linear-gradient(90deg, transparent, var(--sidebar-bg));
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(99, 102, 241, 0.1)
+    );
     z-index: -1;
     opacity: 0.8;
+    pointer-events: none;
 }
+
+/* ============================================
+   Sidebar Header
+   ============================================ */
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    padding: 24px 16px;
+    border-bottom: 1px solid var(--glass-border);
+    margin-bottom: 15px;
+    background: linear-gradient(
+        135deg,
+        rgba(99, 102, 241, 0.2) 0%,
+        rgba(99, 102, 241, 0.05) 100%
+    );
+    position: relative;
+    overflow: hidden;
+}
+
+/* Diagonal shine overlay */
+.sidebar-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(
+        120deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.05) 50%,
+        transparent 70%
+    );
+    animation: shine 8s ease-in-out infinite;
+}
+
+@keyframes shine {
+    0%, 100% { transform: translateX(-50%); }
+    50% { transform: translateX(50%); }
+}
+
+.sidebar-logo {
+    width: 38px;
+    height: 38px;
+    margin-right: 12px;
+    border-radius: 10px;
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.3),
+        0 0 20px var(--accent-glow);
+    transition: transform var(--transition-normal);
+}
+
+.sidebar-header:hover .sidebar-logo {
+    transform: rotate(10deg) scale(1.05);
+}
+
+.sidebar-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   Menu & Buttons
+   ============================================ */
 
 .menu {
     list-style: none;
@@ -113,13 +237,12 @@ canvas.hidden {
     padding: 0;
     margin: 8px 15px;
     border-radius: 12px;
-    transition: all 0.2s ease;
+    transition: all var(--transition-fast);
     position: relative;
 }
 
 .menu li:hover {
-    background-color: var(--menu-hover);
-    transform: translateY(-1px);
+    background-color: var(--glass-bg-hover);
 }
 
 .menu li button {
@@ -129,62 +252,168 @@ canvas.hidden {
     border-radius: inherit;
 }
 
+/* Apple-style button */
+.apple-button {
+    display: inline-flex;
+    align-items: center;
+    width: 100%;
+    padding: 0;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    outline: none;
+    background-color: transparent;
+    color: var(--text-primary);
+    box-shadow: none;
+}
+
+.apple-button:hover {
+    background-color: var(--glass-bg-hover);
+    border-color: var(--glass-border);
+}
+
+.apple-button:active {
+    transform: scale(0.98);
+    background-color: var(--glass-bg-active);
+}
+
+.apple-button:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+.button-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    color: var(--accent-color);
+    transition: all var(--transition-fast);
+    filter: drop-shadow(0 0 4px var(--accent-glow));
+}
+
+.apple-button:hover .button-icon {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 8px var(--accent-glow));
+}
+
+.apple-button.toggled {
+    background: linear-gradient(
+        135deg,
+        rgba(34, 197, 94, 0.15) 0%,
+        rgba(34, 197, 94, 0.08) 100%
+    );
+    border-color: rgba(34, 197, 94, 0.3);
+    font-weight: 600;
+    position: relative;
+}
+
+.apple-button.toggled .button-icon {
+    color: var(--color-success);
+    filter: drop-shadow(0 0 6px var(--color-success-glow));
+}
+
+/* Active state dot indicator */
+.apple-button.toggled::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 6px;
+    height: 6px;
+    background-color: var(--color-success);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--color-success);
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 8px var(--color-success);
+    }
+    50% {
+        opacity: 0.7;
+        box-shadow: 0 0 12px var(--color-success), 0 0 20px var(--color-success-glow);
+    }
+}
+
+/* ============================================
+   Button Tooltips
+   ============================================ */
+
 .menu li .button-tooltip {
     position: absolute;
     left: 100%;
     top: 50%;
-    transform: translateY(-50%);
-    background-color: var(--tooltip-bg);
-    color: var(--tooltip-color);
-    padding: 6px 12px;
-    border-radius: 6px;
+    transform: translateY(-50%) translateX(5px);
+    background-color: rgba(10, 10, 15, 0.95);
+    backdrop-filter: blur(var(--blur-md));
+    -webkit-backdrop-filter: blur(var(--blur-md));
+    color: var(--text-primary);
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
     font-size: 14px;
     white-space: pre-line;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.2s ease, visibility 0.2s ease;
+    transition: all var(--transition-fast);
     z-index: 10;
     margin-left: 10px;
     font-weight: 500;
     pointer-events: none;
     max-width: 220px;
     line-height: 1.4;
-}
-
-/* Keyboard shortcut styling */
-.button-tooltip kbd {
-    display: inline-block;
-    padding: 2px 6px;
-    font-size: 11px;
-    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    margin-left: 6px;
-    vertical-align: middle;
-}
-
-.menu li .button-tooltip:after {
-    content: '';
-    position: absolute;
-    left: -5px;
-    top: 50%;
-    transform: translateY(-50%);
-    border-width: 5px 5px 5px 0;
-    border-style: solid;
-    border-color: transparent var(--tooltip-bg) transparent transparent;
+    box-shadow: var(--shadow-md);
 }
 
 .menu li:hover .button-tooltip {
     opacity: 1;
     visibility: visible;
+    transform: translateY(-50%) translateX(0);
 }
+
+.menu li .button-tooltip::after {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 6px 6px 6px 0;
+    border-style: solid;
+    border-color: transparent rgba(10, 10, 15, 0.95) transparent transparent;
+}
+
+/* Keyboard shortcut styling */
+.button-tooltip kbd {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+    background: linear-gradient(135deg, var(--accent-color) 0%, #4f46e5 100%);
+    border-radius: 4px;
+    border: none;
+    margin-left: 8px;
+    vertical-align: middle;
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================
+   Menu Link Styles
+   ============================================ */
 
 .menu li a {
     text-decoration: none;
-    color: var(--text-color);
+    color: var(--text-primary);
     font-weight: 500;
-    transition: color 0.2s ease;
+    transition: color var(--transition-fast);
     display: block;
     padding: 10px 15px;
 }
@@ -192,8 +421,13 @@ canvas.hidden {
 .menu li a:hover {
     color: var(--accent-color);
 }
+
+/* ============================================
+   Legacy Button Styles
+   ============================================ */
+
 .my-button {
-    background-color: var(--accent-color);
+    background: linear-gradient(135deg, var(--accent-color) 0%, #4f46e5 100%);
     border: none;
     color: white;
     padding: 12px 22px;
@@ -203,26 +437,31 @@ canvas.hidden {
     font-size: 15px;
     cursor: pointer;
     border-radius: 10px;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 5px var(--shadow-color);
+    transition: all var(--transition-fast);
+    box-shadow: 0 4px 12px var(--accent-glow);
     font-weight: 500;
 }
 
 .my-button:hover {
-    background-color: var(--accent-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px var(--shadow-color);
+    background: linear-gradient(135deg, var(--accent-hover) 0%, #6366f1 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px var(--accent-glow);
 }
 
 .my-button:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.25);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.my-button:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
 }
 
 .my-button.toggled {
-    background-color: var(--button-success); 
+    background: linear-gradient(135deg, var(--color-success) 0%, #16a34a 100%);
     color: #ffffff;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px var(--color-success-glow);
 }
 
 .icon {
@@ -234,273 +473,111 @@ canvas.hidden {
     position: relative;
     border-radius: 50%;
     border: 2px solid white;
-    background-color: red;
-    box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+    background-color: var(--color-error);
+    box-shadow: 0 0 8px var(--color-error-glow);
 }
 
-/* Apple-style button */
-.apple-button {
-    display: inline-flex;
-    align-items: center;
-    width: 100%;
-    padding: 0;
-    border-radius: 10px;
-    border: none;
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    outline: none;
-    background-color: transparent;
-    color: var(--text-color);
-    box-shadow: none;
-}
+/* ============================================
+   Toggle Button
+   ============================================ */
 
-.apple-button:hover {
-    background-color: var(--menu-hover);
-    transform: translateY(-1px);
-}
-
-.apple-button:active {
-    transform: translateY(1px);
-}
-
-.button-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 12px;
-    color: var(--accent-color);
-    transition: transform 0.2s ease;
-}
-
-.apple-button:hover .button-icon {
-    transform: scale(1.1);
-}
-
-.apple-button.toggled {
-    background-color: rgba(52, 199, 89, 0.15);
-    font-weight: 600;
-    position: relative;
-}
-
-.apple-button.toggled .button-icon {
-    color: var(--button-success);
-}
-
-/* Active state dot indicator */
-.apple-button.toggled::after {
-    content: '';
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 6px;
-    height: 6px;
-    background-color: var(--button-success);
-    border-radius: 50%;
-    box-shadow: 0 0 4px var(--button-success);
-}
-
-/* Base styles for the toggle button */
 .toggle-button {
     display: inline-block;
     padding: 12px 24px;
     border-radius: 10px;
-    border: none;
+    border: 1px solid var(--glass-border);
     font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
     font-size: 15px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-fast);
     outline: none;
     text-align: center;
-}
-
-/* Style for the "off" state (default) */
-.toggle-button {
-    background-color: var(--toggle-bg);
+    background-color: var(--glass-bg);
     color: var(--text-secondary);
-    box-shadow: 0 1px 5px var(--shadow-color);
+    box-shadow: var(--shadow-sm);
 }
 
-/* Style for the "on" state */
+.toggle-button:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
 .toggle-button.active {
-    background-color: var(--accent-color);
+    background: linear-gradient(135deg, var(--accent-color) 0%, #4f46e5 100%);
     color: #FFFFFF;
-    box-shadow: 0 2px 8px var(--shadow-color);
+    border-color: transparent;
+    box-shadow: 0 4px 12px var(--accent-glow);
 }
 
-/* Notification and message styling */
+/* ============================================
+   Message/Toast Notifications
+   ============================================ */
+
 #message {
-    position: absolute; 
-    top: 50%; 
-    left: 50%; 
-    transform: translate(-50%, -50%);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
     font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-    background-color: rgba(255, 255, 255, 0.92);
-    padding: 16px 24px;
+    background: rgba(10, 10, 15, 0.9);
+    backdrop-filter: blur(var(--blur-md));
+    -webkit-backdrop-filter: blur(var(--blur-md));
+    padding: 18px 28px;
     border-radius: 16px;
-    box-shadow: 0 10px 25px var(--shadow-color);
-    color: #FF3B30; /* Apple's red */
+    box-shadow: var(--shadow-lg);
+    color: var(--color-error);
     font-weight: 500;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 59, 48, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.3);
     z-index: 10;
     max-width: 80%;
     text-align: center;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition: all var(--transition-normal);
 }
 
 #message.visible {
     opacity: 1;
     visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
 }
 
 #message.info {
-    color: #007AFF;  /* Apple's blue - informational, not error */
-    background-color: rgba(240, 248, 255, 0.95);  /* Light blue tint */
-    border-color: rgba(0, 122, 255, 0.2);  /* Blue border to match */
+    color: var(--accent-color);
+    border-color: rgba(99, 102, 241, 0.3);
 }
 
-/* Sidebar header styling */
-.sidebar-header {
-    display: flex;
-    align-items: center;
-    padding: 24px 16px;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 15px;
-    background: linear-gradient(to right, rgba(0, 122, 255, 0.15), rgba(0, 122, 255, 0.05));
-}
+/* ============================================
+   Sidebar Footer
+   ============================================ */
 
-.sidebar-logo {
-    width: 38px;
-    height: 38px;
-    margin-right: 12px;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px var(--shadow-color);
-    transition: transform 0.3s ease;
-}
-
-.sidebar-header:hover .sidebar-logo {
-    transform: rotate(10deg);
-}
-
-.sidebar-header h3 {
-    margin: 0;
-    color: var(--text-color);
-    font-size: 20px;
-    font-weight: 600;
-    letter-spacing: -0.2px;
-}
-
-/* Sidebar footer styling */
 .sidebar-footer {
     position: relative;
     width: 100%;
     text-align: center;
-    color: var(--text-secondary);
+    color: var(--text-tertiary);
     font-size: 12px;
     padding: 12px 0;
-    border-top: 1px solid var(--border-color);
-    background-color: var(--sidebar-bg);
+    border-top: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.02);
     margin-top: auto;
 }
 
-/* Pulse animation for notifications */
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4);
-    }
-    70% {
-        box-shadow: 0 0 0 10px rgba(255, 59, 48, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(255, 59, 48, 0);
-    }
+.sidebar-footer small {
+    display: block;
+    word-break: break-all;
+    font-size: 10px;
+    padding: 0 8px;
 }
 
-/* Tooltip styles */
-[data-tooltip] {
-    position: relative;
-    cursor: help;
-}
+/* ============================================
+   QR Code Container
+   ============================================ */
 
-[data-tooltip]:before {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 8px 12px;
-    background-color: var(--tooltip-bg);
-    color: var(--tooltip-color);
-    border-radius: 6px;
-    font-size: 12px;
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-    z-index: 1000;
-}
-
-[data-tooltip]:hover:before {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* Loading animation */
-.loading-dots {
-    display: inline-block;
-    position: relative;
-    width: 40px;
-    height: 16px;
-}
-
-.loading-dots:after {
-    content: '...';
-    position: absolute;
-    left: 0;
-    animation: loading 1.5s infinite;
-    font-size: 20px;
-    line-height: 10px;
-    letter-spacing: 2px;
-}
-
-@keyframes loading {
-    0% { content: '.'; }
-    33% { content: '..'; }
-    66% { content: '...'; }
-}
-
-/* Toast notification styles */
-.toast {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 12px 20px;
-    background-color: var(--tooltip-bg);
-    color: var(--tooltip-color);
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transform: translateY(100px);
-    opacity: 0;
-    transition: transform 0.3s ease, opacity 0.3s ease;
-    z-index: 1000;
-}
-
-.toast.visible {
-    transform: translateY(0);
-    opacity: 1;
-}
-
-/* QR Code container */
 #qrCodeContainer {
     padding: 12px;
-    background: white;
+    background: rgba(255, 255, 255, 0.95);
     border-radius: 8px;
     margin: 0 12px 8px 12px;
     display: flex;
@@ -513,28 +590,24 @@ canvas.hidden {
     height: 120px;
 }
 
-.sidebar-footer small {
-    display: block;
-    word-break: break-all;
-    font-size: 10px;
-    padding: 0 8px;
-}
+/* ============================================
+   Status Indicator Pill
+   ============================================ */
 
-/* Connection Status Indicator - Pill-shaped with label */
 .status-indicator {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    padding: 6px 12px;
-    background-color: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    padding: 8px 14px;
+    background: rgba(10, 10, 15, 0.8);
+    backdrop-filter: blur(var(--blur-md));
+    -webkit-backdrop-filter: blur(var(--blur-md));
     border-radius: 20px;
-    box-shadow: 0 2px 8px var(--shadow-color);
-    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--glass-border);
     z-index: 100;
     opacity: 1;
-    transition: all 0.3s ease;
+    transition: all var(--transition-normal);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -543,11 +616,12 @@ canvas.hidden {
 .status-indicator.hidden {
     opacity: 0;
     pointer-events: none;
+    transform: translateY(10px);
 }
 
 .status-indicator.collapsed,
 .status-indicator.connected {
-    padding: 6px;
+    padding: 8px;
     border-radius: 50%;
 }
 
@@ -560,8 +634,8 @@ canvas.hidden {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background-color: var(--text-secondary);
-    transition: background-color 0.3s ease;
+    background-color: var(--text-tertiary);
+    transition: all var(--transition-fast);
     display: block;
     flex-shrink: 0;
 }
@@ -571,151 +645,86 @@ canvas.hidden {
     font-weight: 500;
     color: var(--text-secondary);
     white-space: nowrap;
-    transition: color 0.3s ease;
+    transition: color var(--transition-fast);
 }
 
+/* Connected state */
 .status-indicator.connected .status-dot {
-    background-color: var(--button-success);
+    background-color: var(--color-success);
+    box-shadow: 0 0 10px var(--color-success-glow);
 }
 
 .status-indicator.connected .status-label {
-    color: var(--button-success);
+    color: var(--color-success);
 }
 
+/* Paused state */
 .status-indicator.paused .status-dot {
-    background-color: #FF9500;
+    background-color: var(--color-warning);
+    box-shadow: 0 0 10px var(--color-warning-glow);
 }
 
 .status-indicator.paused .status-label {
-    color: #FF9500;
+    color: var(--color-warning);
 }
 
+/* Rate limited state */
 .status-indicator.rate-limited .status-dot {
-    background-color: #FF9500;
+    background-color: var(--color-warning);
+    box-shadow: 0 0 10px var(--color-warning-glow);
 }
 
 .status-indicator.rate-limited .status-label {
-    color: #FF9500;
+    color: var(--color-warning);
 }
 
+/* Reconnecting state */
 .status-indicator.reconnecting .status-dot {
-    background-color: #FF9500;
-    animation: pulse-dot 1.2s ease-in-out infinite;
+    background-color: var(--color-warning);
+    box-shadow: 0 0 10px var(--color-warning-glow);
+    animation: pulse-reconnect 1.2s ease-in-out infinite;
 }
 
 .status-indicator.reconnecting .status-label {
-    color: #FF9500;
+    color: var(--color-warning);
 }
 
-.status-indicator.disconnected .status-dot {
-    background-color: #FF3B30;
-}
-
-.status-indicator.disconnected .status-label {
-    color: #FF3B30;
-}
-
-@keyframes pulse-dot {
+@keyframes pulse-reconnect {
     0%, 100% {
         opacity: 0.5;
         transform: scale(0.9);
+        box-shadow: 0 0 8px var(--color-warning-glow);
     }
     50% {
         opacity: 1;
         transform: scale(1.1);
+        box-shadow: 0 0 16px var(--color-warning-glow);
     }
 }
 
-/* Connection Error Message */
-.connection-error {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    padding: 24px 32px;
-    border-radius: 16px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-    border: 1px solid var(--border-color);
-    z-index: 200;
-    text-align: center;
-    max-width: 400px;
+/* Disconnected state */
+.status-indicator.disconnected .status-dot {
+    background-color: var(--color-error);
+    box-shadow: 0 0 10px var(--color-error-glow);
 }
 
-.connection-error h3 {
-    margin: 0 0 12px 0;
-    color: #FF3B30;
-    font-size: 18px;
-    font-weight: 600;
+.status-indicator.disconnected .status-label {
+    color: var(--color-error);
 }
 
-.connection-error p {
-    margin: 0 0 16px 0;
-    color: var(--text-secondary);
-    font-size: 14px;
-    line-height: 1.5;
-}
+/* ============================================
+   Reconnection Banner
+   ============================================ */
 
-.connection-error button {
-    background-color: var(--accent-color);
-    color: white;
-    border: none;
-    padding: 10px 24px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.connection-error button:hover {
-    background-color: var(--accent-hover);
-}
-
-.connection-error .dismiss-btn {
-    background-color: transparent;
-    color: var(--text-secondary);
-    margin-left: 8px;
-}
-
-.connection-error .dismiss-btn:hover {
-    color: var(--text-color);
-    background-color: var(--toggle-bg);
-}
-
-/* Loading Spinner */
-.loading-spinner {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(0, 122, 255, 0.3);
-    border-radius: 50%;
-    border-top-color: var(--accent-color);
-    animation: spin 0.8s linear infinite;
-    margin-right: 8px;
-    vertical-align: middle;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Message with spinner */
-#message .loading-spinner {
-    border-color: rgba(0, 122, 255, 0.3);
-    border-top-color: #007AFF;
-}
-
-/* Reconnection Banner */
 .reconnect-banner {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    padding: 12px 20px;
-    background: linear-gradient(135deg, #FF9500 0%, #FF6B00 100%);
+    padding: 14px 20px;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.9) 0%, rgba(217, 119, 6, 0.9) 100%);
+    backdrop-filter: blur(var(--blur-sm));
+    -webkit-backdrop-filter: blur(var(--blur-sm));
     color: white;
     display: flex;
     align-items: center;
@@ -723,8 +732,10 @@ canvas.hidden {
     gap: 12px;
     z-index: 1000;
     transform: translateY(-100%);
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    transition: transform var(--transition-normal);
+    box-shadow:
+        0 4px 20px rgba(245, 158, 11, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .reconnect-banner.visible {
@@ -743,25 +754,117 @@ canvas.hidden {
 .reconnect-text {
     font-weight: 500;
     font-size: 14px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-/* Help Overlay */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   Connection Error Dialog
+   ============================================ */
+
+.connection-error {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    background: rgba(10, 10, 15, 0.95);
+    backdrop-filter: blur(var(--blur-lg));
+    -webkit-backdrop-filter: blur(var(--blur-lg));
+    padding: 28px 36px;
+    border-radius: 20px;
+    box-shadow:
+        var(--shadow-xl),
+        0 0 60px var(--color-error-glow);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    z-index: 200;
+    text-align: center;
+    max-width: 400px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all var(--transition-normal);
+}
+
+.connection-error.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.connection-error h3 {
+    margin: 0 0 12px 0;
+    color: var(--color-error);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.connection-error p {
+    margin: 0 0 20px 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.connection-error button {
+    background: linear-gradient(135deg, var(--accent-color) 0%, #4f46e5 100%);
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.connection-error button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px var(--accent-glow);
+}
+
+.connection-error button:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+.connection-error .dismiss-btn {
+    background: var(--glass-bg);
+    color: var(--text-secondary);
+    margin-left: 10px;
+    border: 1px solid var(--glass-border);
+    box-shadow: none;
+}
+
+.connection-error .dismiss-btn:hover {
+    color: var(--text-primary);
+    background-color: var(--glass-bg-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ============================================
+   Help Overlay Modal
+   ============================================ */
+
 .help-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(var(--blur-sm));
+    -webkit-backdrop-filter: blur(var(--blur-sm));
     z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition: all var(--transition-normal);
 }
 
 .help-overlay.visible {
@@ -770,44 +873,69 @@ canvas.hidden {
 }
 
 .help-content {
-    background-color: var(--container-bg);
-    border-radius: 16px;
+    background: rgba(20, 20, 30, 0.95);
+    backdrop-filter: blur(var(--blur-xl));
+    -webkit-backdrop-filter: blur(var(--blur-xl));
+    border-radius: 20px;
     padding: 32px;
     max-width: 600px;
     max-height: 80vh;
     overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--glass-border);
     position: relative;
+}
+
+/* Top shine line */
+.help-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20px;
+    right: 20px;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
 }
 
 .help-close {
     position: absolute;
     top: 16px;
     right: 16px;
-    background: none;
-    border: none;
-    font-size: 28px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    font-size: 24px;
     color: var(--text-secondary);
     cursor: pointer;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: all var(--transition-fast);
 }
 
 .help-close:hover {
-    background-color: var(--toggle-bg);
-    color: var(--text-color);
+    background-color: var(--glass-bg-hover);
+    color: var(--text-primary);
+    transform: rotate(90deg);
+}
+
+.help-close:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
 }
 
 .help-content h2 {
     margin: 0 0 24px 0;
     font-size: 24px;
     font-weight: 600;
-    color: var(--text-color);
+    color: var(--text-primary);
 }
 
 .help-section {
@@ -820,17 +948,17 @@ canvas.hidden {
 
 .help-section h3 {
     margin: 0 0 16px 0;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--accent-color);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
 }
 
 .help-grid {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .help-item {
@@ -838,9 +966,16 @@ canvas.hidden {
     grid-template-columns: 40px 1fr auto;
     align-items: center;
     gap: 12px;
-    padding: 12px;
-    background-color: var(--sidebar-bg);
-    border-radius: 8px;
+    padding: 14px 16px;
+    background-color: var(--glass-bg);
+    border: 1px solid transparent;
+    border-radius: 10px;
+    transition: all var(--transition-fast);
+}
+
+.help-item:hover {
+    background-color: var(--glass-bg-hover);
+    border-color: var(--glass-border);
 }
 
 .help-grid.shortcuts .help-item {
@@ -854,7 +989,7 @@ canvas.hidden {
 }
 
 .help-item span {
-    color: var(--text-color);
+    color: var(--text-primary);
     font-weight: 500;
 }
 
@@ -869,39 +1004,47 @@ canvas.hidden {
     padding: 6px 12px;
     font-size: 13px;
     font-family: 'SF Mono', Monaco, 'Courier New', monospace;
-    background-color: var(--toggle-bg);
+    background: linear-gradient(135deg, var(--accent-color) 0%, #4f46e5 100%);
     border-radius: 6px;
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    font-weight: 500;
+    border: none;
+    color: white;
+    font-weight: 600;
     min-width: 30px;
     text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Onboarding Hint */
+/* ============================================
+   Onboarding Hint
+   ============================================ */
+
 .onboarding-hint {
     position: fixed;
     top: 50%;
     left: 20px;
     transform: translateY(-50%);
-    background-color: var(--accent-color);
+    background: linear-gradient(135deg, var(--accent-color) 0%, #4f46e5 100%);
+    backdrop-filter: blur(var(--blur-sm));
+    -webkit-backdrop-filter: blur(var(--blur-sm));
     color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
+    padding: 14px 22px;
+    border-radius: 10px;
     font-size: 14px;
     font-weight: 500;
-    box-shadow: 0 4px 20px rgba(0, 122, 255, 0.4);
+    box-shadow:
+        0 4px 20px var(--accent-glow),
+        0 0 40px rgba(99, 102, 241, 0.2);
     z-index: 50;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.4s ease, visibility 0.4s ease, transform 0.4s ease;
+    transition: all var(--transition-slow);
     cursor: pointer;
 }
 
 .onboarding-hint.visible {
     opacity: 1;
     visibility: visible;
-    animation: hint-bounce 2s ease-in-out infinite;
+    animation: hint-float 3s ease-in-out infinite;
 }
 
 .onboarding-arrow {
@@ -916,8 +1059,199 @@ canvas.hidden {
     border-right: 8px solid var(--accent-color);
 }
 
-@keyframes hint-bounce {
+@keyframes hint-float {
     0%, 100% { transform: translateY(-50%) translateX(0); }
-    50% { transform: translateY(-50%) translateX(5px); }
+    50% { transform: translateY(-50%) translateX(4px); }
 }
 
+/* ============================================
+   Toast Notifications
+   ============================================ */
+
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 14px 22px;
+    background: rgba(10, 10, 15, 0.9);
+    backdrop-filter: blur(var(--blur-md));
+    -webkit-backdrop-filter: blur(var(--blur-md));
+    color: var(--text-primary);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(100px) scale(0.95);
+    opacity: 0;
+    transition: all var(--transition-normal);
+    z-index: 1000;
+}
+
+.toast.visible {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+/* ============================================
+   Loading Animation
+   ============================================ */
+
+.loading-dots {
+    display: inline-block;
+    position: relative;
+    width: 40px;
+    height: 16px;
+}
+
+.loading-dots::after {
+    content: '...';
+    position: absolute;
+    left: 0;
+    animation: loading 1.5s infinite;
+    font-size: 20px;
+    line-height: 10px;
+    letter-spacing: 2px;
+}
+
+@keyframes loading {
+    0% { content: '.'; }
+    33% { content: '..'; }
+    66% { content: '...'; }
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--accent-glow);
+    border-radius: 50%;
+    border-top-color: var(--accent-color);
+    animation: spin 0.8s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+#message .loading-spinner {
+    border-color: var(--accent-glow);
+    border-top-color: var(--accent-color);
+}
+
+/* ============================================
+   Tooltip Styles
+   ============================================ */
+
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+}
+
+[data-tooltip]::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 14px;
+    background: rgba(10, 10, 15, 0.95);
+    backdrop-filter: blur(var(--blur-sm));
+    -webkit-backdrop-filter: blur(var(--blur-sm));
+    color: var(--text-primary);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all var(--transition-fast);
+    z-index: 1000;
+    box-shadow: var(--shadow-md);
+}
+
+[data-tooltip]:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ============================================
+   Pulse Animation
+   ============================================ */
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 var(--color-error-glow);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+/* ============================================
+   Accessibility: Reduced Motion
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .onboarding-hint.visible {
+        animation: none;
+    }
+
+    .apple-button.toggled::after {
+        animation: none;
+    }
+
+    .status-indicator.reconnecting .status-dot {
+        animation: none;
+    }
+}
+
+/* ============================================
+   Fallback for browsers without backdrop-filter
+   ============================================ */
+
+@supports not (backdrop-filter: blur(10px)) {
+    .sidebar {
+        background: rgba(20, 20, 30, 0.98);
+    }
+
+    .status-indicator {
+        background: rgba(10, 10, 15, 0.98);
+    }
+
+    .help-content {
+        background: rgba(20, 20, 30, 0.98);
+    }
+
+    .connection-error {
+        background: rgba(10, 10, 15, 0.98);
+    }
+
+    #message {
+        background: rgba(10, 10, 15, 0.98);
+    }
+
+    .toast {
+        background: rgba(10, 10, 15, 0.98);
+    }
+
+    .reconnect-banner {
+        background: linear-gradient(135deg, rgb(245, 158, 11) 0%, rgb(217, 119, 6) 100%);
+    }
+
+    .menu li .button-tooltip {
+        background: rgba(10, 10, 15, 0.98);
+    }
+
+    .help-overlay {
+        background-color: rgba(0, 0, 0, 0.85);
+    }
+}
