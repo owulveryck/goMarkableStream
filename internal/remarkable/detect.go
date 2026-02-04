@@ -21,8 +21,8 @@ const (
 )
 
 const (
-	// Firmware version file location
-	firmwareVersionPath = "/etc/version"
+	// Firmware version file location (os-release contains IMG_VERSION)
+	firmwareVersionPath = "/etc/os-release"
 
 	// New format constants (firmware 3.24+)
 	newFormatWidth         = 1404
@@ -36,7 +36,7 @@ const (
 func DetectFirmwareFormat() FramebufferFormat {
 	major, minor, err := parseFirmwareVersion(firmwareVersionPath)
 	if err != nil {
-		log.Printf("Could not detect firmware version: %v, using legacy format", err)
+		log.Printf("Could not detect firmware version from IMG_VERSION in /etc/os-release: %v, using legacy format", err)
 		return FormatLegacy
 	}
 
@@ -50,8 +50,8 @@ func DetectFirmwareFormat() FramebufferFormat {
 	return FormatLegacy
 }
 
-// parseFirmwareVersion reads and parses the firmware version from the given file path.
-// The version file typically contains a string like "3.24.0.1234"
+// parseFirmwareVersion reads and parses the firmware version from /etc/os-release.
+// It looks for IMG_VERSION="3.24.0.149" and extracts the major.minor version.
 func parseFirmwareVersion(path string) (major, minor int, err error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -60,19 +60,23 @@ func parseFirmwareVersion(path string) (major, minor int, err error) {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	if scanner.Scan() {
+	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		parts := strings.Split(line, ".")
-		if len(parts) >= 2 {
-			major, err = strconv.Atoi(parts[0])
-			if err != nil {
-				return 0, 0, err
+		if value, found := strings.CutPrefix(line, "IMG_VERSION="); found {
+			// Remove surrounding quotes if present
+			value = strings.Trim(value, "\"")
+			parts := strings.Split(value, ".")
+			if len(parts) >= 2 {
+				major, err = strconv.Atoi(parts[0])
+				if err != nil {
+					return 0, 0, err
+				}
+				minor, err = strconv.Atoi(parts[1])
+				if err != nil {
+					return 0, 0, err
+				}
+				return major, minor, nil
 			}
-			minor, err = strconv.Atoi(parts[1])
-			if err != nil {
-				return 0, 0, err
-			}
-			return major, minor, nil
 		}
 	}
 
