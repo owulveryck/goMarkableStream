@@ -58,6 +58,7 @@ window.onload = async function() {
 	// Set the iframe source if the URL is available
 	if (presentURL) {
 		document.getElementById('content').src = presentURL;
+		document.getElementById('layersMenuItem').style.display = '';  // Show layers menu
 	}
 	
 	// Update version in the sidebar footer
