@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/owulveryck/goMarkableStream/internal/delta"
 	"github.com/owulveryck/goMarkableStream/internal/events"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
@@ -25,12 +26,18 @@ var rawFrameBuffer = sync.Pool{
 }
 
 // NewStreamHandler creates a new stream handler reading from file @pointerAddr
-func NewStreamHandler(file io.ReaderAt, pointerAddr int64, inputEvents *pubsub.PubSub, useRLE bool) *StreamHandler {
+func NewStreamHandler(file io.ReaderAt, pointerAddr int64, inputEvents *pubsub.PubSub, useRLE bool, useDelta bool, deltaThreshold float64) *StreamHandler {
+	var deltaEncoder *delta.Encoder
+	if useDelta {
+		deltaEncoder = delta.NewEncoder(deltaThreshold)
+	}
 	return &StreamHandler{
 		file:           file,
 		pointerAddr:    pointerAddr,
 		inputEventsBus: inputEvents,
 		useRLE:         useRLE,
+		useDelta:       useDelta,
+		deltaEncoder:   deltaEncoder,
 	}
 }
 
@@ -40,6 +47,8 @@ type StreamHandler struct {
 	pointerAddr    int64
 	inputEventsBus *pubsub.PubSub
 	useRLE         bool
+	useDelta       bool
+	deltaEncoder   *delta.Encoder
 }
 
 // ServeHTTP implements http.Handler
@@ -106,7 +115,9 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writing = false
 		case <-ticker.C:
 			if writing {
-				if h.useRLE {
+				if h.useDelta {
+					h.fetchAndSendDelta(w, rawData)
+				} else if h.useRLE {
 					h.fetchAndSend(rleWriter, rawData)
 				} else {
 					h.fetchAndSend(w, rawData)
@@ -129,6 +140,22 @@ func (h *StreamHandler) fetchAndSend(w io.Writer, rawData []uint8) {
 	}
 	if w, ok := w.(http.Flusher); ok {
 		w.Flush()
+	}
+}
+
+func (h *StreamHandler) fetchAndSendDelta(w io.Writer, rawData []uint8) {
+	_, err := h.file.ReadAt(rawData, h.pointerAddr)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	err = h.deltaEncoder.Encode(rawData, w)
+	if err != nil {
+		log.Println("Error in delta encoding", err)
+		return
+	}
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
 	}
 }
 

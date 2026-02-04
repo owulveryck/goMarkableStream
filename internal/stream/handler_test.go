@@ -41,7 +41,7 @@ func TestStreamHandlerRaceCondition(t *testing.T) {
 		t.Fatal(err)
 	}
 	eventPublisher := pubsub.NewPubSub()
-	handler := NewStreamHandler(file, pointerAddr, eventPublisher, true)
+	handler := NewStreamHandler(file, pointerAddr, eventPublisher, true, false, 0.30)
 
 	server := httptest.NewServer(handler)
 	defer server.Close()

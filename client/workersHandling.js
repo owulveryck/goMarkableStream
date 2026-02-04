@@ -1,11 +1,12 @@
 // Send the OffscreenCanvas to the worker for initialization
-streamWorker.postMessage({ 
-	type: 'init', 
+streamWorker.postMessage({
+	type: 'init',
 	width: screenWidth,
 	height: screenHeight,
 	rate: rate,
 	withColor: withColor,
 	useRLE: UseRLE,
+	useDelta: UseDelta,
 });
 
 
