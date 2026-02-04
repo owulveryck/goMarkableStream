@@ -39,6 +39,31 @@ async function initiateStream() {
 		// Create AbortController to allow canceling the fetch
 		abortController = new AbortController();
 		const response = await fetch('/stream?rate=' + rate, { signal: abortController.signal });
+
+		// Handle rate limiting (429)
+		if (response.status === 429) {
+			postMessage({
+				type: 'error',
+				severity: 'warning',
+				code: 'RATE_LIMITED',
+				message: 'Rate limited - too many clients',
+				retryable: true
+			});
+			return;
+		}
+
+		// Handle other non-OK responses
+		if (!response.ok) {
+			postMessage({
+				type: 'error',
+				severity: 'error',
+				code: 'HTTP_ERROR',
+				message: `Server error: ${response.status}`,
+				retryable: true
+			});
+			return;
+		}
+
 		const stream = response.body;
 		const reader = stream.getReader();
 		const pixelDataSize = width * height * 4;
@@ -54,7 +79,10 @@ async function initiateStream() {
 					if (!abortController.signal.aborted) {
 						postMessage({
 							type: 'error',
-							message: "end of transmission"
+							severity: 'error',
+							code: 'STREAM_ENDED',
+							message: "Stream ended unexpectedly",
+							retryable: true
 						});
 					}
 					return;
@@ -74,7 +102,10 @@ async function initiateStream() {
 				console.log(error);
 				postMessage({
 					type: 'error',
-					message: error.message
+					severity: 'error',
+					code: 'STREAM_ERROR',
+					message: error.message,
+					retryable: true
 				});
 			}
 		};
@@ -89,7 +120,10 @@ async function initiateStream() {
 		console.error('Error:', error);
 		postMessage({
 			type: 'error',
-			message: error.message
+			severity: 'error',
+			code: 'CONNECTION_ERROR',
+			message: error.message,
+			retryable: true
 		});
 	}
 }

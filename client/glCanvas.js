@@ -10,7 +10,14 @@ const gl = canvas.getContext('webgl', {
 
 
 if (!gl) {
-	alert('WebGL not supported');
+	// Wait for DOM to be ready, then show styled error
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', () => {
+			showConnectionError('WebGL is not supported by your browser. Please use a modern browser with WebGL support.', false);
+		});
+	} else {
+		showConnectionError('WebGL is not supported by your browser. Please use a modern browser with WebGL support.', false);
+	}
 }
 
 // Vertex shader program
@@ -85,7 +92,8 @@ function initShaderProgram(gl, vsSource, fsSource) {
 	gl.linkProgram(shaderProgram);
 
 	if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-		alert('Unable to initialize the shader program: ' + gl.getProgramInfoLog(shaderProgram));
+		console.error('Unable to initialize shader program:', gl.getProgramInfoLog(shaderProgram));
+		showConnectionError('Unable to initialize graphics. Your browser may not support the required WebGL features.', false);
 		return null;
 	}
 
@@ -99,7 +107,8 @@ function initShaderProgram(gl, vsSource, fsSource) {
 		gl.compileShader(shader);
 
 		if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-			alert('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
+			console.error('Shader compilation error:', gl.getShaderInfoLog(shader));
+			showConnectionError('Unable to compile graphics shaders. Your browser may not support the required WebGL features.', false);
 			gl.deleteShader(shader);
 			return null;
 		}
