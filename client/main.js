@@ -25,7 +25,7 @@ const messageDiv = document.getElementById('message');
 
 
 // Initialize the worker
-const streamWorker = new Worker('worker_stream_processing.js');
+let streamWorker = new Worker('worker_stream_processing.js');
 const eventWorker = new Worker('worker_event_processing.js');
 const gestureWorker = new Worker('worker_gesture_processing.js');
 function getQueryParamOrDefault(param, defaultValue) {

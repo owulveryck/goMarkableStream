@@ -32,6 +32,8 @@ type configuration struct {
 	Debug          bool    `envconfig:"DEBUG" default:"false" description:"Enable debug logging"`
 
 	// Tailscale configuration
+	TailscaleEnabled  bool   `envconfig:"TAILSCALE_ENABLED" default:"false" description:"Enable Tailscale listener"`
+	TailscalePort     string `envconfig:"TAILSCALE_PORT" default:":8443" description:"Tailscale listener port"`
 	TailscaleHostname string `envconfig:"TAILSCALE_HOSTNAME" default:"gomarkablestream" description:"Device name in tailnet"`
 	TailscaleStateDir string `envconfig:"TAILSCALE_STATE_DIR" default:"/home/root/.tailscale/gomarkablestream" description:"State directory for Tailscale"`
 	TailscaleAuthKey  string `envconfig:"TAILSCALE_AUTHKEY" default:"" description:"Auth key for headless setup"`

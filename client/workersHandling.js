@@ -1,14 +1,5 @@
-// Send the OffscreenCanvas to the worker for initialization
-streamWorker.postMessage({
-	type: 'init',
-	width: screenWidth,
-	height: screenHeight,
-	rate: rate,
-});
-
-
-// Listen for updates from the worker
-streamWorker.onmessage = (event) => {
+// Stream message handler as a named function for reuse
+function handleStreamMessage(event) {
 	// To hide the message (e.g., when you start drawing in WebGL again)
 	messageDiv.style.display = 'none';
 
@@ -17,8 +8,8 @@ streamWorker.onmessage = (event) => {
 	switch (data.type) {
 		case 'update':
 			// Handle the update
-			const data = event.data.data;
-			updateTexture(data, portrait, 1);
+			const frameData = event.data.data;
+			updateTexture(frameData, portrait, 1);
 			break;
 		case 'error':
 			console.error('Error from worker:', event.data.message);
@@ -27,7 +18,21 @@ streamWorker.onmessage = (event) => {
 			break;
 			// ... handle other message types as needed
 	}
-};
+}
+
+// Initialize stream worker - reusable function for restart after Funnel toggle
+function initStreamWorker() {
+	streamWorker.postMessage({
+		type: 'init',
+		width: screenWidth,
+		height: screenHeight,
+		rate: rate,
+	});
+	streamWorker.onmessage = handleStreamMessage;
+}
+
+// Initialize on load
+initStreamWorker();
 
 
 // Determine the WebSocket protocol based on the current window protocol

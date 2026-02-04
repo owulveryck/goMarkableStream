@@ -166,6 +166,48 @@ Configure the application via environment variables:
 - `RK_DEV_MODE`: (True/False, default: `false`) Enable or disable developer mode.
 - `RK_DELTA_THRESHOLD`: (Float, default: `0.30`) Change ratio threshold (0.0-1.0) above which a full frame is sent instead of delta.
 
+### Tailscale Configuration
+
+Tailscale allows secure remote access to your reMarkable tablet from anywhere on your tailnet, without exposing the device to the public internet. When enabled, goMarkableStream creates both a local listener (on `RK_SERVER_BIND_ADDR`) and a Tailscale listener.
+
+**Requirements:**
+- Build with the `tailscale` tag: `go build -tags tailscale`
+- A Tailscale account
+
+**Environment variables:**
+- `RK_TAILSCALE_ENABLED`: (True/False, default: `false`) Enable Tailscale listener.
+- `RK_TAILSCALE_PORT`: (String, default: `:8443`) Tailscale listener port.
+- `RK_TAILSCALE_HOSTNAME`: (String, default: `gomarkablestream`) Device name in your tailnet.
+- `RK_TAILSCALE_STATE_DIR`: (String, default: `/home/root/.tailscale/gomarkablestream`) State directory for Tailscale.
+- `RK_TAILSCALE_AUTHKEY`: (String, default: empty) Auth key for headless setup. If unset, Tailscale will display a login URL in the console for interactive authentication.
+- `RK_TAILSCALE_EPHEMERAL`: (True/False, default: `false`) Register as ephemeral node (removed when disconnected).
+- `RK_TAILSCALE_FUNNEL`: (True/False, default: `false`) Enable public internet access via Tailscale Funnel.
+- `RK_TAILSCALE_USE_TLS`: (True/False, default: `false`) Use Tailscale's automatic TLS certificates.
+- `RK_TAILSCALE_VERBOSE`: (True/False, default: `false`) Verbose Tailscale logging.
+
+**Example usage:**
+
+```bash
+# Enable Tailscale with interactive login (displays login URL in console)
+RK_TAILSCALE_ENABLED=true ./goMarkableStream
+
+# Enable Tailscale with auth key (headless setup)
+RK_TAILSCALE_ENABLED=true RK_TAILSCALE_AUTHKEY=tskey-auth-xxx ./goMarkableStream
+
+# Access via Tailscale: https://gomarkablestream.your-tailnet.ts.net:8443
+# Access locally: https://remarkable.local.:2001
+```
+
+**Systemd service with Tailscale:**
+
+Add the environment variables to your systemd service file:
+```bash
+[Service]
+Environment="RK_TAILSCALE_ENABLED=true"
+Environment="RK_TAILSCALE_AUTHKEY=tskey-auth-xxx"
+ExecStart=/home/root/goMarkableStream
+```
+
 ### Endpoint Configuration
 Add query parameters to the URL (`?parameter=value&otherparameter=value`):
 - `color`: (true/false) Enable or disable color.

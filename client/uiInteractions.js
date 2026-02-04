@@ -66,6 +66,13 @@ document.getElementById('funnelButton').addEventListener('click', async function
 
         // Toggle Funnel state
         const newState = !data.enabled;
+
+        // If enabling Funnel, stop local stream first to free the connection
+        if (newState) {
+            streamWorker.postMessage({ type: 'terminate' });
+            showMessage('Stopping local stream for Funnel...', 2000);
+        }
+
         response = await fetch('/funnel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -102,14 +109,12 @@ document.getElementById('funnelButton').addEventListener('click', async function
             try {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     await navigator.clipboard.writeText(data.url);
-                    showMessage(`Funnel enabled! URL copied: ${data.url}`, 4000);
-                } else {
-                    showMessage(`Funnel enabled! URL: ${data.url}`, 4000);
                 }
             } catch (clipboardErr) {
                 console.warn('Clipboard access denied:', clipboardErr);
-                showMessage(`Funnel enabled! URL: ${data.url}`, 4000);
             }
+            // Show persistent status message
+            showStatusMessage('Local stream paused - Funnel sharing active');
         } else {
             // Hide QR code
             const qrContainer = document.getElementById('qrCodeContainer');
@@ -124,7 +129,13 @@ document.getElementById('funnelButton').addEventListener('click', async function
                     footerElement.title = '';
                 });
             }
-            showMessage('Funnel disabled', 2000);
+
+            // Hide persistent status message before restarting stream
+            hideStatusMessage();
+
+            // Recreate and reinitialize stream worker
+            streamWorker = new Worker('worker_stream_processing.js');
+            initStreamWorker();
         }
     } catch (error) {
         console.error('Funnel toggle error:', error);
