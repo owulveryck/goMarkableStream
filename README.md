@@ -43,17 +43,37 @@ For older firmware versions:
 
 ## Features
 
+### Core Benefits
 - **No Warranty Voiding**: Operates within the reMarkable tablet's intended functionality without unauthorized modifications.
-- **No Subscription Required**: Completely free to use, with no subscription fees or recurring charges.
-- **No Client-Side Installation**: Access the screen streaming feature directly through a web browser, with no need for additional software or plugins.
-- **Color Support**: Enhanced streaming experience with color support.
-- **High Performance**: Utilizes WebGL for smooth and efficient performance.
-- **Laser Pointer**: Features a laser pointer that activates on hovering.
-- **Gesture Support**: Full integration with Reveal.js, allowing slide switching directly from the reMarkable.
-- **Overlay Feature**: Allows overlaying over existing websites that support iframe embedding.
-- **Live Parameter Tweaking**: Side menu for live adjustments, including screen rotation.
-- **Dark Mode**: Toggle between light and dark themes for comfortable viewing in any environment.
-- **Version API**: Check the current version via the `/version` endpoint.
+- **No Subscription Required**: Completely free to use, with no subscription fees.
+- **No Client-Side Installation**: Access directly through a web browser, no additional software needed.
+- **HTTPS by Default**: Secure encrypted connections out of the box.
+
+### Streaming
+- **Full Color Support**: RGBA streaming with full color from PDFs and documents (firmware 3.24+).
+- **High Performance**: WebGL-based rendering for smooth, efficient display.
+- **Delta Compression**: Bandwidth-efficient streaming that only transmits changed pixels.
+- **Configurable Frame Rate**: Adjust streaming rate via URL parameters.
+
+### Remote Access (Tailscale)
+- **Tailscale Integration**: Access your reMarkable from anywhere on your tailnet without exposing it to the public internet.
+- **Tailscale Funnel**: Share your screen publicly via Tailscale Funnel with automatic QR code generation.
+- **Ephemeral Mode**: Register as a temporary node that's automatically removed when disconnected.
+
+### Interaction
+- **Laser Pointer**: Red laser pointer that follows pen hover position (toggle with `L` key).
+- **Gesture Support**: Swipe gestures for slide navigation, integrated with Reveal.js presentations.
+- **Keyboard Shortcuts**: `R` for rotation, `L` for laser pointer, `?` for help overlay.
+- **Layer Control**: Toggle drawing layer above or below embedded content.
+
+### Presentation Mode
+- **Overlay Feature**: Embed presentations or videos in the background for live annotation.
+- **Reveal.js Integration**: Full slide control directly from your reMarkable tablet.
+
+### UI
+- **Side Menu**: Collapsible sidebar for rotation, layer control, and Funnel toggle.
+- **Connection Status**: Visual indicator showing connection state with auto-reconnection.
+- **Help Overlay**: Press `?` to view all available gestures and shortcuts.
 
 ## Available Binaries
 
@@ -253,13 +273,6 @@ _Note_: Due to browser restrictions, the URL must be HTTPS.
 - **Control**: There is no way to control the underlying presentation directly from the tablet.
 Users must use the side menu for navigation and control.
 - This feature operates seamlessly, with no additional load on the reMarkable tablet, as all rendering is done in the client's browser.
-
-### UI Features
-
-- **Dark Mode**: Toggle between light and dark themes using the sun/moon icon in the sidebar
-- **Modern Interface**: Improved UI with better typography and layout
-- **Tooltips**: Helpful tooltips on hover for all buttons
-- **Feedback Messages**: Visual feedback for user actions
 
 ## Technical Details
 
