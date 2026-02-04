@@ -13,6 +13,17 @@ goMarkableStream is a lightweight and user-friendly application designed specifi
 
 Its primary goal is to enable users to stream their reMarkable tablet screen to a web browser without the need for any hacks or modifications that could void the warranty.
 
+## Table of Contents
+- [Device Support](#device-support)
+- [Available Binaries](#available-binaries)
+- [Quick Start](#quick-start)
+- [Systemd Service Setup](#setup-as-a-systemd-service)
+- [Configuration](#configurations)
+- [Presentation Mode](#presentation-mode)
+- [Technical Details](#technical-details)
+- [Compilation](#compilation)
+- [Contributing](#contributing)
+
 ## Device Support
 
 **Actively supported and tested:**
@@ -62,100 +73,58 @@ Each release provides four binary variants:
 
 ## Quick Start
 
+1. Connect your reMarkable to your computer via USB-C cable and SSH into it:
 ```bash
-localhost> ssh root@remarkable
+ssh root@10.11.99.1
 ```
 
-**For reMarkable 2:**
-
+2. Download and run (choose your device):
 ```bash
-export GORKVERSION=$(wget -q -O - https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
-wget -O goMarkableStream https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/gomarkablestream-RM2
+# Set your device: RM2 for reMarkable 2, RMPRO for Paper Pro
+DEVICE=RM2
+
+# Download latest version
+VERSION=$(wget -q -O - https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
+wget -O goMarkableStream https://github.com/owulveryck/goMarkableStream/releases/download/$VERSION/gomarkablestream-$DEVICE
 chmod +x goMarkableStream
 ./goMarkableStream
 ```
 
-**For reMarkable Paper Pro:**
+3. Open https://10.11.99.1:2001 in your browser
+   - Default credentials: `admin` / `password`
 
-```bash
-export GORKVERSION=$(wget -q -O - https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
-wget -O goMarkableStream https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/gomarkablestream-RMPRO
-chmod +x goMarkableStream
-./goMarkableStream
-```
+_Note_: You can also connect via Wi-Fi using your tablet's IP address or `remarkable.local.` (with trailing dot) on Apple devices.
 
-**For lite versions (without Tailscale):** Replace `gomarkablestream-RM2` or `gomarkablestream-RMPRO` with `gomarkablestream-RM2-lite` or `gomarkablestream-RMPRO-lite` respectively.
+For lite versions (without Tailscale), append `-lite` to the device name: `gomarkablestream-RM2-lite`
 
-Then go to [https://remarkable.local.:2001](https://remarkable.local.:2001) and log in with `admin`/`password` (can be changed through environment variables or disable authentication with `-unsafe`)
-
-_Note_: _remarkable.local._ may work from Apple devices (mDNS resolution).
-Please note the `.` at the end.
-If it does not work, you may need to replace `remarkable.local.` with the IP address of the tablet.
-
-_Note 2_: You can use this to update to a new version (ensure that you killed the previous version before with `kill $(pidof goMarkableStream)`)
+To update to a new version, first stop the running instance with `kill $(pidof goMarkableStream)`, then repeat step 2.
 
 ### Errors due to missing packages
 
-If you get errors such as `wget: note: TLS certificate validation not implemented` when running through the process above, you can first download goMarkableStream to your local computer and then copy it over to your reMarkable as follows:
-
-1. Run this on your local computer to download goMarkableStream into the current directory (use `gomarkablestream-RM2` for reMarkable 2 or `gomarkablestream-RMPRO` for reMarkable Paper Pro):
+If you get errors such as `wget: note: TLS certificate validation not implemented`, download goMarkableStream on your local computer and copy it over:
 
 ```bash
-localhost> export GORKVERSION=$(wget -q -O - https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
-wget -O goMarkableStream https://github.com/owulveryck/goMarkableStream/releases/download/$GORKVERSION/gomarkablestream-RM2
+# On your local computer (set DEVICE to RM2 or RMPRO)
+DEVICE=RM2
+VERSION=$(wget -q -O - https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
+wget -O goMarkableStream https://github.com/owulveryck/goMarkableStream/releases/download/$VERSION/gomarkablestream-$DEVICE
 chmod +x goMarkableStream
+
+# Copy to reMarkable (via USB-C)
+scp ./goMarkableStream root@10.11.99.1:/home/root/goMarkableStream
+
+# SSH and run
+ssh root@10.11.99.1 ./goMarkableStream
 ```
 
-2. Copy it over to your reMarkable (`remarkable` is the IP of your reMarkable):
-```bash
-localhost> scp ./goMarkableStream root@remarkable:/home/root/goMarkableStream
-```
+## Setup as a Systemd Service
 
-3. Log in to your reMarkable:
-```bash
-localhost> ssh root@remarkable
-```
-
-4. Start goMarkableStream (to make it permanent, see section about turning goMarkableStream into a systemd service):
-```bash
-./goMarkableStream
-```
-
-
-
-## Setup goMarkableStream as a systemd service
-
-This section explains how to set up goMarkableStream as a system service that will stay running through
-device restart and sleep. Note, however, this setup script will need to be executed 
-for any reMarkable system update/installation. 
-
-First, we'll write the script, saving it to the home directory. Then, we'll execute the script which performs all
-setup necessary to register goMarkableStream as a system service. It can be executed after every system update.
-Note, this script assumes the goMarkableStream executable exists in the home directory.
+After connecting via USB-C (`ssh root@10.11.99.1`), run this command to install goMarkableStream as a service that starts automatically:
 
 ```bash
-localhost> ssh root@remarkable
-```
-
-Create a bash script under the home directory:
-```bash
-touch setupGoMarkableStream.sh
-chmod +x setupGoMarkableStream.sh
-```
-
-Then open the file in nano:
-```bash
-nano setupGoMarkableStream.sh
-```
-
-Finally, paste (ctrl-shift-v) the following into the nano editor. Then save and quit (ctrl-X, Y, [enter]).
-```bash
-pushd /etc/systemd/system
-touch goMarkableStream.service
-
-cat <<EOF>goMarkableStream.service
+cat <<'EOF' > /etc/systemd/system/goMarkableStream.service
 [Unit]
-Description=Go Remarkable Stream Server
+Description=goMarkableStream Server
 
 [Service]
 ExecStart=/home/root/goMarkableStream
@@ -165,13 +134,17 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-systemctl enable goMarkableStream.service
-systemctl start goMarkableStream.service
-systemctl status goMarkableStream.service
-popd
+systemctl daemon-reload
+systemctl enable --now goMarkableStream.service
 ```
 
-Executing setupGoMarkableStream.sh will register the goMarkableStream executable as a systemd service!
+To check status: `systemctl status goMarkableStream.service`
+
+To view logs: `journalctl -u goMarkableStream.service`
+
+To stop: `systemctl stop goMarkableStream.service`
+
+**Note:** After a reMarkable system update, you may need to re-download the binary and restart the service.
 
 ## Configurations
 
