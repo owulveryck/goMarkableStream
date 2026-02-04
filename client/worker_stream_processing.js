@@ -2,8 +2,6 @@ let withColor = true;
 let height;
 let width;
 let rate;
-let useRLE;
-let useDelta;
 
 // Delta decoding state
 let previousFrame = null;
@@ -22,8 +20,6 @@ onmessage = (event) => {
 			width = event.data.width;
 			withColor = event.data.withColor;
 			rate = event.data.rate;
-			useRLE = event.data.useRLE;
-			useDelta = event.data.useDelta;
 			initiateStream();
 			break;
 		case 'withColorChanged':
@@ -45,12 +41,7 @@ async function initiateStream() {
 		const imageData = new Uint8ClampedArray(pixelDataSize);
 
 		// Initialize previous frame buffer for delta decoding
-		if (useDelta) {
-			previousFrame = new Uint8Array(pixelDataSize);
-		}
-
-		let offset = 0;
-		let count = 0;
+		previousFrame = new Uint8Array(pixelDataSize);
 
 		const processData = async ({ done, value }) => {
 			try {
@@ -64,13 +55,7 @@ async function initiateStream() {
 
 				const uint8Array = new Uint8Array(value);
 
-				if (useDelta) {
-					processDeltaData(uint8Array, imageData, pixelDataSize);
-				} else if (useRLE) {
-					({ offset, count } = decodeRLE(imageData, uint8Array, offset, count, withColor, pixelDataSize));
-				} else {
-					offset = decodeRaw(imageData, uint8Array, offset, pixelDataSize);
-				}
+				processDeltaData(uint8Array, imageData, pixelDataSize);
 
 				const nextChunk = await reader.read();
 				processData(nextChunk);
@@ -205,99 +190,3 @@ function handleDeltaFrame(payload, imageData, pixelDataSize) {
 	postMessage({ type: 'update', data: imageData });
 }
 
-function decodeRLE(imageData, chunkData, offset, count, withColor, pixelDataSize) {
-	for (let i = 0; i < chunkData.length; i++) {
-		if (count === 0) {
-			count = chunkData[i];
-			continue;
-		}
-
-		const value = chunkData[i];
-		for (let c = 0; c < count; c++) {
-			offset += 4;
-			if (withColor) {
-				switch (value) {
-					case 30:
-						imageData[offset + 3] = 0;
-						break;
-					case 6:
-					case 8:
-						imageData[offset] = 255;
-						imageData[offset + 1] = 0;
-						imageData[offset + 2] = 0;
-						imageData[offset + 3] = 255;
-						break;
-					case 12:
-						imageData[offset] = 0;
-						imageData[offset + 1] = 0;
-						imageData[offset + 2] = 255;
-						imageData[offset + 3] = 255;
-						break;
-					case 20:
-						imageData[offset] = 125;
-						imageData[offset + 1] = 184;
-						imageData[offset + 2] = 86;
-						imageData[offset + 3] = 255;
-						break;
-					case 24:
-						imageData[offset] = 255;
-						imageData[offset + 1] = 253;
-						imageData[offset + 2] = 84;
-						imageData[offset + 3] = 255;
-						break;
-					default:
-						imageData[offset] = value * 10;
-						imageData[offset + 1] = value * 10;
-						imageData[offset + 2] = value * 10;
-						imageData[offset + 3] = 255;
-						break;
-				}
-			} else {
-				if (value === 30) {
-					imageData[offset + 3] = 0;
-				} else {
-					imageData[offset] = value * 10;
-					imageData[offset + 1] = value * 10;
-					imageData[offset + 2] = value * 10;
-					imageData[offset + 3] = 255;
-				}
-			}
-
-			if (offset >= pixelDataSize) {
-				break;
-			}
-		}
-
-		count = 0;
-
-		if (offset >= pixelDataSize) {
-			postMessage({ type: 'update', data: imageData });
-			offset = 0;
-		}
-	}
-
-	return { offset, count };
-}
-
-function decodeRaw(imageData, chunkData, offset, pixelDataSize) {
-	let start = 0;
-	while (start < chunkData.length) {
-		const bytesLeftInFrame = pixelDataSize - offset;
-		const bytesToCopy = Math.min(chunkData.length - start, bytesLeftInFrame);
-		imageData.set(chunkData.subarray(start, start + bytesToCopy), offset);
-
-		offset += bytesToCopy;
-		start += bytesToCopy;
-
-		if (offset >= pixelDataSize) {
-			postMessage({ type: 'update', data: imageData });
-			offset = 0;
-		}
-	}
-
-	return offset;
-}
-
-function simpleSum(data) {
-	return data.reduce((acc, val) => acc + val, 0);
-}

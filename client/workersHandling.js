@@ -5,8 +5,6 @@ streamWorker.postMessage({
 	height: screenHeight,
 	rate: rate,
 	withColor: withColor,
-	useRLE: UseRLE,
-	useDelta: UseDelta,
 });
 
 

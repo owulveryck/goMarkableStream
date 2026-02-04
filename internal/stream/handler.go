@@ -12,7 +12,6 @@ import (
 	"github.com/owulveryck/goMarkableStream/internal/events"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
-	"github.com/owulveryck/goMarkableStream/internal/rle"
 )
 
 var (
@@ -26,18 +25,12 @@ var rawFrameBuffer = sync.Pool{
 }
 
 // NewStreamHandler creates a new stream handler reading from file @pointerAddr
-func NewStreamHandler(file io.ReaderAt, pointerAddr int64, inputEvents *pubsub.PubSub, useRLE bool, useDelta bool, deltaThreshold float64) *StreamHandler {
-	var deltaEncoder *delta.Encoder
-	if useDelta {
-		deltaEncoder = delta.NewEncoder(deltaThreshold)
-	}
+func NewStreamHandler(file io.ReaderAt, pointerAddr int64, inputEvents *pubsub.PubSub, deltaThreshold float64) *StreamHandler {
 	return &StreamHandler{
 		file:           file,
 		pointerAddr:    pointerAddr,
 		inputEventsBus: inputEvents,
-		useRLE:         useRLE,
-		useDelta:       useDelta,
-		deltaEncoder:   deltaEncoder,
+		deltaEncoder:   delta.NewEncoder(deltaThreshold),
 	}
 }
 
@@ -46,8 +39,6 @@ type StreamHandler struct {
 	file           io.ReaderAt
 	pointerAddr    int64
 	inputEventsBus *pubsub.PubSub
-	useRLE         bool
-	useDelta       bool
 	deltaEncoder   *delta.Encoder
 }
 
@@ -91,8 +82,6 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	rawData := rawFrameBuffer.Get().([]uint8)
 	defer rawFrameBuffer.Put(rawData) // Return the slice to the pool when done
-	// the informations are int4, therefore store it in a uint8array to reduce data transfer
-	rleWriter := rle.NewRLE(w)
 	writing := true
 	stopWriting := time.NewTicker(2 * time.Second)
 	defer stopWriting.Stop()
@@ -115,31 +104,9 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writing = false
 		case <-ticker.C:
 			if writing {
-				if h.useDelta {
-					h.fetchAndSendDelta(w, rawData)
-				} else if h.useRLE {
-					h.fetchAndSend(rleWriter, rawData)
-				} else {
-					h.fetchAndSend(w, rawData)
-				}
+				h.fetchAndSendDelta(w, rawData)
 			}
 		}
-	}
-}
-
-func (h *StreamHandler) fetchAndSend(w io.Writer, rawData []uint8) {
-	_, err := h.file.ReadAt(rawData, h.pointerAddr)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	_, err = w.Write(rawData)
-	if err != nil {
-		log.Println("Error in writing", err)
-		return
-	}
-	if w, ok := w.(http.Flusher); ok {
-		w.Flush()
 	}
 }
 
@@ -157,15 +124,4 @@ func (h *StreamHandler) fetchAndSendDelta(w io.Writer, rawData []uint8) {
 	if f, ok := w.(http.Flusher); ok {
 		f.Flush()
 	}
-}
-
-func sum(d []uint8) int {
-	val := 0 // Assuming `int` is large enough to avoid overflow
-	// Manual loop unrolling could be done here, but it's typically not recommended
-	// for readability and maintenance reasons unless profiling identifies this loop
-	// as a significant bottleneck.
-	for _, v := range d {
-		val += int(v)
-	}
-	return val
 }

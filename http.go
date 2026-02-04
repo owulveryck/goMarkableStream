@@ -29,11 +29,9 @@ func setMuxer(eventPublisher *pubsub.PubSub) *http.ServeMux {
 	// Custom handler to serve index.html for root path
 	mux.HandleFunc("/", newIndexHandler(stripFS{http.FS(assetsFS)}))
 
-	streamHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher, c.RLECompression, c.DeltaCompression, c.DeltaThreshold)
+	streamHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher, c.DeltaThreshold)
 	if c.Compression {
 		mux.Handle("/stream", gzMiddleware(stream.ThrottlingMiddleware(streamHandler)))
-	} else if c.ZSTDCompression {
-		mux.Handle("/stream", zstdMiddleware(stream.ThrottlingMiddleware(streamHandler), c.ZSTDCompressionLevel))
 	} else {
 		mux.Handle("/stream", stream.ThrottlingMiddleware(streamHandler))
 	}
@@ -89,8 +87,6 @@ func newIndexHandler(fs http.FileSystem) http.HandlerFunc {
 		ScreenHeight   int
 		MaxXValue      int
 		MaxYValue      int
-		UseRLE         bool
-		UseDelta       bool
 		DeviceModel    string
 		UseBGRA        bool
 		TextureFlipped bool
@@ -99,8 +95,6 @@ func newIndexHandler(fs http.FileSystem) http.HandlerFunc {
 		ScreenHeight:   remarkable.Config.Height,
 		MaxXValue:      remarkable.MaxXValue,
 		MaxYValue:      remarkable.MaxYValue,
-		UseRLE:         c.RLECompression,
-		UseDelta:       c.DeltaCompression,
 		DeviceModel:    remarkable.Model.String(),
 		UseBGRA:        remarkable.Config.UseBGRA,
 		TextureFlipped: remarkable.Config.TextureFlipped,
