@@ -17,8 +17,11 @@ jobs:
         with:
           go-version: 1.24.0
 
-      - name: Build
+      - name: Build (without Tailscale)
         run: go build -v ./...
+
+      - name: Build (with Tailscale)
+        run: go build -v -tags tailscale ./...
 
       - name: Test
         run: go test -v ./...

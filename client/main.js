@@ -60,12 +60,41 @@ window.onload = async function() {
 		document.getElementById('content').src = presentURL;
 		document.getElementById('layersMenuItem').style.display = '';  // Show layers menu
 	}
-	
+
 	// Update version in the sidebar footer
 	const version = await fetchVersion();
-	const versionElement = document.querySelector('.sidebar-footer small');
-	if (versionElement) {
-		versionElement.textContent = `goMarkableStream ${version}`;
+	const footerElement = document.querySelector('.sidebar-footer small');
+	if (footerElement) {
+		footerElement.textContent = `goMarkableStream ${version}`;
+	}
+
+	// Check Funnel availability and status
+	try {
+		const funnelResponse = await fetch('/funnel');
+		if (funnelResponse.ok) {
+			const funnelData = await funnelResponse.json();
+			if (funnelData.available) {
+				document.getElementById('funnelMenuItem').style.display = '';
+				if (funnelData.enabled) {
+					document.getElementById('funnelButton').classList.add('toggled');
+					// Show Funnel URL in footer
+					if (footerElement && funnelData.url) {
+						footerElement.textContent = funnelData.url;
+						footerElement.title = 'Public Funnel URL';
+
+						// Generate and show QR code
+						const qrContainer = document.getElementById('qrCodeContainer');
+						if (qrContainer && typeof generateQRCode === 'function') {
+							const qrSvg = generateQRCode(funnelData.url, 120);
+							qrContainer.innerHTML = qrSvg;
+							qrContainer.style.display = 'flex';
+						}
+					}
+				}
+			}
+		}
+	} catch (error) {
+		console.error('Error checking funnel status:', error);
 	}
 };
 

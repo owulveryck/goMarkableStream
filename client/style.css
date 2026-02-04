@@ -477,3 +477,26 @@ canvas.hidden {
     opacity: 1;
 }
 
+/* QR Code container */
+#qrCodeContainer {
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    margin: 0 12px 8px 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#qrCodeContainer svg {
+    width: 120px;
+    height: 120px;
+}
+
+.sidebar-footer small {
+    display: block;
+    word-break: break-all;
+    font-size: 10px;
+    padding: 0 8px;
+}
+

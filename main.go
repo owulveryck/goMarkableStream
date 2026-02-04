@@ -7,8 +7,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"runtime/debug"
+	"syscall"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 
@@ -25,6 +30,15 @@ type configuration struct {
 	DevMode        bool    `envconfig:"DEV_MODE" default:"false"`
 	DeltaThreshold float64 `envconfig:"DELTA_THRESHOLD" default:"0.30" description:"Change ratio threshold (0.0-1.0) above which full frame is sent"`
 	Debug          bool    `envconfig:"DEBUG" default:"false" description:"Enable debug logging"`
+
+	// Tailscale configuration
+	TailscaleHostname string `envconfig:"TAILSCALE_HOSTNAME" default:"gomarkablestream" description:"Device name in tailnet"`
+	TailscaleStateDir string `envconfig:"TAILSCALE_STATE_DIR" default:"/home/root/.tailscale/gomarkablestream" description:"State directory for Tailscale"`
+	TailscaleAuthKey  string `envconfig:"TAILSCALE_AUTHKEY" default:"" description:"Auth key for headless setup"`
+	TailscaleEphemeral bool  `envconfig:"TAILSCALE_EPHEMERAL" default:"false" description:"Register as ephemeral node"`
+	TailscaleFunnel   bool   `envconfig:"TAILSCALE_FUNNEL" default:"false" description:"Enable public internet access via Funnel"`
+	TailscaleUseTLS   bool   `envconfig:"TAILSCALE_USE_TLS" default:"false" description:"Use Tailscale's TLS certs"`
+	TailscaleVerbose  bool   `envconfig:"TAILSCALE_VERBOSE" default:"false" description:"Verbose Tailscale logging"`
 }
 
 const (
@@ -80,24 +94,105 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Setup listener first to get TailscaleManager
+	listenerResult, err := setupListener(ctx, &c)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if listenerResult.Cleanup != nil {
+			if err := listenerResult.Cleanup(); err != nil {
+				log.Printf("Cleanup error: %v", err)
+			}
+		}
+	}()
+
+	for _, l := range listenerResult.Listeners {
+		log.Printf("listening on %v", l.Addr())
+	}
+
 	eventPublisher := pubsub.NewPubSub()
 	eventScanner := remarkable.NewEventScanner()
-	eventScanner.StartAndPublish(context.Background(), eventPublisher)
+	eventScanner.StartAndPublish(ctx, eventPublisher)
 
-	mux := setMuxer(eventPublisher)
+	// Channel to signal Tailscale listener restart
+	restartCh := make(chan bool, 1)
+
+	// Pass TailscaleManager and restart channel to setMuxer
+	mux := setMuxer(eventPublisher, listenerResult.TailscaleManager, restartCh)
 
 	var handler http.Handler
 	handler = BasicAuthMiddleware(mux)
 	if *unsafe {
 		handler = mux
 	}
-	l, err := setupListener(context.Background(), &c)
-	if err != nil {
-		log.Fatal(err)
+
+	// Create HTTP server for graceful shutdown
+	server := &http.Server{
+		Handler: handler,
 	}
-	log.Printf("listening on %v", l.Addr())
-	if c.TLS {
-		log.Fatal(runTLS(l, handler))
+
+	// Setup signal handling for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start server goroutines for each listener
+	serverErr := make(chan error, len(listenerResult.Listeners)+1)
+	for i, listener := range listenerResult.Listeners {
+		isTailscale := i == 0 && listenerResult.TailscaleManager != nil
+		go func(l net.Listener, isTailscale bool) {
+			for {
+				log.Printf("Serving on %v", l.Addr())
+				var serveErr error
+				if listenerResult.UseTLS {
+					serveErr = runTLS(l, handler)
+				} else {
+					serveErr = server.Serve(l)
+				}
+
+				if serveErr == http.ErrServerClosed {
+					return
+				}
+
+				// If Tailscale listener, wait for restart signal
+				if isTailscale && listenerResult.TailscaleManager != nil {
+					select {
+					case <-restartCh:
+						l = listenerResult.TailscaleManager.GetListener()
+						continue
+					case <-ctx.Done():
+						return
+					}
+				}
+
+				serverErr <- serveErr
+				return
+			}
+		}(listener, isTailscale)
 	}
-	log.Fatal(http.Serve(l, handler))
+
+	// Wait for shutdown signal or server error
+	select {
+	case sig := <-sigChan:
+		log.Printf("Received signal %v, shutting down gracefully...", sig)
+		cancel()
+
+		// Give the server time to finish ongoing requests
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer shutdownCancel()
+
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			log.Printf("Server shutdown error: %v", err)
+		}
+		log.Println("Server shutdown complete")
+
+	case err := <-serverErr:
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}
 }

@@ -6,6 +6,9 @@ let rate;
 let previousFrame = null;
 let pendingBuffer = new Uint8Array(0);
 
+// AbortController to cancel the stream fetch on terminate
+let abortController = null;
+
 // Frame type constants (must match server)
 const FRAME_TYPE_FULL = 0x00;  // Deprecated: uncompressed full frame
 const FRAME_TYPE_DELTA = 0x01;
@@ -23,6 +26,9 @@ onmessage = (event) => {
 			break;
 		case 'terminate':
 			console.log("terminating worker");
+			if (abortController) {
+				abortController.abort();
+			}
 			close();
 			break;
 	}
@@ -30,7 +36,9 @@ onmessage = (event) => {
 
 async function initiateStream() {
 	try {
-		const response = await fetch('/stream?rate=' + rate);
+		// Create AbortController to allow canceling the fetch
+		abortController = new AbortController();
+		const response = await fetch('/stream?rate=' + rate, { signal: abortController.signal });
 		const stream = response.body;
 		const reader = stream.getReader();
 		const pixelDataSize = width * height * 4;
@@ -42,10 +50,13 @@ async function initiateStream() {
 		const processData = async ({ done, value }) => {
 			try {
 				if (done) {
-					postMessage({
-						type: 'error',
-						message: "end of transmission"
-					});
+					// Only report error if not intentionally aborted
+					if (!abortController.signal.aborted) {
+						postMessage({
+							type: 'error',
+							message: "end of transmission"
+						});
+					}
 					return;
 				}
 
@@ -56,6 +67,10 @@ async function initiateStream() {
 				const nextChunk = await reader.read();
 				processData(nextChunk);
 			} catch (error) {
+				// Don't report errors if intentionally aborted
+				if (abortController && abortController.signal.aborted) {
+					return;
+				}
 				console.log(error);
 				postMessage({
 					type: 'error',
@@ -67,6 +82,10 @@ async function initiateStream() {
 		const initialChunk = await reader.read();
 		processData(initialChunk);
 	} catch (error) {
+		// Don't report errors if intentionally aborted
+		if (abortController && abortController.signal.aborted) {
+			return;
+		}
 		console.error('Error:', error);
 		postMessage({
 			type: 'error',
