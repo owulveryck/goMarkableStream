@@ -41,7 +41,7 @@ func TestStreamHandlerRaceCondition(t *testing.T) {
 		t.Fatal(err)
 	}
 	eventPublisher := pubsub.NewPubSub()
-	handler := NewStreamHandler(file, pointerAddr, eventPublisher, true)
+	handler := NewStreamHandler(file, pointerAddr, eventPublisher, 0.30)
 
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -77,7 +77,7 @@ func TestStreamHandlerRaceCondition(t *testing.T) {
 	}
 }
 
-func TestStreamHandler_fetchAndSend(t *testing.T) {
+func TestStreamHandler_fetchAndSendDelta(t *testing.T) {
 	type fields struct {
 		file           io.ReaderAt
 		pointerAddr    int64
@@ -102,9 +102,9 @@ func TestStreamHandler_fetchAndSend(t *testing.T) {
 				inputEventsBus: tt.fields.inputEventsBus,
 			}
 			w := &bytes.Buffer{}
-			h.fetchAndSend(w, tt.args.rawData)
+			h.fetchAndSendDelta(w, tt.args.rawData)
 			if gotW := w.String(); gotW != tt.wantW {
-				t.Errorf("StreamHandler.fetchAndSend() = %v, want %v", gotW, tt.wantW)
+				t.Errorf("StreamHandler.fetchAndSendDelta() = %v, want %v", gotW, tt.wantW)
 			}
 		})
 	}

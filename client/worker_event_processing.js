@@ -2,7 +2,7 @@ let height;
 let width;
 let eventURL;
 let portrait;
-let draw; 
+let draw;
 let latestX;
 let latestY;
 let maxXValue;
@@ -40,27 +40,29 @@ async function initiateEventsListener() {
 		const message = JSON.parse(event.data);
 		if (message.Type === 3) {
 			if (message.Code === 24) {
-				draw = false;	
+				draw = false;
 				postMessage({ type: 'clear' });
 				//						clearLaser();
 			} else if (message.Code === 25) {
-				draw = true;	
+				draw = true;
 
 			}
 		}
 		if (message.Type === 3) {
 			// Code 3: Update and draw laser pointer
+			// Device axes are rotated 90° from screen coordinates:
+			// Code 0 = device Y-axis = horizontal movement on device
+			// Code 1 = device X-axis = vertical movement on device
 			if (portrait) {
-				if (message.Code === 1) { // Horizontal position
-					latestX = scaleValue(message.Value, maxXValue, width);
-				} else if (message.Code === 0) { // Vertical position
-					latestY = height - scaleValue(message.Value, maxYValue, height);
+				if (message.Code === 0) { // device Y (horizontal) → screen X (inverted)
+					latestX = width - scaleValue(message.Value, maxYValue, width);
+				} else if (message.Code === 1) { // device X (vertical) → screen Y (inverted)
+					latestY = height - scaleValue(message.Value, maxXValue, height);
 				}
 			} else {
-				// wrong
-				if (message.Code === 1) { // Horizontal position
-					latestY = scaleValue(message.Value, maxYValue, height);
-				} else if (message.Code === 0) { // Vertical position
+				if (message.Code === 0) { // device Y → screen Y (inverted)
+					latestY = height - scaleValue(message.Value, maxYValue, height);
+				} else if (message.Code === 1) { // device X → screen X
 					latestX = scaleValue(message.Value, maxXValue, width);
 				}
 			}

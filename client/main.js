@@ -1,4 +1,5 @@
 const rawCanvas = new OffscreenCanvas(screenWidth, screenHeight); // Define width and height as needed
+let laserEnabled = true;
 let portrait = getQueryParam('portrait');
 portrait = portrait !== null ? portrait === 'true' : false;
 
@@ -9,15 +10,10 @@ if (DeviceModel === 'RemarkablePaperPro') {
 }
 let flip = getBoolQueryParam('flip', defaultFlip);
 
-let withColor = getQueryParam('color', 'true');
-withColor = withColor !== null ? withColor === 'true' : true;
 let rate = parseInt(getQueryParamOrDefault('rate', '200'), 10);
 
-// Remarkable Paper Pro uses BGRA format.
-let useBGRA = false;
-if (DeviceModel === 'RemarkablePaperPro') {
-	useBGRA = true;
-};
+// Use BGRA format flag from server (Paper Pro or RM2 firmware 3.24+)
+let useBGRA = UseBGRA;
 
 //let portrait = false;
 // Get the 'present' parameter from the URL
@@ -62,6 +58,7 @@ window.onload = async function() {
 	// Set the iframe source if the URL is available
 	if (presentURL) {
 		document.getElementById('content').src = presentURL;
+		document.getElementById('layersMenuItem').style.display = '';  // Show layers menu
 	}
 	
 	// Update version in the sidebar footer

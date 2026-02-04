@@ -38,46 +38,23 @@ varying highp vec2 vTextureCoord;
 uniform sampler2D uSampler;
 uniform float uLaserX;
 uniform float uLaserY;
-uniform bool uDarkMode;
-uniform float uContrastLevel;
 
-// Constants for laser pointer visualization
 const float LASER_RADIUS = 6.0;
 const float LASER_EDGE_SOFTNESS = 2.0;
 const vec3 LASER_COLOR = vec3(1.0, 0.0, 0.0);
 
-// Constants for image processing
-const float BRIGHTNESS = 0.05;       // Slight brightness boost
-const float SHARPNESS = 0.5;         // Sharpness level
-
-// Get texture color without any sharpening - better for handwriting
-vec4 getBaseTexture(sampler2D sampler, vec2 texCoord) {
-    return texture2D(sampler, texCoord);
-}
-
 void main(void) {
-    // Get base texture color directly - no sharpening for clearer handwriting
-    vec4 texColor = getBaseTexture(uSampler, vTextureCoord);
-    
-    // Apply contrast adjustments based on the slider value
-    vec3 adjusted = (texColor.rgb - 0.5) * uContrastLevel + 0.5;
-    texColor.rgb = clamp(adjusted, 0.0, 1.0);
-    
+    vec4 texColor = texture2D(uSampler, vTextureCoord);
+
     // Calculate laser pointer effect
     float dx = gl_FragCoord.x - uLaserX;
     float dy = gl_FragCoord.y - uLaserY;
     float distance = sqrt(dx * dx + dy * dy);
-    
-    if (uDarkMode) {
-        // Invert colors in dark mode, but preserve alpha
-        texColor.rgb = 1.0 - texColor.rgb;
-    }
-    
-    // Simple laser pointer - more reliable rendering
+
+    // Simple laser pointer
     if (distance < 8.0 && uLaserX > 0.0 && uLaserY > 0.0) {
-        // Create solid circle with slight fade at edge
         float fade = 1.0 - smoothstep(6.0, 8.0, distance);
-        gl_FragColor = vec4(1.0, 0.0, 0.0, fade); // Red with fade at edge
+        gl_FragColor = vec4(1.0, 0.0, 0.0, fade);
     } else {
         gl_FragColor = texColor;
     }
@@ -144,8 +121,6 @@ const programInfo = {
 		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
         uLaserX: gl.getUniformLocation(shaderProgram, 'uLaserX'),
         uLaserY: gl.getUniformLocation(shaderProgram, 'uLaserY'),
-        uDarkMode: gl.getUniformLocation(shaderProgram, 'uDarkMode'),
-        uContrastLevel: gl.getUniformLocation(shaderProgram, 'uContrastLevel'),
 	},
 };
 
@@ -173,22 +148,24 @@ gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
 const textureCoordinates = getTextureCoordinates();
 
 function getTextureCoordinates() {
-    if (DeviceModel === "Remarkable2") {
+    if (TextureFlipped) {
+        // Paper Pro style or RM2 firmware 3.24+ (portrait orientation)
         return [
-			1.0, 1.0,
-			0.0, 1.0,
 			1.0, 0.0,
 			0.0, 0.0,
+			1.0, 1.0,
+			0.0, 1.0,
 		];
     } else {
+        // Legacy RM2 style (pre-3.24, landscape orientation)
         return [
-			1.0, 0.0,
-			0.0, 0.0,
 			1.0, 1.0,
 			0.0, 1.0,
+			1.0, 0.0,
+			0.0, 0.0,
 		];
-    };
-};
+    }
+}
 
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
 
@@ -211,10 +188,6 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 let imageData = new ImageData(screenWidth, screenHeight);
 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imageData);
 
-// Variables to track display state
-let isDarkMode = false;
-let contrastValue = 1.15; // Default contrast value
-
 // Draw the scene
 function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture) {
 	// Handle canvas resize for proper rendering
@@ -222,11 +195,8 @@ function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture)
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 	}
 	
-	// Adjust background color based on dark mode
-	const bgColor = isDarkMode 
-		? [0.12, 0.12, 0.13, 0.25]  // Darker, more neutral dark mode bg
-		: [0.98, 0.98, 0.98, 0.25]; // Nearly white light mode bg
-	gl.clearColor(bgColor[0], bgColor[1], bgColor[2], bgColor[3]);
+	// Set background color
+	gl.clearColor(0.98, 0.98, 0.98, 0.25);
 	
 	// Enable alpha blending for transparency
 	gl.enable(gl.BLEND);
@@ -264,10 +234,6 @@ function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture)
 	// Set the laser coordinates
     gl.uniform1f(programInfo.uniformLocations.uLaserX, laserX);
     gl.uniform1f(programInfo.uniformLocations.uLaserY, laserY);
-    
-    // Set display flags
-    gl.uniform1i(programInfo.uniformLocations.uDarkMode, isDarkMode ? 1 : 0);
-    gl.uniform1f(programInfo.uniformLocations.uContrastLevel, contrastValue);
 
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
@@ -285,7 +251,7 @@ function updateTexture(newRawData, shouldRotate, scaleFactor) {
 
 	// Set rotation
 	const uRotationMatrixLocation = gl.getUniformLocation(shaderProgram, 'uRotationMatrix');
-	const rotationMatrix = shouldRotate ? makeRotationZMatrix(270) : makeRotationZMatrix(0);
+	const rotationMatrix = shouldRotate ? makeRotationZMatrix(90) : makeRotationZMatrix(0);
 	gl.uniformMatrix4fv(uRotationMatrixLocation, false, rotationMatrix);
 
 	// Set scaling
@@ -324,6 +290,13 @@ function resizeGLCanvas(canvas) {
 
 // Direct laser pointer position - no animation for more reliability
 function updateLaserPosition(x, y) {
+    // Check if laser is disabled
+    if (!laserEnabled) {
+        laserX = -10;
+        laserY = -10;
+        return;
+    }
+
     // If x and y are valid positive values
     if (x > 0 && y > 0) {
         // Position is now directly proportional to canvas size
@@ -334,60 +307,15 @@ function updateLaserPosition(x, y) {
         laserX = -10;
         laserY = -10;
     }
-    
+
     // Redraw immediately
     drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 }
 
-// Function to update dark mode state with transition effect
-let darkModeTransition = 0; // 0 = light mode, 1 = dark mode
-let transitionActive = false;
-
-function setDarkMode(darkModeEnabled) {
-    isDarkMode = darkModeEnabled;
-    
-    // If not already transitioning, start a smooth transition
-    if (!transitionActive) {
-        transitionActive = true;
-        const startTime = performance.now();
-        const duration = 300; // transition duration in ms
-        
-        function animateDarkModeTransition(timestamp) {
-            const elapsed = timestamp - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            // Update transition value (0 to 1 for light to dark)
-            darkModeTransition = darkModeEnabled ? progress : 1 - progress;
-            
-            // Render with current transition value
-            drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
-            
-            // Continue animation if not complete
-            if (progress < 1) {
-                requestAnimationFrame(animateDarkModeTransition);
-            } else {
-                transitionActive = false;
-            }
-        }
-        
-        requestAnimationFrame(animateDarkModeTransition);
-    } else {
-        // Just update the scene if already transitioning
-        drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
-    }
+// Clear laser pointer (hide it off-screen)
+function clearLaser() {
+    laserX = -10;
+    laserY = -10;
+    drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 }
 
-// Function to set contrast level
-function setContrast(contrastLevel) {
-    // Store the contrast value (between 1.0 and 3.0)
-    contrastValue = parseFloat(contrastLevel);
-    
-    // If the value is valid, update rendering
-    if (!isNaN(contrastValue) && contrastValue >= 1.0 && contrastValue <= 3.0) {
-        // Update the scene with new contrast
-        drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
-        
-        // Save user preference to localStorage
-        localStorage.setItem('contrastLevel', contrastValue);
-    }
-}

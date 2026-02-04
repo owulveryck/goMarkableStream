@@ -1,0 +1,400 @@
+package delta
+
+import (
+	"bytes"
+	"compress/gzip"
+	"encoding/binary"
+	"io"
+	"testing"
+)
+
+func TestNewEncoder(t *testing.T) {
+	tests := []struct {
+		name      string
+		threshold float64
+		expected  float64
+	}{
+		{"default threshold", 0, DefaultThreshold},
+		{"negative threshold", -0.5, DefaultThreshold},
+		{"threshold too high", 1.5, DefaultThreshold},
+		{"valid threshold", 0.5, 0.5},
+		{"edge threshold 1.0", 1.0, 1.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			enc := NewEncoder(tt.threshold)
+			if enc.threshold != tt.expected {
+				t.Errorf("expected threshold %f, got %f", tt.expected, enc.threshold)
+			}
+		})
+	}
+}
+
+func TestEncode_FullFrame_NoPrevious(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+	frame := make([]byte, 160) // 40 pixels
+	for i := range frame {
+		frame[i] = byte(i)
+	}
+
+	var buf bytes.Buffer
+	err := enc.Encode(frame, &buf)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	result := buf.Bytes()
+
+	// Check header - now expecting compressed full frame
+	if result[0] != FrameTypeFullCompressed {
+		t.Errorf("expected compressed full frame type (0x02), got %d", result[0])
+	}
+
+	// Check payload length (24-bit LE)
+	payloadLen := int(result[1]) | int(result[2])<<8 | int(result[3])<<16
+
+	// Decompress and verify payload
+	compressedPayload := result[4 : 4+payloadLen]
+	gz, err := gzip.NewReader(bytes.NewReader(compressedPayload))
+	if err != nil {
+		t.Fatalf("failed to create gzip reader: %v", err)
+	}
+	decompressed, err := io.ReadAll(gz)
+	gz.Close()
+	if err != nil {
+		t.Fatalf("failed to decompress payload: %v", err)
+	}
+
+	if !bytes.Equal(decompressed, frame) {
+		t.Error("decompressed payload does not match frame data")
+	}
+}
+
+func TestEncode_FullFrame_SizeChange(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+
+	// First frame
+	frame1 := make([]byte, 160)
+	var buf1 bytes.Buffer
+	enc.Encode(frame1, &buf1)
+
+	// Second frame with different size - should send full frame
+	frame2 := make([]byte, 320)
+	for i := range frame2 {
+		frame2[i] = byte(i)
+	}
+	var buf2 bytes.Buffer
+	err := enc.Encode(frame2, &buf2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	result := buf2.Bytes()
+	if result[0] != FrameTypeFullCompressed {
+		t.Errorf("expected compressed full frame for size change (0x02), got %d", result[0])
+	}
+}
+
+func TestEncode_DeltaFrame_SmallChange(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 1600 // 400 pixels
+
+	// First frame - all zeros
+	frame1 := make([]byte, frameSize)
+	var buf1 bytes.Buffer
+	enc.Encode(frame1, &buf1)
+
+	// Second frame - change only first 4 pixels (16 bytes = 1% change)
+	frame2 := make([]byte, frameSize)
+	for i := 0; i < 16; i++ {
+		frame2[i] = 0xFF
+	}
+
+	var buf2 bytes.Buffer
+	err := enc.Encode(frame2, &buf2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	result := buf2.Bytes()
+
+	// Should be delta frame since change is 1% < 30% threshold
+	if result[0] != FrameTypeDelta {
+		t.Errorf("expected delta frame type, got %d", result[0])
+	}
+
+	// Verify payload length in header
+	payloadLen := int(result[1]) | int(result[2])<<8 | int(result[3])<<16
+
+	// Should be much smaller than full frame
+	if payloadLen >= frameSize {
+		t.Errorf("delta payload (%d) should be smaller than full frame (%d)", payloadLen, frameSize)
+	}
+}
+
+func TestEncode_FullFrame_ExceedsThreshold(t *testing.T) {
+	enc := NewEncoder(0.10) // 10% threshold
+	frameSize := 400        // 100 pixels
+
+	// First frame - all zeros
+	frame1 := make([]byte, frameSize)
+	var buf1 bytes.Buffer
+	enc.Encode(frame1, &buf1)
+
+	// Second frame - change 50% of pixels (exceeds 10% threshold)
+	frame2 := make([]byte, frameSize)
+	for i := 0; i < frameSize/2; i++ {
+		frame2[i] = 0xFF
+	}
+
+	var buf2 bytes.Buffer
+	err := enc.Encode(frame2, &buf2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	result := buf2.Bytes()
+
+	// Should be compressed full frame since change exceeds threshold
+	if result[0] != FrameTypeFullCompressed {
+		t.Errorf("expected compressed full frame when threshold exceeded (0x02), got %d", result[0])
+	}
+}
+
+func TestEncode_Reset(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 160
+
+	// First frame
+	frame1 := make([]byte, frameSize)
+	var buf1 bytes.Buffer
+	enc.Encode(frame1, &buf1)
+
+	// Second frame with small change (would normally be delta)
+	frame2 := make([]byte, frameSize)
+	frame2[0] = 0xFF
+
+	// Reset encoder
+	enc.Reset()
+
+	var buf2 bytes.Buffer
+	err := enc.Encode(frame2, &buf2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	result := buf2.Bytes()
+
+	// Should be compressed full frame after reset
+	if result[0] != FrameTypeFullCompressed {
+		t.Errorf("expected compressed full frame after reset (0x02), got %d", result[0])
+	}
+}
+
+func TestCompareFrames_NoChanges(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 160
+
+	frame := make([]byte, frameSize)
+	for i := range frame {
+		frame[i] = byte(i)
+	}
+
+	enc.prevFrame = make([]byte, frameSize)
+	copy(enc.prevFrame, frame)
+	enc.hasPrev = true
+
+	runs := enc.compareFrames(frame)
+
+	if len(runs) != 0 {
+		t.Errorf("expected 0 runs for identical frames, got %d", len(runs))
+	}
+}
+
+func TestCompareFrames_SingleRun(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 160 // 40 pixels
+
+	// Previous frame - all zeros
+	enc.prevFrame = make([]byte, frameSize)
+	enc.hasPrev = true
+
+	// Current frame - change first pixel
+	current := make([]byte, frameSize)
+	current[0] = 0xFF
+	current[1] = 0xFF
+	current[2] = 0xFF
+	current[3] = 0xFF
+
+	runs := enc.compareFrames(current)
+
+	if len(runs) == 0 {
+		t.Fatal("expected at least one run")
+	}
+
+	// First run should start at offset 0
+	if runs[0].offset != 0 {
+		t.Errorf("expected first run offset 0, got %d", runs[0].offset)
+	}
+}
+
+func TestShortRunEncoding(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+
+	run := changeRun{
+		offset: 100,
+		length: 10,
+		data:   make([]byte, 40), // 10 pixels
+	}
+	for i := range run.data {
+		run.data[i] = byte(i)
+	}
+
+	var buf bytes.Buffer
+	err := enc.writeShortRun(run, &buf)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	result := buf.Bytes()
+
+	// Check length byte
+	if result[0] != 10 {
+		t.Errorf("expected length 10, got %d", result[0])
+	}
+
+	// Check offset (little-endian)
+	offset := binary.LittleEndian.Uint16(result[1:3])
+	if offset != 100 {
+		t.Errorf("expected offset 100, got %d", offset)
+	}
+
+	// Check data
+	if !bytes.Equal(result[3:], run.data) {
+		t.Error("run data mismatch")
+	}
+}
+
+func TestLongRunEncoding(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+
+	run := changeRun{
+		offset: 70000, // > 64KB
+		length: 200,   // > 127
+		data:   make([]byte, 800),
+	}
+
+	var buf bytes.Buffer
+	err := enc.writeLongRun(run, &buf)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	result := buf.Bytes()
+
+	// Check high bit is set on first byte
+	if result[0]&0x80 == 0 {
+		t.Error("expected high bit set on first byte")
+	}
+
+	// Check length (15-bit)
+	length := int(result[0]&0x7F)<<8 | int(result[1])
+	if length != 200 {
+		t.Errorf("expected length 200, got %d", length)
+	}
+
+	// Check offset (24-bit little-endian)
+	offset := int(result[2]) | int(result[3])<<8 | int(result[4])<<16
+	if offset != 70000 {
+		t.Errorf("expected offset 70000, got %d", offset)
+	}
+}
+
+func TestCalculateDeltaSize(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+
+	tests := []struct {
+		name     string
+		runs     []changeRun
+		expected int
+	}{
+		{
+			name:     "empty",
+			runs:     nil,
+			expected: 0,
+		},
+		{
+			name: "single short run",
+			runs: []changeRun{
+				{offset: 100, length: 10, data: make([]byte, 40)},
+			},
+			expected: 1 + 2 + 40, // length + offset + data
+		},
+		{
+			name: "single long run",
+			runs: []changeRun{
+				{offset: 70000, length: 200, data: make([]byte, 800)},
+			},
+			expected: 2 + 3 + 800, // length + offset + data
+		},
+		{
+			name: "mixed runs",
+			runs: []changeRun{
+				{offset: 100, length: 10, data: make([]byte, 40)},
+				{offset: 70000, length: 200, data: make([]byte, 800)},
+			},
+			expected: (1 + 2 + 40) + (2 + 3 + 800),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			size := enc.calculateDeltaSize(tt.runs)
+			if size != tt.expected {
+				t.Errorf("expected size %d, got %d", tt.expected, size)
+			}
+		})
+	}
+}
+
+func BenchmarkCompareFrames(b *testing.B) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 1872 * 1404 * 4 // Typical reMarkable screen size
+
+	enc.prevFrame = make([]byte, frameSize)
+	current := make([]byte, frameSize)
+
+	// Simulate 2% change (typical handwriting)
+	changeBytes := frameSize * 2 / 100
+	for i := 0; i < changeBytes; i++ {
+		current[i] = 0xFF
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		enc.compareFrames(current)
+	}
+}
+
+func BenchmarkEncode_Delta(b *testing.B) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 1872 * 1404 * 4
+
+	frame1 := make([]byte, frameSize)
+	enc.prevFrame = make([]byte, frameSize)
+	enc.hasPrev = true
+
+	// Simulate 2% change
+	changeBytes := frameSize * 2 / 100
+	for i := 0; i < changeBytes; i++ {
+		frame1[i] = 0xFF
+	}
+
+	var buf bytes.Buffer
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		buf.Reset()
+		enc.Encode(frame1, &buf)
+	}
+}

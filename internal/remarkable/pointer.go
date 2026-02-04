@@ -10,6 +10,11 @@ import (
 	"strings"
 )
 
+func init() {
+	// Detect firmware version and update runtime config
+	initConfigForFirmware()
+}
+
 func getFramePointer(pid string) (int64, error) {
 	file, err := os.OpenFile("/proc/"+pid+"/maps", os.O_RDONLY, os.ModeDevice)
 	if err != nil {
@@ -30,5 +35,5 @@ func getFramePointer(pid string) (int64, error) {
 			scanAddr = true
 		}
 	}
-	return addr + 8, err
+	return addr + Config.PointerOffset + 8, err
 }

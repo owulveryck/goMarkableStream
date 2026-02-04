@@ -8,10 +8,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/owulveryck/goMarkableStream/internal/debug"
+	"github.com/owulveryck/goMarkableStream/internal/delta"
 	"github.com/owulveryck/goMarkableStream/internal/events"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
-	"github.com/owulveryck/goMarkableStream/internal/rle"
 )
 
 var (
@@ -20,17 +21,17 @@ var (
 
 var rawFrameBuffer = sync.Pool{
 	New: func() any {
-		return make([]uint8, remarkable.ScreenSizeBytes) // Adjust the initial capacity as needed
+		return make([]uint8, remarkable.Config.SizeBytes)
 	},
 }
 
 // NewStreamHandler creates a new stream handler reading from file @pointerAddr
-func NewStreamHandler(file io.ReaderAt, pointerAddr int64, inputEvents *pubsub.PubSub, useRLE bool) *StreamHandler {
+func NewStreamHandler(file io.ReaderAt, pointerAddr int64, inputEvents *pubsub.PubSub, deltaThreshold float64) *StreamHandler {
 	return &StreamHandler{
 		file:           file,
 		pointerAddr:    pointerAddr,
 		inputEventsBus: inputEvents,
-		useRLE:         useRLE,
+		deltaEncoder:   delta.NewEncoder(deltaThreshold),
 	}
 }
 
@@ -39,11 +40,16 @@ type StreamHandler struct {
 	file           io.ReaderAt
 	pointerAddr    int64
 	inputEventsBus *pubsub.PubSub
-	useRLE         bool
+	deltaEncoder   *delta.Encoder
 }
 
 // ServeHTTP implements http.Handler
 func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	debug.Log("Stream: new connection from %s", r.RemoteAddr)
+
+	// Reset delta encoder to force a full frame for the new client
+	h.deltaEncoder.Reset()
+
 	// Parse query parameters
 	query := r.URL.Query()
 	rateStr := query.Get("rate")
@@ -63,6 +69,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "rate value is too low", http.StatusBadRequest)
 		return
 	}
+	debug.Log("Stream: rate=%dms", rate)
 
 	// Set CORS headers for the preflight request
 	if r.Method == http.MethodOptions {
@@ -76,14 +83,14 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	eventC := h.inputEventsBus.Subscribe("stream")
 	defer h.inputEventsBus.Unsubscribe(eventC)
+	debug.Log("Stream: subscribed to events")
+
 	ticker := time.NewTicker(rate * time.Millisecond)
 	ticker.Reset(rate * time.Millisecond)
 	defer ticker.Stop()
 
 	rawData := rawFrameBuffer.Get().([]uint8)
 	defer rawFrameBuffer.Put(rawData) // Return the slice to the pool when done
-	// the informations are int4, therefore store it in a uint8array to reduce data transfer
-	rleWriter := rle.NewRLE(w)
 	writing := true
 	stopWriting := time.NewTicker(2 * time.Second)
 	defer stopWriting.Stop()
@@ -96,49 +103,42 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case <-r.Context().Done():
+			debug.Log("Stream: client disconnected (%s)", r.RemoteAddr)
 			return
 		case event := <-eventC:
 			if event.Code == 24 || event.Source == events.Touch {
+				if !writing {
+					debug.Log("Stream: writing resumed (input event code=%d, source=%v)", event.Code, event.Source)
+				}
 				writing = true
 				stopWriting.Reset(2000 * time.Millisecond)
 			}
 		case <-stopWriting.C:
+			if writing {
+				debug.Log("Stream: writing paused (no input for 2s)")
+			}
 			writing = false
 		case <-ticker.C:
 			if writing {
-				if h.useRLE {
-					h.fetchAndSend(rleWriter, rawData)
-				} else {
-					h.fetchAndSend(w, rawData)
-				}
+				h.fetchAndSendDelta(w, rawData)
 			}
 		}
 	}
 }
 
-func (h *StreamHandler) fetchAndSend(w io.Writer, rawData []uint8) {
+func (h *StreamHandler) fetchAndSendDelta(w io.Writer, rawData []uint8) {
 	_, err := h.file.ReadAt(rawData, h.pointerAddr)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	_, err = w.Write(rawData)
+	frameSize, err := h.deltaEncoder.EncodeWithSize(rawData, w)
 	if err != nil {
-		log.Println("Error in writing", err)
+		log.Println("Error in delta encoding", err)
 		return
 	}
-	if w, ok := w.(http.Flusher); ok {
-		w.Flush()
+	debug.Log("Stream: sent frame (%d bytes)", frameSize)
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
 	}
-}
-
-func sum(d []uint8) int {
-	val := 0 // Assuming `int` is large enough to avoid overflow
-	// Manual loop unrolling could be done here, but it's typically not recommended
-	// for readability and maintenance reasons unless profiling identifies this loop
-	// as a significant bottleneck.
-	for _, v := range d {
-		val += int(v)
-	}
-	return val
 }

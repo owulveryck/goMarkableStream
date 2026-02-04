@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"embed"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -13,20 +12,19 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 
+	dbg "github.com/owulveryck/goMarkableStream/internal/debug"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 )
 
 type configuration struct {
-	BindAddr             string `envconfig:"SERVER_BIND_ADDR" default:":2001" required:"true" description:"The server bind address"`
-	Username             string `envconfig:"SERVER_USERNAME" default:"admin"`
-	Password             string `envconfig:"SERVER_PASSWORD" default:"password"`
-	TLS                  bool   `envconfig:"HTTPS" default:"true"`
-	Compression          bool   `envconfig:"COMPRESSION" default:"false"`
-	RLECompression       bool   `envconfig:"RLE_COMPRESSION" default:"true"`
-	DevMode              bool   `envconfig:"DEV_MODE" default:"false"`
-	ZSTDCompression      bool   `envconfig:"ZSTD_COMPRESSION" default:"false" description:"Enable zstd compression"`
-	ZSTDCompressionLevel int    `envconfig:"ZSTD_COMPRESSION_LEVEL" default:"3" description:"Zstd compression level (1-22, where 1 is fastest and 22 is maximum compression)"`
+	BindAddr       string  `envconfig:"SERVER_BIND_ADDR" default:":2001" required:"true" description:"The server bind address"`
+	Username       string  `envconfig:"SERVER_USERNAME" default:"admin"`
+	Password       string  `envconfig:"SERVER_PASSWORD" default:"password"`
+	TLS            bool    `envconfig:"HTTPS" default:"true"`
+	DevMode        bool    `envconfig:"DEV_MODE" default:"false"`
+	DeltaThreshold float64 `envconfig:"DELTA_THRESHOLD" default:"0.30" description:"Change ratio threshold (0.0-1.0) above which full frame is sent"`
+	Debug          bool    `envconfig:"DEBUG" default:"false" description:"Enable debug logging"`
 }
 
 const (
@@ -47,12 +45,6 @@ var (
 )
 
 func validateConfiguration(c *configuration) error {
-	if remarkable.Model == remarkable.RemarkablePaperPro {
-		if c.RLECompression {
-			return errors.New("RLE compression is not supported on the Remarkable Paper Pro. Disable it by setting RLE_COMPRESSION=false")
-		}
-	}
-
 	return nil
 }
 
@@ -82,6 +74,8 @@ func main() {
 		panic(err)
 	}
 
+	dbg.Enabled = c.Debug
+
 	file, pointerAddr, err = remarkable.GetFileAndPointer()
 	if err != nil {
 		log.Fatal(err)
@@ -92,7 +86,6 @@ func main() {
 
 	mux := setMuxer(eventPublisher)
 
-	//	handler := BasicAuthMiddleware(gzMiddleware(mux))
 	var handler http.Handler
 	handler = BasicAuthMiddleware(mux)
 	if *unsafe {
