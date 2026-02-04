@@ -6,7 +6,8 @@ document.getElementById('rotate').addEventListener('click', function () {
     this.classList.toggle('toggled');
     eventWorker.postMessage({ type: 'portrait', portrait: portrait });
     resizeVisibleCanvas();
-    
+    redrawScene(portrait, 1);
+
     // Show confirmation message
     showMessage(`Display ${portrait ? 'portrait' : 'landscape'} mode activated`, 2000);
 });

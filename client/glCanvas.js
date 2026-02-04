@@ -269,7 +269,17 @@ function convertBGRAtoRGBA(data) {
     }
 }
 
-// Call `updateTexture` with new data whenever you need to update the image
+// Redraw scene with current texture (for rotation changes without new frame data)
+function redrawScene(shouldRotate, scaleFactor) {
+    const uRotationMatrixLocation = gl.getUniformLocation(shaderProgram, 'uRotationMatrix');
+    const rotationMatrix = shouldRotate ? makeRotationZMatrix(90) : makeRotationZMatrix(0);
+    gl.uniformMatrix4fv(uRotationMatrixLocation, false, rotationMatrix);
+
+    const uScaleFactorLocation = gl.getUniformLocation(shaderProgram, 'uScaleFactor');
+    gl.uniform1f(uScaleFactorLocation, scaleFactor);
+
+    drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
+}
 
 // Let's create a function that resizes the canvas element. 
 // This function will adjust the canvas's width and height attributes based on its display size, which can be set using CSS or directly in JavaScript.
