@@ -3,12 +3,12 @@ package remarkable
 // FramebufferConfig holds runtime configuration for the framebuffer
 // that varies based on device model and firmware version.
 type FramebufferConfig struct {
-	Width         int
-	Height        int
-	BytesPerPixel int
-	SizeBytes     int
-	PointerOffset int64
-	UseBGRA       bool
+	Width          int
+	Height         int
+	BytesPerPixel  int
+	SizeBytes      int
+	PointerOffset  int64
+	UseBGRA        bool
 	TextureFlipped bool
 }
 

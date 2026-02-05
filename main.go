@@ -32,15 +32,15 @@ type configuration struct {
 	Debug          bool    `envconfig:"DEBUG" default:"false" description:"Enable debug logging"`
 
 	// Tailscale configuration
-	TailscaleEnabled  bool   `envconfig:"TAILSCALE_ENABLED" default:"false" description:"Enable Tailscale listener"`
-	TailscalePort     string `envconfig:"TAILSCALE_PORT" default:":8443" description:"Tailscale listener port"`
-	TailscaleHostname string `envconfig:"TAILSCALE_HOSTNAME" default:"gomarkablestream" description:"Device name in tailnet"`
-	TailscaleStateDir string `envconfig:"TAILSCALE_STATE_DIR" default:"/home/root/.tailscale/gomarkablestream" description:"State directory for Tailscale"`
-	TailscaleAuthKey  string `envconfig:"TAILSCALE_AUTHKEY" default:"" description:"Auth key for headless setup"`
-	TailscaleEphemeral bool  `envconfig:"TAILSCALE_EPHEMERAL" default:"false" description:"Register as ephemeral node"`
-	TailscaleFunnel   bool   `envconfig:"TAILSCALE_FUNNEL" default:"false" description:"Enable public internet access via Funnel"`
-	TailscaleUseTLS   bool   `envconfig:"TAILSCALE_USE_TLS" default:"false" description:"Use Tailscale's TLS certs"`
-	TailscaleVerbose  bool   `envconfig:"TAILSCALE_VERBOSE" default:"false" description:"Verbose Tailscale logging"`
+	TailscaleEnabled   bool   `envconfig:"TAILSCALE_ENABLED" default:"false" description:"Enable Tailscale listener"`
+	TailscalePort      string `envconfig:"TAILSCALE_PORT" default:":8443" description:"Tailscale listener port"`
+	TailscaleHostname  string `envconfig:"TAILSCALE_HOSTNAME" default:"gomarkablestream" description:"Device name in tailnet"`
+	TailscaleStateDir  string `envconfig:"TAILSCALE_STATE_DIR" default:"/home/root/.tailscale/gomarkablestream" description:"State directory for Tailscale"`
+	TailscaleAuthKey   string `envconfig:"TAILSCALE_AUTHKEY" default:"" description:"Auth key for headless setup"`
+	TailscaleEphemeral bool   `envconfig:"TAILSCALE_EPHEMERAL" default:"false" description:"Register as ephemeral node"`
+	TailscaleFunnel    bool   `envconfig:"TAILSCALE_FUNNEL" default:"false" description:"Enable public internet access via Funnel"`
+	TailscaleUseTLS    bool   `envconfig:"TAILSCALE_USE_TLS" default:"false" description:"Use Tailscale's TLS certs"`
+	TailscaleVerbose   bool   `envconfig:"TAILSCALE_VERBOSE" default:"false" description:"Verbose Tailscale logging"`
 }
 
 const (

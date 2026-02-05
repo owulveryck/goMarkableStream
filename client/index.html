@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 	<head>
 		<title>goMarkableStream</title>
 		<link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -16,6 +16,13 @@
         </script>
 	</head>
 	<body>
+		<!-- Mobile hamburger menu button -->
+		<button id="hamburgerMenu" class="hamburger-menu" aria-label="Toggle menu" aria-expanded="false">
+			<span class="hamburger-icon"></span>
+			<span class="hamburger-icon"></span>
+			<span class="hamburger-icon"></span>
+		</button>
+
 		<div id="menuContainer">
 			<div class="sidebar" id="sidebar">
 				<div class="sidebar-header">
@@ -24,8 +31,8 @@
 				</div>
 				<ul class="menu">
 					<li>
-						<button id="rotate" class="apple-button">
-							<svg class="button-icon" viewBox="0 0 24 24" width="20" height="20">
+						<button id="rotate" class="apple-button" aria-label="Toggle orientation (press R)" aria-pressed="false">
+							<svg class="button-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
 								<path fill="currentColor" d="M7.11,8.53L5.7,7.11C4.8,8.27 4.24,9.61 4.07,11h2.02c0.14-0.87 0.49-1.72 1.02-2.47zM6.09,13H4.07c0.17,1.39 0.72,2.73 1.62,3.89l1.41-1.42c-0.52-0.75-0.87-1.59-1.01-2.47zm1.01,5.32c1.16,0.9 2.51,1.44 3.9,1.61V17.9c-0.87-0.15-1.71-0.49-2.46-1.03L7.1,18.32zM13,4.07V1L8.45,5.55L13,10V6.09c2.84,0.48 5,2.94 5,5.91s-2.16,5.43-5,5.91v2.02c3.95-0.49 7-3.85 7-7.93S16.95,4.56 13,4.07z"/>
 							</svg>
 							<span>Rotate</span>
@@ -33,37 +40,50 @@
 						</button>
 					</li>
 					<li id="layersMenuItem" style="display: none;">
-						<button id="switchOrderButton" class="apple-button">
-							<svg class="button-icon" viewBox="0 0 24 24" width="20" height="20">
+						<button id="switchOrderButton" class="apple-button" aria-label="Toggle layer order: drawing or content on top" aria-pressed="false">
+							<svg class="button-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
 								<path fill="currentColor" d="M12 16L6 10H9V4H15V10H18L12 16M12 18L18 12H15V6H9V12H6L12 18M3 20H21V22H3V20M12 2L21 9H15V15H9V9H3L12 2Z"/>
 							</svg>
-							<span>Layer Order</span>
-							<div class="button-tooltip">Toggle which layer displays on top:
-drawing or content</div>
+							<span id="layerOrderText">Drawing on Top</span>
+							<div class="button-tooltip">Toggle layer order
+Currently: <span id="layerOrderStatus">Drawing on Top</span></div>
 						</button>
 					</li>
 					<li>
-						<button id="laserToggle" class="apple-button toggled">
-							<svg class="button-icon" viewBox="0 0 24 24" width="20" height="20">
-								<path fill="currentColor" d="M9,3L7.17,5H4A2,2 0 0,0 2,7V19A2,2 0 0,0 4,21H20A2,2 0 0,0 22,19V7A2,2 0 0,0 20,5H16.83L15,3M12,18A5,5 0 0,1 7,13A5,5 0 0,1 12,8A5,5 0 0,1 17,13A5,5 0 0,1 12,18M12,10A3,3 0 0,0 9,13A3,3 0 0,0 12,16A3,3 0 0,0 15,13A3,3 0 0,0 12,10Z"/>
+						<button id="fullscreenButton" class="apple-button" aria-label="Toggle fullscreen mode (press F)" aria-pressed="false">
+							<svg class="button-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+								<path fill="currentColor" d="M5,5H10V7H7V10H5V5M14,5H19V10H17V7H14V5M17,14H19V19H14V17H17V14M10,17V19H5V14H7V17H10Z"/>
+							</svg>
+							<span>Fullscreen</span>
+							<div class="button-tooltip">Toggle fullscreen mode <kbd>F</kbd></div>
+						</button>
+					</li>
+					<li>
+						<button id="laserToggle" class="apple-button toggled" aria-label="Toggle laser pointer (press L)" aria-pressed="true">
+							<svg class="button-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+								<path fill="currentColor" d="M5.35 13.35L2.87 15.83L4.04 17L6.52 14.52L5.35 13.35M14.32 5.3L16.09 7.07L4.16 19H2V17.84L14.32 5.3M22.66 4.19L20.47 2L15.26 7.21L15.74 8.68L14.27 10.15L15.68 11.56L17.15 10.09L18.62 10.57L22.66 4.19M6.52 5.31L4.04 2.83L2.87 4L5.35 6.5L6.52 5.31Z"/>
 							</svg>
 							<span>Laser</span>
 							<div class="button-tooltip">Toggle laser pointer <kbd>L</kbd></div>
 						</button>
 					</li>
 					<li id="funnelMenuItem" style="display: none;">
-						<button id="funnelButton" class="apple-button">
-							<svg class="button-icon" viewBox="0 0 24 24" width="20" height="20">
+						<button id="funnelButton" class="apple-button" aria-label="Share stream publicly via Tailscale Funnel" aria-pressed="false">
+							<svg class="button-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
 								<path fill="currentColor" d="M16.36,14C16.44,13.34 16.5,12.68 16.5,12C16.5,11.32 16.44,10.66 16.36,10H19.74C19.9,10.64 20,11.31 20,12C20,12.69 19.9,13.36 19.74,14M14.59,19.56C15.19,18.45 15.65,17.25 15.97,16H18.92C17.96,17.65 16.43,18.93 14.59,19.56M14.34,14H9.66C9.56,13.34 9.5,12.68 9.5,12C9.5,11.32 9.56,10.65 9.66,10H14.34C14.43,10.65 14.5,11.32 14.5,12C14.5,12.68 14.43,13.34 14.34,14M12,19.96C11.17,18.76 10.5,17.43 10.09,16H13.91C13.5,17.43 12.83,18.76 12,19.96M8,8H5.08C6.03,6.34 7.57,5.06 9.4,4.44C8.8,5.55 8.35,6.75 8,8M5.08,16H8C8.35,17.25 8.8,18.45 9.4,19.56C7.57,18.93 6.03,17.65 5.08,16M4.26,14C4.1,13.36 4,12.69 4,12C4,11.31 4.1,10.64 4.26,10H7.64C7.56,10.66 7.5,11.32 7.5,12C7.5,12.68 7.56,13.34 7.64,14M12,4.03C12.83,5.23 13.5,6.57 13.91,8H10.09C10.5,6.57 11.17,5.23 12,4.03M18.92,8H15.97C15.65,6.75 15.19,5.55 14.59,4.44C16.43,5.07 17.96,6.34 18.92,8M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
 							</svg>
 							<span>Public Share</span>
-							<div class="button-tooltip">Share stream publicly via Tailscale Funnel
-Note: Local stream pauses while sharing</div>
+							<div class="button-tooltip">
+								<strong>Share stream publicly</strong>
+								<br>Via Tailscale Funnel
+								<br>Press <kbd>C</kbd> to copy URL when active
+								<br><em>Note: Local stream pauses to free the connection</em>
+							</div>
 						</button>
 					</li>
 					<li>
-						<button id="helpButton" class="apple-button">
-							<svg class="button-icon" viewBox="0 0 24 24" width="20" height="20">
+						<button id="helpButton" class="apple-button" aria-label="Show help and shortcuts (press ?)">
+							<svg class="button-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
 								<path fill="currentColor" d="M11,18H13V16H11V18M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,6A4,4 0 0,0 8,10H10A2,2 0 0,1 12,8A2,2 0 0,1 14,10C14,12 11,11.75 11,15H13C13,12.75 16,12.5 16,10A4,4 0 0,0 12,6Z"/>
 							</svg>
 							<span>Help</span>
@@ -81,9 +101,9 @@ Note: Local stream pauses while sharing</div>
 		</div>
 		<div id="container">
 			<canvas id="canvas"></canvas>
-			<div id="message"></div>
-			<div id="statusIndicator" class="status-indicator">
-				<span class="status-dot"></span>
+			<div id="message" role="alert" aria-live="assertive"></div>
+			<div id="statusIndicator" class="status-indicator" role="status" aria-live="polite">
+				<span class="status-dot" aria-hidden="true"></span>
 				<span class="status-label">Connecting...</span>
 			</div>
 			<div id="reconnectBanner" class="reconnect-banner">
@@ -94,10 +114,10 @@ Note: Local stream pauses while sharing</div>
 		</div>
 
 		<!-- Help Overlay -->
-		<div id="helpOverlay" class="help-overlay">
+		<div id="helpOverlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
 			<div class="help-content">
-				<button id="helpCloseBtn" class="help-close">&times;</button>
-				<h2>goMarkableStream Help</h2>
+				<button id="helpCloseBtn" class="help-close" aria-label="Close help">&times;</button>
+				<h2 id="helpTitle">goMarkableStream Help</h2>
 
 				<section class="help-section">
 					<h3>Gesture Controls</h3>
@@ -147,12 +167,24 @@ Note: Local stream pauses while sharing</div>
 							<span>Toggle laser pointer</span>
 						</div>
 						<div class="help-item">
+							<kbd>H</kbd> or <kbd>S</kbd>
+							<span>Toggle sidebar</span>
+						</div>
+						<div class="help-item">
+							<kbd>F</kbd>
+							<span>Toggle fullscreen mode</span>
+						</div>
+						<div class="help-item">
+							<kbd>C</kbd>
+							<span>Copy share URL (when sharing)</span>
+						</div>
+						<div class="help-item">
 							<kbd>?</kbd>
 							<span>Show this help overlay</span>
 						</div>
 						<div class="help-item">
 							<kbd>Esc</kbd>
-							<span>Close this overlay</span>
+							<span>Close overlay/sidebar</span>
 						</div>
 					</div>
 				</section>
@@ -163,6 +195,11 @@ Note: Local stream pauses while sharing</div>
 		<div id="onboardingHint" class="onboarding-hint">
 			<div class="onboarding-arrow"></div>
 			<span>Hover here for controls</span>
+		</div>
+
+		<!-- Fullscreen exit hint -->
+		<div id="fullscreenHint" class="fullscreen-hint">
+			Press <kbd>ESC</kbd> or <kbd>F</kbd> to exit fullscreen
 		</div>
 
 		<script src="qrcode.js"></script>
