@@ -14,18 +14,20 @@ import (
 )
 
 const (
-	// Frame type constants for wire protocol
-	FrameTypeFull           = 0x00 // Deprecated: uncompressed full frame
-	FrameTypeDelta          = 0x01
-	FrameTypeFullCompressed = 0x02 // Gzip-compressed full frame
+	// FrameTypeFull is a deprecated frame type for uncompressed full frames
+	FrameTypeFull = 0x00
+	// FrameTypeDelta indicates a delta-encoded frame
+	FrameTypeDelta = 0x01
+	// FrameTypeFullCompressed is a gzip-compressed full frame
+	FrameTypeFullCompressed = 0x02
 
 	// DefaultThreshold is the default change ratio above which a full frame is sent
 	DefaultThreshold = 0.30
 
 	// Maximum values for short run encoding
-	maxShortOffset = 0xFFFF   // 64KB - 1
-	maxShortLength = 127      // 7 bits
-	bytesPerPixel  = 4        // BGRA format
+	maxShortOffset = 0xFFFF // 64KB - 1
+	maxShortLength = 127    // 7 bits
+	bytesPerPixel  = 4      // BGRA format
 )
 
 // Encoder holds the state for delta encoding between frames.
@@ -113,7 +115,7 @@ func (e *Encoder) compareFrames(current []byte) []changeRun {
 	numQwords := frameLen / 8
 
 	var runStart int = -1
-	var lastDiffEnd int = 0
+	var lastDiffEnd int
 
 	// Get pointers for fast comparison
 	currPtr := unsafe.Pointer(&current[0])
