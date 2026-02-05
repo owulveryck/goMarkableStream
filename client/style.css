@@ -15,8 +15,8 @@
     /* Text Hierarchy - Soft Contrast */
     --text-primary: #211e1c;
     --text-secondary: rgba(33, 30, 28, 0.7);
-    --text-tertiary: rgba(33, 30, 28, 0.5);
-    --text-muted: rgba(33, 30, 28, 0.35);
+    --text-tertiary: rgba(33, 30, 28, 0.65);
+    --text-muted: rgba(33, 30, 28, 0.50);
 
     /* Accent - Pen Blue */
     --accent-color: #1142d4;
@@ -72,6 +72,23 @@
     --radius-md: 4px;
     --radius-lg: 8px;
     --radius-pill: 9999px;
+
+    /* Z-Index System */
+    --z-content: 1;
+    --z-canvas: 2;
+    --z-status: 50;
+    --z-sidebar: 100;
+    --z-banner: 200;
+    --z-modal: 300;
+    --z-tooltip: 500;
+
+    /* Spacing Scale */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 24px;
+    --space-2xl: 32px;
 }
 
 /* ============================================
@@ -107,13 +124,13 @@ body, html {
     width: 100vw;
     height: 100vh;
     display: block;
-    z-index: 2;
+    z-index: var(--z-canvas);
     transition: filter var(--transition-normal);
 }
 
 #content {
     position: absolute;
-    z-index: 1;
+    z-index: var(--z-content);
 }
 
 canvas.hidden {
@@ -136,7 +153,7 @@ canvas.hidden {
     top: 0;
     left: calc(-1 * (var(--sidebar-width) - var(--sidebar-collapsed-width)));
     transition: all var(--transition-normal);
-    z-index: 5;
+    z-index: var(--z-sidebar);
     padding-top: 0;
     overflow-y: auto;
     overflow-x: hidden;
@@ -218,6 +235,24 @@ canvas.hidden {
     border-radius: var(--radius-md);
     transition: all var(--transition-fast);
     position: relative;
+    animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.menu li:nth-child(1) { animation-delay: 0.05s; }
+.menu li:nth-child(2) { animation-delay: 0.1s; }
+.menu li:nth-child(3) { animation-delay: 0.15s; }
+.menu li:nth-child(4) { animation-delay: 0.2s; }
+.menu li:nth-child(5) { animation-delay: 0.25s; }
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .menu li:hover {
@@ -256,7 +291,7 @@ canvas.hidden {
 }
 
 .apple-button:active {
-    transform: scale(0.98);
+    transform: scale(0.96);
     background-color: var(--glass-bg-active);
 }
 
@@ -302,6 +337,45 @@ canvas.hidden {
     animation: pulse-subtle 2.5s ease-in-out infinite;
 }
 
+/* Disabled button state */
+.apple-button:disabled,
+.my-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.apple-button:disabled:hover,
+.my-button:disabled:hover {
+    transform: none;
+    background-color: transparent;
+}
+
+/* Loading button state */
+.apple-button.loading {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.apple-button.loading .button-icon {
+    opacity: 0;
+}
+
+.apple-button.loading::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--accent-light);
+    border-radius: 50%;
+    border-top-color: var(--accent-color);
+    animation: spin 0.8s linear infinite;
+}
+
 @keyframes pulse-subtle {
     0%, 100% {
         opacity: 1;
@@ -332,7 +406,7 @@ canvas.hidden {
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-fast);
-    z-index: 10;
+    z-index: var(--z-tooltip);
     margin-left: 10px;
     font-weight: 400;
     pointer-events: none;
@@ -493,7 +567,7 @@ canvas.hidden {
     color: var(--color-error);
     font-weight: 500;
     border: 1px solid var(--color-error-light);
-    z-index: 10;
+    z-index: var(--z-sidebar);
     max-width: 80%;
     text-align: center;
     opacity: 0;
@@ -505,6 +579,33 @@ canvas.hidden {
     opacity: 1;
     visibility: visible;
     transform: translate(-50%, -50%) scale(1);
+    animation: messageEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#message.exiting {
+    animation: messageExit 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes messageEnter {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+@keyframes messageExit {
+    from {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9) translateY(10px);
+    }
 }
 
 #message.info {
@@ -571,7 +672,7 @@ canvas.hidden {
     border-radius: var(--radius-pill);
     box-shadow: var(--shadow-md);
     border: 1px solid var(--glass-border);
-    z-index: 100;
+    z-index: var(--z-status);
     opacity: 1;
     transition: all var(--transition-normal);
     display: flex;
@@ -597,8 +698,8 @@ canvas.hidden {
 }
 
 .status-dot {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     background-color: var(--text-tertiary);
     transition: all var(--transition-fast);
@@ -687,7 +788,7 @@ canvas.hidden {
     align-items: center;
     justify-content: center;
     gap: 12px;
-    z-index: 1000;
+    z-index: var(--z-banner);
     transform: translateY(-100%);
     transition: transform var(--transition-normal);
     box-shadow: var(--shadow-md);
@@ -731,7 +832,7 @@ canvas.hidden {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-xl);
     border: 1px solid var(--glass-border);
-    z-index: 200;
+    z-index: var(--z-banner);
     text-align: center;
     max-width: 400px;
     opacity: 0;
@@ -809,7 +910,7 @@ canvas.hidden {
     background-color: rgba(33, 30, 28, 0.4);
     backdrop-filter: blur(var(--blur-sm));
     -webkit-backdrop-filter: blur(var(--blur-sm));
-    z-index: 1000;
+    z-index: var(--z-modal);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -965,7 +1066,7 @@ canvas.hidden {
     font-size: 14px;
     font-weight: 500;
     box-shadow: var(--shadow-lg);
-    z-index: 50;
+    z-index: var(--z-status);
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-slow);
@@ -1014,7 +1115,7 @@ canvas.hidden {
     transform: translateY(100px) scale(0.95);
     opacity: 0;
     transition: all var(--transition-normal);
-    z-index: 1000;
+    z-index: var(--z-modal);
 }
 
 .toast.visible {
@@ -1095,7 +1196,7 @@ canvas.hidden {
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-fast);
-    z-index: 1000;
+    z-index: var(--z-tooltip);
     box-shadow: var(--shadow-md);
 }
 
@@ -1143,6 +1244,180 @@ canvas.hidden {
 
     .status-indicator.reconnecting .status-dot {
         animation: none;
+    }
+}
+
+/* ============================================
+   Mobile Responsive Breakpoints
+   ============================================ */
+
+/* Tablet: Collapse sidebar to icons only */
+@media (max-width: 768px) {
+    :root {
+        --sidebar-width: 60px;
+    }
+
+    .sidebar-header h3 {
+        display: none;
+    }
+
+    .sidebar-header {
+        justify-content: center;
+        padding: 20px 12px;
+    }
+
+    .sidebar-logo {
+        margin-right: 0;
+    }
+
+    .menu li button span {
+        display: none;
+    }
+
+    .menu li button {
+        justify-content: center;
+        padding: 14px;
+    }
+
+    .button-icon {
+        margin-right: 0;
+    }
+
+    .menu li .button-tooltip {
+        display: none;
+    }
+
+    .sidebar-footer small {
+        display: none;
+    }
+
+    #qrCodeContainer svg {
+        width: 80px;
+        height: 80px;
+    }
+
+    #qrCodeContainer {
+        margin: 0 8px 8px 8px;
+        padding: 12px;
+    }
+
+    .help-content {
+        max-width: calc(100vw - 48px);
+        padding: 24px;
+        margin: 16px;
+    }
+
+    .help-content h2 {
+        font-size: 22px;
+    }
+
+    .help-item {
+        grid-template-columns: 32px 1fr auto;
+        padding: 10px 12px;
+        gap: 8px;
+    }
+
+    .help-grid.shortcuts .help-item {
+        grid-template-columns: 40px 1fr;
+    }
+}
+
+/* Mobile: Hide sidebar completely, adjust layout */
+@media (max-width: 480px) {
+    :root {
+        --sidebar-width: 0;
+        --sidebar-collapsed-width: 8px;
+    }
+
+    .sidebar {
+        left: calc(-1 * var(--sidebar-width) - 60px);
+    }
+
+    .sidebar.active {
+        left: 0;
+        width: 200px;
+    }
+
+    .sidebar.active .menu li button span {
+        display: inline;
+    }
+
+    .sidebar.active .sidebar-header h3 {
+        display: block;
+    }
+
+    .sidebar.active .button-icon {
+        margin-right: 12px;
+    }
+
+    .sidebar.active .menu li button {
+        justify-content: flex-start;
+        padding: 12px 14px;
+    }
+
+    .status-indicator {
+        bottom: 12px;
+        right: 12px;
+        padding: 6px 12px;
+    }
+
+    .status-indicator.collapsed,
+    .status-indicator.connected {
+        padding: 8px;
+    }
+
+    .help-content {
+        max-width: calc(100vw - 32px);
+        max-height: 90vh;
+        padding: 20px;
+        margin: 8px;
+    }
+
+    .help-content h2 {
+        font-size: 20px;
+        margin-bottom: 20px;
+    }
+
+    .help-section h3 {
+        font-size: 10px;
+    }
+
+    .help-item {
+        grid-template-columns: 28px 1fr;
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+
+    .help-desc {
+        display: none;
+    }
+
+    .help-close {
+        width: 32px;
+        height: 32px;
+        font-size: 18px;
+    }
+
+    #qrCodeContainer svg {
+        width: 80px;
+        height: 80px;
+    }
+
+    .onboarding-hint {
+        left: 12px;
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+
+    .reconnect-banner {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+
+    #message {
+        padding: 16px 20px;
+        max-width: 90%;
+        font-size: 14px;
     }
 }
 
@@ -1199,8 +1474,8 @@ canvas.hidden {
 
     --text-primary: #fcfbf8;
     --text-secondary: rgba(252, 251, 248, 0.7);
-    --text-tertiary: rgba(252, 251, 248, 0.5);
-    --text-muted: rgba(252, 251, 248, 0.35);
+    --text-tertiary: rgba(252, 251, 248, 0.65);
+    --text-muted: rgba(252, 251, 248, 0.50);
 
     --glass-bg: rgba(33, 30, 28, 0.85);
     --glass-bg-hover: rgba(42, 39, 36, 0.95);

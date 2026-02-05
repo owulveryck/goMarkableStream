@@ -1,5 +1,105 @@
 // UI interactions module
 
+// ============================================
+// State Persistence with localStorage
+// ============================================
+
+const STORAGE_KEYS = {
+    PORTRAIT_MODE: 'goMarkableStream_portraitMode',
+    LASER_ENABLED: 'goMarkableStream_laserEnabled',
+    LAYER_ORDER: 'goMarkableStream_layerOrder'
+};
+
+// Load saved preferences on initialization
+function loadSavedPreferences() {
+    // Portrait mode
+    const savedPortrait = localStorage.getItem(STORAGE_KEYS.PORTRAIT_MODE);
+    if (savedPortrait !== null) {
+        const isPortrait = savedPortrait === 'true';
+        if (isPortrait !== portrait) {
+            portrait = isPortrait;
+            const rotateBtn = document.getElementById('rotate');
+            rotateBtn.classList.toggle('toggled', portrait);
+            rotateBtn.setAttribute('aria-pressed', portrait.toString());
+            eventWorker.postMessage({ type: 'portrait', portrait: portrait });
+            resizeVisibleCanvas();
+            redrawScene(portrait, 1);
+        }
+    }
+
+    // Laser enabled
+    const savedLaser = localStorage.getItem(STORAGE_KEYS.LASER_ENABLED);
+    if (savedLaser !== null) {
+        const isLaserEnabled = savedLaser === 'true';
+        if (isLaserEnabled !== laserEnabled) {
+            laserEnabled = isLaserEnabled;
+            const laserBtn = document.getElementById('laserToggle');
+            laserBtn.classList.toggle('toggled', laserEnabled);
+            laserBtn.setAttribute('aria-pressed', laserEnabled.toString());
+            if (!laserEnabled) {
+                clearLaser();
+            }
+        }
+    }
+
+    // Layer order (only if layers menu is visible)
+    const savedLayerOrder = localStorage.getItem(STORAGE_KEYS.LAYER_ORDER);
+    if (savedLayerOrder !== null && document.getElementById('layersMenuItem').style.display !== 'none') {
+        const isContentOnTop = savedLayerOrder === 'content';
+        const switchBtn = document.getElementById('switchOrderButton');
+        if (isContentOnTop) {
+            iFrame.style.zIndex = 4;
+            switchBtn.classList.add('toggled');
+            switchBtn.setAttribute('aria-pressed', 'true');
+        }
+    }
+}
+
+// Save preference to localStorage
+function savePreference(key, value) {
+    try {
+        localStorage.setItem(key, value.toString());
+    } catch (e) {
+        console.warn('Failed to save preference:', e);
+    }
+}
+
+// Initialize preferences after DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Small delay to ensure all components are initialized
+    setTimeout(loadSavedPreferences, 100);
+});
+
+// ============================================
+// Toast Notification System
+// ============================================
+
+function showToast(message, duration = 3000) {
+    // Remove existing toast if any
+    const existingToast = document.querySelector('.toast');
+    if (existingToast) {
+        existingToast.remove();
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    document.body.appendChild(toast);
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+        toast.classList.add('visible');
+    });
+
+    // Auto-dismiss
+    setTimeout(() => {
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+}
+
 // Help overlay functionality
 function toggleHelpOverlay(show) {
     const overlay = document.getElementById('helpOverlay');
@@ -62,9 +162,13 @@ document.addEventListener('keydown', function(e) {
 document.getElementById('rotate').addEventListener('click', function () {
     portrait = !portrait;
     this.classList.toggle('toggled');
+    this.setAttribute('aria-pressed', portrait.toString());
     eventWorker.postMessage({ type: 'portrait', portrait: portrait });
     resizeVisibleCanvas();
     redrawScene(portrait, 1);
+
+    // Save preference
+    savePreference(STORAGE_KEYS.PORTRAIT_MODE, portrait);
 
     // Show confirmation message
     showMessage(`Display ${portrait ? 'portrait' : 'landscape'} mode activated`, MessageDuration.QUICK);
@@ -91,10 +195,14 @@ document.getElementById('switchOrderButton').addEventListener('click', function 
     if (isLayerSwitched) {
         iFrame.style.zIndex = 1;
         this.classList.remove('toggled');
+        this.setAttribute('aria-pressed', 'false');
+        savePreference(STORAGE_KEYS.LAYER_ORDER, 'drawing');
         showMessage('Drawing layer on top', MessageDuration.QUICK);
     } else {
         iFrame.style.zIndex = 4;
         this.classList.add('toggled');
+        this.setAttribute('aria-pressed', 'true');
+        savePreference(STORAGE_KEYS.LAYER_ORDER, 'content');
         showMessage('Content layer on top', MessageDuration.QUICK);
     }
 });
@@ -103,14 +211,30 @@ document.getElementById('switchOrderButton').addEventListener('click', function 
 document.getElementById('laserToggle').addEventListener('click', function () {
     laserEnabled = !laserEnabled;
     this.classList.toggle('toggled');
+    this.setAttribute('aria-pressed', laserEnabled.toString());
     if (!laserEnabled) {
         clearLaser();
     }
+
+    // Save preference
+    savePreference(STORAGE_KEYS.LASER_ENABLED, laserEnabled);
+
     showMessage(`Laser pointer ${laserEnabled ? 'enabled' : 'disabled'}`, MessageDuration.QUICK);
 });
 
 // Funnel toggle and URL copy
 document.getElementById('funnelButton').addEventListener('click', async function() {
+    const funnelBtn = this;
+
+    // Prevent double-click during async operation
+    if (funnelBtn.disabled || funnelBtn.classList.contains('loading')) {
+        return;
+    }
+
+    // Add loading state
+    funnelBtn.disabled = true;
+    funnelBtn.classList.add('loading');
+
     try {
         // Get current status
         let response = await fetch('/funnel');
@@ -145,7 +269,8 @@ document.getElementById('funnelButton').addEventListener('click', async function
         data = await response.json();
 
         // Update button visual state
-        this.classList.toggle('toggled', data.enabled);
+        funnelBtn.classList.toggle('toggled', data.enabled);
+        funnelBtn.setAttribute('aria-pressed', data.enabled.toString());
 
         // Update footer with URL or version
         const footerElement = document.querySelector('.sidebar-footer small');
@@ -168,6 +293,7 @@ document.getElementById('funnelButton').addEventListener('click', async function
             try {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     await navigator.clipboard.writeText(data.url);
+                    showToast('Funnel URL copied to clipboard');
                 }
             } catch (clipboardErr) {
                 console.warn('Clipboard access denied:', clipboardErr);
@@ -202,6 +328,10 @@ document.getElementById('funnelButton').addEventListener('click', async function
     } catch (error) {
         console.error('Funnel toggle error:', error);
         showMessage('Failed to toggle public sharing', MessageDuration.IMPORTANT);
+    } finally {
+        // Remove loading state
+        funnelBtn.disabled = false;
+        funnelBtn.classList.remove('loading');
     }
 });
 
