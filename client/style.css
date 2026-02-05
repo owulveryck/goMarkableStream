@@ -1,39 +1,46 @@
-/* CSS styles for the layout - Glassmorphism UI */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* CSS styles for the layout - reMarkable Ark Design System */
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap');
 
 /* ============================================
-   Design System: Glassmorphism Dark Theme
+   Design System: reMarkable Ark Light Theme
+   "Digital Paper" - Organic & Minimal
    ============================================ */
 
 :root {
-    /* Base Colors */
-    --bg-base: #0a0a0f;
-    --bg-gradient-end: #1a1a2e;
+    /* Base Colors - Light Neutral Theme */
+    --bg-base: #fcfbf8;
+    --bg-surface: #f7f6f3;
+    --bg-elevated: #ffffff;
 
-    /* Glass Surfaces */
-    --glass-bg: rgba(255, 255, 255, 0.08);
-    --glass-bg-hover: rgba(255, 255, 255, 0.12);
-    --glass-bg-active: rgba(255, 255, 255, 0.16);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --glass-border-hover: rgba(255, 255, 255, 0.18);
+    /* Text Hierarchy - Soft Contrast */
+    --text-primary: #211e1c;
+    --text-secondary: rgba(33, 30, 28, 0.7);
+    --text-tertiary: rgba(33, 30, 28, 0.5);
+    --text-muted: rgba(33, 30, 28, 0.35);
 
-    /* Text Hierarchy */
-    --text-primary: rgba(255, 255, 255, 0.95);
-    --text-secondary: rgba(255, 255, 255, 0.65);
-    --text-tertiary: rgba(255, 255, 255, 0.45);
+    /* Accent - Pen Blue */
+    --accent-color: #1142d4;
+    --accent-hover: #0d35a8;
+    --accent-light: rgba(17, 66, 212, 0.1);
+    --accent-glow: rgba(17, 66, 212, 0.15);
 
-    /* Accent Colors */
-    --accent-color: #6366f1;
-    --accent-hover: #818cf8;
-    --accent-glow: rgba(99, 102, 241, 0.4);
+    /* Glass Surfaces - Light Theme */
+    --glass-bg: rgba(252, 251, 248, 0.85);
+    --glass-bg-hover: rgba(247, 246, 243, 0.95);
+    --glass-bg-active: rgba(240, 239, 236, 1);
+    --glass-border: rgba(33, 30, 28, 0.08);
+    --glass-border-hover: rgba(33, 30, 28, 0.15);
 
     /* Semantic Colors */
-    --color-success: #22c55e;
-    --color-success-glow: rgba(34, 197, 94, 0.4);
-    --color-warning: #f59e0b;
-    --color-warning-glow: rgba(245, 158, 11, 0.4);
-    --color-error: #ef4444;
-    --color-error-glow: rgba(239, 68, 68, 0.4);
+    --color-success: #2d8a4e;
+    --color-success-light: rgba(45, 138, 78, 0.1);
+    --color-success-glow: rgba(45, 138, 78, 0.2);
+    --color-warning: #b8860b;
+    --color-warning-light: rgba(184, 134, 11, 0.1);
+    --color-warning-glow: rgba(184, 134, 11, 0.2);
+    --color-error: #c53030;
+    --color-error-light: rgba(197, 48, 48, 0.1);
+    --color-error-glow: rgba(197, 48, 48, 0.2);
 
     /* Blur Values */
     --blur-sm: 8px;
@@ -41,20 +48,30 @@
     --blur-lg: 24px;
     --blur-xl: 40px;
 
-    /* Shadows */
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-    --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
+    /* Shadows - Very Subtle */
+    --shadow-sm: 0 1px 3px rgba(33, 30, 28, 0.04);
+    --shadow-md: 0 4px 12px rgba(33, 30, 28, 0.06);
+    --shadow-lg: 0 8px 24px rgba(33, 30, 28, 0.08);
+    --shadow-xl: 0 16px 48px rgba(33, 30, 28, 0.1);
 
     /* Layout */
-    --sidebar-width: 200px;
+    --sidebar-width: 220px;
     --sidebar-collapsed-width: 12px;
 
     /* Transitions */
     --transition-fast: 0.15s ease;
-    --transition-normal: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-normal: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     --transition-slow: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* Typography */
+    --font-sans: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --font-serif: 'Source Serif 4', 'Book Antiqua', Palatino, 'Times New Roman', serif;
+
+    /* Border Radius - Strict/Modern */
+    --radius-sm: 2px;
+    --radius-md: 4px;
+    --radius-lg: 8px;
+    --radius-pill: 9999px;
 }
 
 /* ============================================
@@ -65,11 +82,11 @@ body, html {
     margin: 0;
     padding: 0;
     height: 100%;
-    background: linear-gradient(135deg, var(--bg-base) 0%, var(--bg-gradient-end) 100%);
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background: var(--bg-base);
+    font-family: var(--font-sans);
     color: var(--text-primary);
     font-size: 16px;
-    line-height: 1.5;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -104,23 +121,17 @@ canvas.hidden {
 }
 
 /* ============================================
-   Sidebar
+   Sidebar - Ark Pill Nav Style
    ============================================ */
 
 .sidebar {
     width: var(--sidebar-width);
     height: 100vh;
-    background: linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.1) 0%,
-        rgba(255, 255, 255, 0.05) 100%
-    );
+    background: var(--glass-bg);
     backdrop-filter: blur(var(--blur-lg)) saturate(180%);
     -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(180%);
     border-right: 1px solid var(--glass-border);
-    box-shadow:
-        var(--shadow-lg),
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-lg);
     position: fixed;
     top: 0;
     left: calc(-1 * (var(--sidebar-width) - var(--sidebar-collapsed-width)));
@@ -135,9 +146,7 @@ canvas.hidden {
 
 .sidebar.active {
     left: 0;
-    box-shadow:
-        var(--shadow-xl),
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+    box-shadow: var(--shadow-xl);
 }
 
 .sidebar::after {
@@ -150,10 +159,9 @@ canvas.hidden {
     background: linear-gradient(
         90deg,
         transparent,
-        rgba(99, 102, 241, 0.1)
+        rgba(17, 66, 212, 0.03)
     );
     z-index: -1;
-    opacity: 0.8;
     pointer-events: none;
 }
 
@@ -164,79 +172,50 @@ canvas.hidden {
 .sidebar-header {
     display: flex;
     align-items: center;
-    padding: 24px 16px;
+    padding: 24px 20px;
     border-bottom: 1px solid var(--glass-border);
-    margin-bottom: 15px;
-    background: linear-gradient(
-        135deg,
-        rgba(99, 102, 241, 0.2) 0%,
-        rgba(99, 102, 241, 0.05) 100%
-    );
+    margin-bottom: 8px;
+    background: transparent;
     position: relative;
-    overflow: hidden;
-}
-
-/* Diagonal shine overlay */
-.sidebar-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 200%;
-    height: 100%;
-    background: linear-gradient(
-        120deg,
-        transparent 30%,
-        rgba(255, 255, 255, 0.05) 50%,
-        transparent 70%
-    );
-    animation: shine 8s ease-in-out infinite;
-}
-
-@keyframes shine {
-    0%, 100% { transform: translateX(-50%); }
-    50% { transform: translateX(50%); }
 }
 
 .sidebar-logo {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     margin-right: 12px;
-    border-radius: 10px;
-    box-shadow:
-        0 4px 12px rgba(0, 0, 0, 0.3),
-        0 0 20px var(--accent-glow);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
     transition: transform var(--transition-normal);
 }
 
 .sidebar-header:hover .sidebar-logo {
-    transform: rotate(10deg) scale(1.05);
+    transform: rotate(5deg) scale(1.02);
 }
 
 .sidebar-header h3 {
     margin: 0;
     color: var(--text-primary);
+    font-family: var(--font-serif);
     font-size: 20px;
-    font-weight: 600;
-    letter-spacing: -0.2px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    font-weight: 500;
+    letter-spacing: -0.3px;
 }
 
 /* ============================================
-   Menu & Buttons
+   Menu & Buttons - Ark Style
    ============================================ */
 
 .menu {
     list-style: none;
     padding: 0;
-    margin: 10px 0;
+    margin: 8px 0;
     flex: 1;
 }
 
 .menu li {
     padding: 0;
-    margin: 8px 15px;
-    border-radius: 12px;
+    margin: 4px 12px;
+    border-radius: var(--radius-md);
     transition: all var(--transition-fast);
     position: relative;
 }
@@ -248,20 +227,20 @@ canvas.hidden {
 .menu li button {
     width: 100%;
     text-align: left;
-    padding: 12px 16px;
+    padding: 12px 14px;
     border-radius: inherit;
 }
 
-/* Apple-style button */
+/* Ark Button - Primary Style */
 .apple-button {
     display: inline-flex;
     align-items: center;
     width: 100%;
     padding: 0;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     border: 1px solid transparent;
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-    font-size: 15px;
+    font-family: var(--font-sans);
+    font-size: 14px;
     font-weight: 500;
     cursor: pointer;
     transition: all var(--transition-normal);
@@ -293,52 +272,42 @@ canvas.hidden {
     margin-right: 12px;
     color: var(--accent-color);
     transition: all var(--transition-fast);
-    filter: drop-shadow(0 0 4px var(--accent-glow));
 }
 
 .apple-button:hover .button-icon {
-    transform: scale(1.1);
-    filter: drop-shadow(0 0 8px var(--accent-glow));
+    transform: scale(1.05);
 }
 
 .apple-button.toggled {
-    background: linear-gradient(
-        135deg,
-        rgba(34, 197, 94, 0.15) 0%,
-        rgba(34, 197, 94, 0.08) 100%
-    );
-    border-color: rgba(34, 197, 94, 0.3);
+    background: var(--color-success-light);
+    border-color: rgba(45, 138, 78, 0.2);
     font-weight: 600;
     position: relative;
 }
 
 .apple-button.toggled .button-icon {
     color: var(--color-success);
-    filter: drop-shadow(0 0 6px var(--color-success-glow));
 }
 
 /* Active state dot indicator */
 .apple-button.toggled::after {
     content: '';
     position: absolute;
-    top: 8px;
-    right: 8px;
+    top: 10px;
+    right: 10px;
     width: 6px;
     height: 6px;
     background-color: var(--color-success);
     border-radius: 50%;
-    box-shadow: 0 0 8px var(--color-success);
-    animation: pulse-glow 2s ease-in-out infinite;
+    animation: pulse-subtle 2.5s ease-in-out infinite;
 }
 
-@keyframes pulse-glow {
+@keyframes pulse-subtle {
     0%, 100% {
         opacity: 1;
-        box-shadow: 0 0 8px var(--color-success);
     }
     50% {
-        opacity: 0.7;
-        box-shadow: 0 0 12px var(--color-success), 0 0 20px var(--color-success-glow);
+        opacity: 0.5;
     }
 }
 
@@ -351,25 +320,25 @@ canvas.hidden {
     left: 100%;
     top: 50%;
     transform: translateY(-50%) translateX(5px);
-    background-color: rgba(10, 10, 15, 0.95);
+    background-color: var(--bg-elevated);
     backdrop-filter: blur(var(--blur-md));
     -webkit-backdrop-filter: blur(var(--blur-md));
     color: var(--text-primary);
-    padding: 8px 14px;
-    border-radius: 8px;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--glass-border);
-    font-size: 14px;
+    font-size: 13px;
     white-space: pre-line;
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-fast);
     z-index: 10;
     margin-left: 10px;
-    font-weight: 500;
+    font-weight: 400;
     pointer-events: none;
     max-width: 220px;
-    line-height: 1.4;
-    box-shadow: var(--shadow-md);
+    line-height: 1.5;
+    box-shadow: var(--shadow-lg);
 }
 
 .menu li:hover .button-tooltip {
@@ -386,23 +355,22 @@ canvas.hidden {
     transform: translateY(-50%);
     border-width: 6px 6px 6px 0;
     border-style: solid;
-    border-color: transparent rgba(10, 10, 15, 0.95) transparent transparent;
+    border-color: transparent var(--bg-elevated) transparent transparent;
 }
 
-/* Keyboard shortcut styling */
+/* Keyboard shortcut styling - Ark style */
 .button-tooltip kbd {
     display: inline-block;
     padding: 3px 8px;
     font-size: 11px;
     font-family: 'SF Mono', Monaco, 'Courier New', monospace;
-    background: linear-gradient(135deg, var(--accent-color) 0%, #4f46e5 100%);
-    border-radius: 4px;
+    background: var(--accent-color);
+    border-radius: var(--radius-sm);
     border: none;
     margin-left: 8px;
     vertical-align: middle;
     color: white;
     font-weight: 600;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* ============================================
@@ -415,7 +383,7 @@ canvas.hidden {
     font-weight: 500;
     transition: color var(--transition-fast);
     display: block;
-    padding: 10px 15px;
+    padding: 10px 14px;
 }
 
 .menu li a:hover {
@@ -423,34 +391,34 @@ canvas.hidden {
 }
 
 /* ============================================
-   Legacy Button Styles
+   Legacy Button Styles - Ark Primary Button
    ============================================ */
 
 .my-button {
-    background: linear-gradient(135deg, var(--accent-color) 0%, #4f46e5 100%);
+    background: var(--accent-color);
     border: none;
     color: white;
-    padding: 12px 22px;
+    padding: 12px 24px;
     text-align: center;
     text-decoration: none;
     display: inline-block;
-    font-size: 15px;
+    font-size: 14px;
     cursor: pointer;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     transition: all var(--transition-fast);
-    box-shadow: 0 4px 12px var(--accent-glow);
+    box-shadow: var(--shadow-sm);
     font-weight: 500;
+    font-family: var(--font-sans);
 }
 
 .my-button:hover {
-    background: linear-gradient(135deg, var(--accent-hover) 0%, #6366f1 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px var(--accent-glow);
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
 }
 
 .my-button:focus {
     outline: none;
-    box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .my-button:focus-visible {
@@ -459,9 +427,8 @@ canvas.hidden {
 }
 
 .my-button.toggled {
-    background: linear-gradient(135deg, var(--color-success) 0%, #16a34a 100%);
+    background: var(--color-success);
     color: #ffffff;
-    box-shadow: 0 4px 12px var(--color-success-glow);
 }
 
 .icon {
@@ -474,28 +441,26 @@ canvas.hidden {
     border-radius: 50%;
     border: 2px solid white;
     background-color: var(--color-error);
-    box-shadow: 0 0 8px var(--color-error-glow);
 }
 
 /* ============================================
-   Toggle Button
+   Toggle Button - Ark Secondary Style
    ============================================ */
 
 .toggle-button {
     display: inline-block;
     padding: 12px 24px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     border: 1px solid var(--glass-border);
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-    font-size: 15px;
+    font-family: var(--font-sans);
+    font-size: 14px;
     font-weight: 500;
     cursor: pointer;
     transition: all var(--transition-fast);
     outline: none;
     text-align: center;
-    background-color: var(--glass-bg);
+    background-color: transparent;
     color: var(--text-secondary);
-    box-shadow: var(--shadow-sm);
 }
 
 .toggle-button:focus-visible {
@@ -504,10 +469,9 @@ canvas.hidden {
 }
 
 .toggle-button.active {
-    background: linear-gradient(135deg, var(--accent-color) 0%, #4f46e5 100%);
+    background: var(--accent-color);
     color: #FFFFFF;
     border-color: transparent;
-    box-shadow: 0 4px 12px var(--accent-glow);
 }
 
 /* ============================================
@@ -519,16 +483,16 @@ canvas.hidden {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.95);
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-    background: rgba(10, 10, 15, 0.9);
+    font-family: var(--font-sans);
+    background: var(--bg-elevated);
     backdrop-filter: blur(var(--blur-md));
     -webkit-backdrop-filter: blur(var(--blur-md));
-    padding: 18px 28px;
-    border-radius: 16px;
-    box-shadow: var(--shadow-lg);
+    padding: 20px 28px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
     color: var(--color-error);
     font-weight: 500;
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    border: 1px solid var(--color-error-light);
     z-index: 10;
     max-width: 80%;
     text-align: center;
@@ -545,7 +509,7 @@ canvas.hidden {
 
 #message.info {
     color: var(--accent-color);
-    border-color: rgba(99, 102, 241, 0.3);
+    border-color: var(--accent-light);
 }
 
 /* ============================================
@@ -556,11 +520,11 @@ canvas.hidden {
     position: relative;
     width: 100%;
     text-align: center;
-    color: var(--text-tertiary);
+    color: var(--text-muted);
     font-size: 12px;
-    padding: 12px 0;
+    padding: 16px 0;
     border-top: 1px solid var(--glass-border);
-    background: rgba(255, 255, 255, 0.02);
+    background: transparent;
     margin-top: auto;
 }
 
@@ -568,7 +532,8 @@ canvas.hidden {
     display: block;
     word-break: break-all;
     font-size: 10px;
-    padding: 0 8px;
+    padding: 0 12px;
+    font-weight: 400;
 }
 
 /* ============================================
@@ -576,13 +541,14 @@ canvas.hidden {
    ============================================ */
 
 #qrCodeContainer {
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 8px;
-    margin: 0 12px 8px 12px;
+    padding: 16px;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-md);
+    margin: 0 16px 12px 16px;
     display: flex;
     justify-content: center;
     align-items: center;
+    border: 1px solid var(--glass-border);
 }
 
 #qrCodeContainer svg {
@@ -591,18 +557,18 @@ canvas.hidden {
 }
 
 /* ============================================
-   Status Indicator Pill
+   Status Indicator Pill - Ark Style
    ============================================ */
 
 .status-indicator {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 8px 14px;
-    background: rgba(10, 10, 15, 0.8);
+    bottom: 24px;
+    right: 24px;
+    padding: 8px 16px;
+    background: var(--glass-bg);
     backdrop-filter: blur(var(--blur-md));
     -webkit-backdrop-filter: blur(var(--blur-md));
-    border-radius: 20px;
+    border-radius: var(--radius-pill);
     box-shadow: var(--shadow-md);
     border: 1px solid var(--glass-border);
     z-index: 100;
@@ -621,7 +587,7 @@ canvas.hidden {
 
 .status-indicator.collapsed,
 .status-indicator.connected {
-    padding: 8px;
+    padding: 10px;
     border-radius: 50%;
 }
 
@@ -631,8 +597,8 @@ canvas.hidden {
 }
 
 .status-dot {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background-color: var(--text-tertiary);
     transition: all var(--transition-fast);
@@ -651,7 +617,6 @@ canvas.hidden {
 /* Connected state */
 .status-indicator.connected .status-dot {
     background-color: var(--color-success);
-    box-shadow: 0 0 10px var(--color-success-glow);
 }
 
 .status-indicator.connected .status-label {
@@ -661,7 +626,6 @@ canvas.hidden {
 /* Paused state */
 .status-indicator.paused .status-dot {
     background-color: var(--color-warning);
-    box-shadow: 0 0 10px var(--color-warning-glow);
 }
 
 .status-indicator.paused .status-label {
@@ -671,7 +635,6 @@ canvas.hidden {
 /* Rate limited state */
 .status-indicator.rate-limited .status-dot {
     background-color: var(--color-warning);
-    box-shadow: 0 0 10px var(--color-warning-glow);
 }
 
 .status-indicator.rate-limited .status-label {
@@ -681,8 +644,7 @@ canvas.hidden {
 /* Reconnecting state */
 .status-indicator.reconnecting .status-dot {
     background-color: var(--color-warning);
-    box-shadow: 0 0 10px var(--color-warning-glow);
-    animation: pulse-reconnect 1.2s ease-in-out infinite;
+    animation: pulse-reconnect 1.5s ease-in-out infinite;
 }
 
 .status-indicator.reconnecting .status-label {
@@ -691,21 +653,18 @@ canvas.hidden {
 
 @keyframes pulse-reconnect {
     0%, 100% {
-        opacity: 0.5;
+        opacity: 0.4;
         transform: scale(0.9);
-        box-shadow: 0 0 8px var(--color-warning-glow);
     }
     50% {
         opacity: 1;
         transform: scale(1.1);
-        box-shadow: 0 0 16px var(--color-warning-glow);
     }
 }
 
 /* Disconnected state */
 .status-indicator.disconnected .status-dot {
     background-color: var(--color-error);
-    box-shadow: 0 0 10px var(--color-error-glow);
 }
 
 .status-indicator.disconnected .status-label {
@@ -721,10 +680,8 @@ canvas.hidden {
     top: 0;
     left: 0;
     right: 0;
-    padding: 14px 20px;
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.9) 0%, rgba(217, 119, 6, 0.9) 100%);
-    backdrop-filter: blur(var(--blur-sm));
-    -webkit-backdrop-filter: blur(var(--blur-sm));
+    padding: 12px 20px;
+    background: var(--color-warning);
     color: white;
     display: flex;
     align-items: center;
@@ -733,9 +690,7 @@ canvas.hidden {
     z-index: 1000;
     transform: translateY(-100%);
     transition: transform var(--transition-normal);
-    box-shadow:
-        0 4px 20px rgba(245, 158, 11, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    box-shadow: var(--shadow-md);
 }
 
 .reconnect-banner.visible {
@@ -743,8 +698,8 @@ canvas.hidden {
 }
 
 .reconnect-spinner {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     border-top-color: white;
@@ -754,7 +709,6 @@ canvas.hidden {
 .reconnect-text {
     font-weight: 500;
     font-size: 14px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes spin {
@@ -770,15 +724,13 @@ canvas.hidden {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.95);
-    background: rgba(10, 10, 15, 0.95);
+    background: var(--bg-elevated);
     backdrop-filter: blur(var(--blur-lg));
     -webkit-backdrop-filter: blur(var(--blur-lg));
-    padding: 28px 36px;
-    border-radius: 20px;
-    box-shadow:
-        var(--shadow-xl),
-        0 0 60px var(--color-error-glow);
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 32px 40px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--glass-border);
     z-index: 200;
     text-align: center;
     max-width: 400px;
@@ -796,33 +748,34 @@ canvas.hidden {
 .connection-error h3 {
     margin: 0 0 12px 0;
     color: var(--color-error);
-    font-size: 18px;
-    font-weight: 600;
+    font-family: var(--font-serif);
+    font-size: 20px;
+    font-weight: 500;
 }
 
 .connection-error p {
-    margin: 0 0 20px 0;
+    margin: 0 0 24px 0;
     color: var(--text-secondary);
     font-size: 14px;
     line-height: 1.6;
 }
 
 .connection-error button {
-    background: linear-gradient(135deg, var(--accent-color) 0%, #4f46e5 100%);
+    background: var(--accent-color);
     color: white;
     border: none;
     padding: 12px 28px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
     transition: all var(--transition-fast);
-    box-shadow: 0 4px 12px var(--accent-glow);
+    font-family: var(--font-sans);
 }
 
 .connection-error button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px var(--accent-glow);
+    background: var(--accent-hover);
+    transform: translateY(-1px);
 }
 
 .connection-error button:focus-visible {
@@ -831,18 +784,16 @@ canvas.hidden {
 }
 
 .connection-error .dismiss-btn {
-    background: var(--glass-bg);
+    background: transparent;
     color: var(--text-secondary);
     margin-left: 10px;
     border: 1px solid var(--glass-border);
-    box-shadow: none;
 }
 
 .connection-error .dismiss-btn:hover {
     color: var(--text-primary);
     background-color: var(--glass-bg-hover);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
 }
 
 /* ============================================
@@ -855,7 +806,7 @@ canvas.hidden {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(33, 30, 28, 0.4);
     backdrop-filter: blur(var(--blur-sm));
     -webkit-backdrop-filter: blur(var(--blur-sm));
     z-index: 1000;
@@ -873,11 +824,11 @@ canvas.hidden {
 }
 
 .help-content {
-    background: rgba(20, 20, 30, 0.95);
+    background: var(--bg-elevated);
     backdrop-filter: blur(var(--blur-xl));
     -webkit-backdrop-filter: blur(var(--blur-xl));
-    border-radius: 20px;
-    padding: 32px;
+    border-radius: var(--radius-lg);
+    padding: 36px;
     max-width: 600px;
     max-height: 80vh;
     overflow-y: auto;
@@ -886,33 +837,17 @@ canvas.hidden {
     position: relative;
 }
 
-/* Top shine line */
-.help-content::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 20px;
-    right: 20px;
-    height: 1px;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.3),
-        transparent
-    );
-}
-
 .help-close {
     position: absolute;
     top: 16px;
     right: 16px;
-    background: var(--glass-bg);
+    background: var(--glass-bg-hover);
     border: 1px solid var(--glass-border);
-    font-size: 24px;
+    font-size: 20px;
     color: var(--text-secondary);
     cursor: pointer;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -921,9 +856,8 @@ canvas.hidden {
 }
 
 .help-close:hover {
-    background-color: var(--glass-bg-hover);
+    background-color: var(--glass-bg-active);
     color: var(--text-primary);
-    transform: rotate(90deg);
 }
 
 .help-close:focus-visible {
@@ -932,14 +866,16 @@ canvas.hidden {
 }
 
 .help-content h2 {
-    margin: 0 0 24px 0;
-    font-size: 24px;
-    font-weight: 600;
+    margin: 0 0 28px 0;
+    font-family: var(--font-serif);
+    font-size: 28px;
+    font-weight: 500;
     color: var(--text-primary);
+    letter-spacing: -0.5px;
 }
 
 .help-section {
-    margin-bottom: 24px;
+    margin-bottom: 28px;
 }
 
 .help-section:last-child {
@@ -948,17 +884,17 @@ canvas.hidden {
 
 .help-section h3 {
     margin: 0 0 16px 0;
-    font-size: 14px;
+    font-size: 11px;
     font-weight: 600;
-    color: var(--accent-color);
+    color: var(--text-tertiary);
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
 }
 
 .help-grid {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
 .help-item {
@@ -967,9 +903,9 @@ canvas.hidden {
     align-items: center;
     gap: 12px;
     padding: 14px 16px;
-    background-color: var(--glass-bg);
+    background-color: var(--bg-surface);
     border: 1px solid transparent;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     transition: all var(--transition-fast);
 }
 
@@ -983,7 +919,7 @@ canvas.hidden {
 }
 
 .gesture-icon {
-    font-size: 20px;
+    font-size: 18px;
     text-align: center;
     color: var(--accent-color);
 }
@@ -1002,20 +938,19 @@ canvas.hidden {
 .help-content kbd {
     display: inline-block;
     padding: 6px 12px;
-    font-size: 13px;
+    font-size: 12px;
     font-family: 'SF Mono', Monaco, 'Courier New', monospace;
-    background: linear-gradient(135deg, var(--accent-color) 0%, #4f46e5 100%);
-    border-radius: 6px;
+    background: var(--accent-color);
+    border-radius: var(--radius-sm);
     border: none;
     color: white;
     font-weight: 600;
-    min-width: 30px;
+    min-width: 28px;
     text-align: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* ============================================
-   Onboarding Hint
+   Onboarding Hint - Ark Style
    ============================================ */
 
 .onboarding-hint {
@@ -1023,17 +958,13 @@ canvas.hidden {
     top: 50%;
     left: 20px;
     transform: translateY(-50%);
-    background: linear-gradient(135deg, var(--accent-color) 0%, #4f46e5 100%);
-    backdrop-filter: blur(var(--blur-sm));
-    -webkit-backdrop-filter: blur(var(--blur-sm));
+    background: var(--accent-color);
     color: white;
-    padding: 14px 22px;
-    border-radius: 10px;
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
     font-size: 14px;
     font-weight: 500;
-    box-shadow:
-        0 4px 20px var(--accent-glow),
-        0 0 40px rgba(99, 102, 241, 0.2);
+    box-shadow: var(--shadow-lg);
     z-index: 50;
     opacity: 0;
     visibility: hidden;
@@ -1044,24 +975,24 @@ canvas.hidden {
 .onboarding-hint.visible {
     opacity: 1;
     visibility: visible;
-    animation: hint-float 3s ease-in-out infinite;
+    animation: hint-subtle 3s ease-in-out infinite;
 }
 
 .onboarding-arrow {
     position: absolute;
-    left: -8px;
+    left: -6px;
     top: 50%;
     transform: translateY(-50%);
     width: 0;
     height: 0;
-    border-top: 8px solid transparent;
-    border-bottom: 8px solid transparent;
-    border-right: 8px solid var(--accent-color);
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-right: 6px solid var(--accent-color);
 }
 
-@keyframes hint-float {
+@keyframes hint-subtle {
     0%, 100% { transform: translateY(-50%) translateX(0); }
-    50% { transform: translateY(-50%) translateX(4px); }
+    50% { transform: translateY(-50%) translateX(3px); }
 }
 
 /* ============================================
@@ -1070,15 +1001,15 @@ canvas.hidden {
 
 .toast {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    bottom: 24px;
+    right: 24px;
     padding: 14px 22px;
-    background: rgba(10, 10, 15, 0.9);
+    background: var(--bg-elevated);
     backdrop-filter: blur(var(--blur-md));
     -webkit-backdrop-filter: blur(var(--blur-md));
     color: var(--text-primary);
     border: 1px solid var(--glass-border);
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
     transform: translateY(100px) scale(0.95);
     opacity: 0;
@@ -1110,6 +1041,7 @@ canvas.hidden {
     font-size: 20px;
     line-height: 10px;
     letter-spacing: 2px;
+    color: var(--text-tertiary);
 }
 
 @keyframes loading {
@@ -1123,7 +1055,7 @@ canvas.hidden {
     display: inline-block;
     width: 16px;
     height: 16px;
-    border: 2px solid var(--accent-glow);
+    border: 2px solid var(--accent-light);
     border-radius: 50%;
     border-top-color: var(--accent-color);
     animation: spin 0.8s linear infinite;
@@ -1132,7 +1064,7 @@ canvas.hidden {
 }
 
 #message .loading-spinner {
-    border-color: var(--accent-glow);
+    border-color: var(--accent-light);
     border-top-color: var(--accent-color);
 }
 
@@ -1152,12 +1084,12 @@ canvas.hidden {
     left: 50%;
     transform: translateX(-50%);
     padding: 8px 14px;
-    background: rgba(10, 10, 15, 0.95);
+    background: var(--bg-elevated);
     backdrop-filter: blur(var(--blur-sm));
     -webkit-backdrop-filter: blur(var(--blur-sm));
     color: var(--text-primary);
     border: 1px solid var(--glass-border);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     font-size: 12px;
     white-space: nowrap;
     opacity: 0;
@@ -1181,10 +1113,10 @@ canvas.hidden {
         box-shadow: 0 0 0 0 var(--color-error-glow);
     }
     70% {
-        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+        box-shadow: 0 0 0 8px rgba(197, 48, 48, 0);
     }
     100% {
-        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        box-shadow: 0 0 0 0 rgba(197, 48, 48, 0);
     }
 }
 
@@ -1220,38 +1152,59 @@ canvas.hidden {
 
 @supports not (backdrop-filter: blur(10px)) {
     .sidebar {
-        background: rgba(20, 20, 30, 0.98);
+        background: rgba(252, 251, 248, 0.98);
     }
 
     .status-indicator {
-        background: rgba(10, 10, 15, 0.98);
+        background: rgba(252, 251, 248, 0.98);
     }
 
     .help-content {
-        background: rgba(20, 20, 30, 0.98);
+        background: rgba(255, 255, 255, 0.98);
     }
 
     .connection-error {
-        background: rgba(10, 10, 15, 0.98);
+        background: rgba(255, 255, 255, 0.98);
     }
 
     #message {
-        background: rgba(10, 10, 15, 0.98);
+        background: rgba(255, 255, 255, 0.98);
     }
 
     .toast {
-        background: rgba(10, 10, 15, 0.98);
+        background: rgba(255, 255, 255, 0.98);
     }
 
     .reconnect-banner {
-        background: linear-gradient(135deg, rgb(245, 158, 11) 0%, rgb(217, 119, 6) 100%);
+        background: var(--color-warning);
     }
 
     .menu li .button-tooltip {
-        background: rgba(10, 10, 15, 0.98);
+        background: rgba(255, 255, 255, 0.98);
     }
 
     .help-overlay {
-        background-color: rgba(0, 0, 0, 0.85);
+        background-color: rgba(33, 30, 28, 0.6);
     }
+}
+
+/* ============================================
+   Dark Theme Support (Optional)
+   ============================================ */
+
+[data-theme="dark"] {
+    --bg-base: #211e1c;
+    --bg-surface: #2a2724;
+    --bg-elevated: #332f2c;
+
+    --text-primary: #fcfbf8;
+    --text-secondary: rgba(252, 251, 248, 0.7);
+    --text-tertiary: rgba(252, 251, 248, 0.5);
+    --text-muted: rgba(252, 251, 248, 0.35);
+
+    --glass-bg: rgba(33, 30, 28, 0.85);
+    --glass-bg-hover: rgba(42, 39, 36, 0.95);
+    --glass-bg-active: rgba(51, 47, 44, 1);
+    --glass-border: rgba(252, 251, 248, 0.1);
+    --glass-border-hover: rgba(252, 251, 248, 0.18);
 }
