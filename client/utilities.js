@@ -107,7 +107,7 @@ function updateConnectionStatus(state) {
 			break;
 		case ConnectionState.CONNECTED:
 			indicator.classList.add('connected');
-			// Pulsing green dot indicates receiving - no label needed
+			if (statusLabel) statusLabel.textContent = 'Connected';
 			break;
 		case ConnectionState.PAUSED:
 			indicator.classList.add('paused');
