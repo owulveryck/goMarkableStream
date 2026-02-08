@@ -31,7 +31,7 @@ func setupListener(ctx context.Context, s *configuration) (*ListenerResult, erro
 		tm = NewTailscaleManager(s)
 		if tm == nil {
 			localListener.Close()
-			return nil, fmt.Errorf("Tailscale support not compiled in. Build with: go build -tags tailscale")
+			return nil, fmt.Errorf("tailscale support not compiled in: build with 'go build -tags tailscale'")
 		}
 
 		tsListener, err := tm.Start(ctx)

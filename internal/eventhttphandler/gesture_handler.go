@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"syscall"
 	"time"
 
 	"github.com/owulveryck/goMarkableStream/internal/events"
@@ -136,16 +135,4 @@ func (h *GestureHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			tick.Reset(gestureMaxInterval)
 		}
 	}
-}
-
-func abs(x int32) int32 {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
-
-// timevalToTime converts syscall.Timeval to time.Time
-func timevalToTime(tv syscall.Timeval) time.Time {
-	return time.Unix(int64(tv.Sec), int64(tv.Usec)*1000)
 }

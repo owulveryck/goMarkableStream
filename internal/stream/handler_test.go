@@ -64,7 +64,7 @@ func TestStreamHandlerRaceCondition(t *testing.T) {
 			if err == nil {
 				defer resp.Body.Close()
 				// Optionally read the response body
-				io.ReadAll(resp.Body)
+				_, _ = io.ReadAll(resp.Body)
 			}
 
 			doneChan <- struct{}{}

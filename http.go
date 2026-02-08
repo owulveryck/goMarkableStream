@@ -54,11 +54,13 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 		w.Header().Set("Content-Type", "application/json")
 
 		if tm == nil {
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			if err := json.NewEncoder(w).Encode(map[string]interface{}{
 				"available": false,
 				"enabled":   false,
 				"url":       "",
-			})
+			}); err != nil {
+				log.Printf("failed to encode JSON response: %v", err)
+			}
 			return
 		}
 
@@ -102,11 +104,13 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 			return
 		}
 
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"available": true,
 			"enabled":   enabled,
 			"url":       url,
-		})
+		}); err != nil {
+			log.Printf("failed to encode JSON response: %v", err)
+		}
 	})
 
 	if c.DevMode {

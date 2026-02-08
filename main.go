@@ -78,11 +78,11 @@ func main() {
 	unsafe := flag.Bool("unsafe", false, "disable authentication")
 	flag.Parse()
 	if *help {
-		envconfig.Usage(ConfigPrefix, &c)
+		_ = envconfig.Usage(ConfigPrefix, &c)
 		return
 	}
 	if err := envconfig.Process(ConfigPrefix, &c); err != nil {
-		envconfig.Usage(ConfigPrefix, &c)
+		_ = envconfig.Usage(ConfigPrefix, &c)
 		log.Fatal(err)
 	}
 

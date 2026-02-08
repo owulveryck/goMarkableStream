@@ -8,25 +8,13 @@ import (
 	"fmt"
 	"image"
 	"image/png"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 )
-
-func decodeUint8(data []byte) []byte {
-	decoded := make([]byte, 0, len(data)*15)
-	for i := 0; i < len(data); i += 2 {
-		count := data[i]
-		item := data[i+1]
-		for i := uint8(0); i < count+1; i++ {
-			decoded = append(decoded, uint8(item))
-		}
-	}
-	return decoded
-}
 
 func decodePacked(data []byte) []byte {
 	decoded := make([]uint8, 0, len(data)*255)
@@ -87,7 +75,7 @@ func main() {
 	defer resp.Body.Close()
 
 	// Read the response body into a byte array
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading response:", err)
 		return
@@ -126,6 +114,8 @@ func main() {
 		img.Pix[i] = data[i] * 17
 	}
 	log.Println(len(data))
-	png.Encode(os.Stdout, img)
+	if err := png.Encode(os.Stdout, img); err != nil {
+		log.Fatal("Error encoding PNG:", err)
+	}
 
 }
