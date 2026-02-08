@@ -8,7 +8,8 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"runtime/debug"
+	"runtime"
+	godebug "runtime/debug"
 
 	"github.com/owulveryck/goMarkableStream/internal/delta"
 	internalDebug "github.com/owulveryck/goMarkableStream/internal/debug"
@@ -46,6 +47,10 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 		stream.ResetFrameBufferPool()
 		delta.ResetEncoderPool()
 		streamHandler.ReleaseMemory()
+		// Force garbage collection and return memory to OS
+		runtime.GC()
+		godebug.FreeOSMemory()
+		internalDebug.Log("Idle: memory returned to OS")
 	})
 
 	wsHandler := eventhttphandler.NewEventHandler(eventPublisher)
@@ -58,7 +63,7 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 
 	// Version endpoint
 	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
-		bi, ok := debug.ReadBuildInfo()
+		bi, ok := godebug.ReadBuildInfo()
 		if !ok {
 			http.Error(w, "Unable to read build info", http.StatusInternalServerError)
 			return
