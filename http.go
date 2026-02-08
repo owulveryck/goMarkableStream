@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"runtime/debug"
 
+	"github.com/owulveryck/goMarkableStream/internal/delta"
+	internalDebug "github.com/owulveryck/goMarkableStream/internal/debug"
 	"github.com/owulveryck/goMarkableStream/internal/eventhttphandler"
 	"github.com/owulveryck/goMarkableStream/internal/jwtutil"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
@@ -37,6 +39,14 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 
 	streamHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher, c.DeltaThreshold)
 	mux.Handle("/stream", stream.ThrottlingMiddleware(streamHandler))
+
+	// Register idle callback to release memory when streaming ends
+	stream.SetOnIdleCallback(func() {
+		internalDebug.Log("Idle: releasing memory pools")
+		stream.ResetFrameBufferPool()
+		delta.ResetEncoderPool()
+		streamHandler.ReleaseMemory()
+	})
 
 	wsHandler := eventhttphandler.NewEventHandler(eventPublisher)
 	mux.Handle("/events", wsHandler)

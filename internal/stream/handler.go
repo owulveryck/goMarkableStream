@@ -26,6 +26,17 @@ var rawFrameBuffer = sync.Pool{
 	},
 }
 
+// ResetFrameBufferPool replaces the frame buffer pool with a fresh one,
+// allowing old buffers to be garbage collected.
+func ResetFrameBufferPool() {
+	rawFrameBuffer = sync.Pool{
+		New: func() any {
+			buf := make([]uint8, remarkable.Config.SizeBytes)
+			return &buf
+		},
+	}
+}
+
 // NewStreamHandler creates a new stream handler reading from file @pointerAddr
 func NewStreamHandler(file io.ReaderAt, pointerAddr int64, inputEvents *pubsub.PubSub, deltaThreshold float64) *StreamHandler {
 	return &StreamHandler{
@@ -42,6 +53,11 @@ type StreamHandler struct {
 	pointerAddr    int64
 	inputEventsBus *pubsub.PubSub
 	deltaEncoder   *delta.Encoder
+}
+
+// ReleaseMemory releases large buffers held by the stream handler's delta encoder.
+func (h *StreamHandler) ReleaseMemory() {
+	h.deltaEncoder.ReleaseMemory()
 }
 
 // ServeHTTP implements http.Handler

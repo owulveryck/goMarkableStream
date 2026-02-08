@@ -17,7 +17,18 @@ var (
 	// Stream cancellation context
 	streamCtx    context.Context
 	streamCancel context.CancelFunc
+
+	// Callback invoked when activeWriters drops to 0
+	onIdleCallback func()
 )
+
+// SetOnIdleCallback sets a callback to be invoked when all streaming connections close.
+// The callback is called while holding the mutex, so it should be fast and non-blocking.
+func SetOnIdleCallback(cb func()) {
+	mu.Lock()
+	defer mu.Unlock()
+	onIdleCallback = cb
+}
 
 func init() {
 	streamCtx, streamCancel = context.WithCancel(context.Background())
@@ -84,6 +95,9 @@ func ThrottlingMiddleware(next http.Handler) http.Handler {
 		mu.Lock()
 		activeWriters--
 		debug.Log("Throttle: request completed, activeWriters=%d (%s)", activeWriters, r.RemoteAddr)
+		if activeWriters == 0 && onIdleCallback != nil {
+			onIdleCallback()
+		}
 		cond.Broadcast() // Notify waiting goroutines
 		mu.Unlock()
 	})
