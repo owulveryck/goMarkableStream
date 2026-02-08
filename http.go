@@ -43,6 +43,9 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 	gestureHandler := eventhttphandler.NewGestureHandler(eventPublisher)
 	mux.Handle("/gestures", gestureHandler)
 
+	screenshotHandler := stream.NewScreenshotHandler(file, pointerAddr)
+	mux.Handle("/screenshot", screenshotHandler)
+
 	// Version endpoint
 	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		bi, ok := debug.ReadBuildInfo()

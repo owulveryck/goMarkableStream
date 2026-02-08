@@ -244,6 +244,10 @@ document.addEventListener('keydown', function(e) {
                 }
             }
             break;
+        case 'p':
+            // Download screenshot
+            downloadScreenshot();
+            break;
         case '?':
             // Help overlay
             toggleHelpOverlay(true);
@@ -543,4 +547,60 @@ document.getElementById('funnelButton').addEventListener('click', async function
         funnelBtn.classList.remove('loading');
     }
 });
+
+// Screenshot download functionality
+async function downloadScreenshot() {
+    const screenshotBtn = document.getElementById('screenshotBtn');
+    if (!screenshotBtn || screenshotBtn.classList.contains('loading')) {
+        return;
+    }
+
+    // Add loading state
+    screenshotBtn.classList.add('loading');
+
+    try {
+        const response = await authFetch('/screenshot');
+
+        if (!response.ok) {
+            throw new Error(`Failed to download screenshot: ${response.status}`);
+        }
+
+        // Get the blob from the response
+        const blob = await response.blob();
+
+        // Create a download link
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+
+        // Extract filename from Content-Disposition header if available
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = 'remarkable_screenshot.png';
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename="(.+)"/);
+            if (match) {
+                filename = match[1];
+            }
+        }
+
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast('Screenshot downloaded');
+    } catch (error) {
+        console.error('Screenshot download error:', error);
+        showToast('Failed to download screenshot');
+    } finally {
+        screenshotBtn.classList.remove('loading');
+    }
+}
+
+// Screenshot button click handler
+const screenshotBtn = document.getElementById('screenshotBtn');
+if (screenshotBtn) {
+    screenshotBtn.addEventListener('click', downloadScreenshot);
+}
 
