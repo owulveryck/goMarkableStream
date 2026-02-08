@@ -98,6 +98,17 @@ func (f *tlsErrorFilter) Write(p []byte) (n int, err error) {
 }
 
 func main() {
+	// Check for subcommands before flag parsing
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "install":
+			if err := runInstall(); err != nil {
+				log.Fatal(err)
+			}
+			return
+		}
+	}
+
 	bi, ok := debug.ReadBuildInfo()
 	if !ok {
 		fmt.Println("not ok")
