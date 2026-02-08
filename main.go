@@ -106,6 +106,11 @@ func main() {
 				log.Fatal(err)
 			}
 			return
+		case "download":
+			if err := runDownload(); err != nil {
+				log.Fatal(err)
+			}
+			return
 		}
 	}
 

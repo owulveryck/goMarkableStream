@@ -18,6 +18,7 @@ Its primary goal is to enable users to stream their reMarkable tablet screen to 
 - [Available Binaries](#available-binaries)
 - [Quick Start](#quick-start)
 - [Systemd Service Setup](#setup-as-a-systemd-service)
+- [Subcommands](#subcommands)
 - [Configuration](#configurations)
 - [Presentation Mode](#presentation-mode)
 - [Technical Details](#technical-details)
@@ -117,7 +118,7 @@ _Note_: You can also connect via Wi-Fi using your tablet's IP address or `remark
 
 For lite versions (without Tailscale), append `-lite` to the device name: `gomarkablestream-RM2-lite`
 
-To update to a new version, first stop the running instance with `kill $(pidof goMarkableStream)`, then repeat step 2.
+To update to a new version, use the built-in download command: `./goMarkableStream download` (see [Subcommands](#subcommands)).
 
 ### Errors due to missing packages
 
@@ -139,7 +140,15 @@ ssh root@10.11.99.1 ./goMarkableStream
 
 ## Setup as a Systemd Service
 
-After connecting via USB-C (`ssh root@10.11.99.1`), run this command to install goMarkableStream as a service that starts automatically:
+The easiest way to install goMarkableStream as a systemd service is using the built-in `install` subcommand:
+
+```bash
+./goMarkableStream install
+```
+
+This will create the service file and enable it to start automatically on boot.
+
+Alternatively, you can manually create the service file after connecting via USB-C (`ssh root@10.11.99.1`):
 
 ```bash
 cat <<'EOF' > /etc/systemd/system/goMarkableStream.service
@@ -165,6 +174,43 @@ To view logs: `journalctl -u goMarkableStream.service`
 To stop: `systemctl stop goMarkableStream.service`
 
 **Note:** After a reMarkable system update, you may need to re-download the binary and restart the service.
+
+## Subcommands
+
+goMarkableStream provides built-in subcommands to simplify installation and updates:
+
+### install
+
+Installs goMarkableStream as a systemd service for automatic startup:
+
+```bash
+./goMarkableStream install
+```
+
+This command:
+- Creates the systemd service file at `/etc/systemd/system/goMarkableStream.service`
+- Reloads the systemd daemon
+- Enables and starts the service
+
+### download
+
+Downloads the latest version from GitHub releases:
+
+```bash
+./goMarkableStream download
+```
+
+This command:
+1. Computes the SHA256 checksum of the currently running binary
+2. Fetches the latest release from GitHub
+3. Compares the current checksum against all binaries in the release
+4. If you're already running the latest version, it tells you
+5. If a newer version is available, prompts you to confirm the download
+6. Lists all available binaries and lets you choose which one to download
+7. Downloads and verifies the checksum of the selected binary
+8. Asks if you want to replace the current binary with the downloaded one
+
+This is the recommended way to update goMarkableStream on your device.
 
 ## Configurations
 
