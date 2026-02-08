@@ -107,7 +107,7 @@ function updateConnectionStatus(state) {
 			break;
 		case ConnectionState.CONNECTED:
 			indicator.classList.add('connected');
-			// Pulsing green dot indicates receiving - no label needed
+			if (statusLabel) statusLabel.textContent = 'Connected';
 			break;
 		case ConnectionState.PAUSED:
 			indicator.classList.add('paused');
@@ -128,31 +128,112 @@ function updateConnectionStatus(state) {
 	}
 }
 
-// Show connection error with optional retry button
-function showConnectionError(message, retryable = true, onRetry = null) {
+// Enhanced error message builder
+function buildErrorMessage(error) {
+	let userMessage = '';
+	let technicalDetails = '';
+	let troubleshootingSteps = [];
+
+	// Determine error type and build appropriate message
+	if (error.code === 1006) {
+		userMessage = 'Connection was unexpectedly closed';
+		technicalDetails = 'WebSocket closed abnormally (code 1006)';
+		troubleshootingSteps = [
+			'Check your network connection',
+			'Ensure the reMarkable device is connected',
+			'Verify no firewall is blocking the connection'
+		];
+	} else if (error.code === 1000) {
+		userMessage = 'Connection closed normally';
+		technicalDetails = 'WebSocket closed (code 1000)';
+		troubleshootingSteps = ['The connection was intentionally closed'];
+	} else if (error.message && error.message.includes('network')) {
+		userMessage = 'Network connection issue';
+		technicalDetails = error.message;
+		troubleshootingSteps = [
+			'Check your internet connection',
+			'Try refreshing the page',
+			'Disable VPN if enabled'
+		];
+	} else {
+		userMessage = error.message || 'An unexpected error occurred';
+		technicalDetails = error.toString();
+		troubleshootingSteps = [
+			'Try refreshing the page',
+			'Check browser console for more details'
+		];
+	}
+
+	return { userMessage, technicalDetails, troubleshootingSteps };
+}
+
+// Show connection error with enhanced messaging
+function showConnectionError(error, retryable = true, onRetry = null) {
 	// Remove any existing error dialog
 	const existingError = document.getElementById('connectionError');
 	if (existingError) {
 		existingError.remove();
 	}
 
+	const { userMessage, technicalDetails, troubleshootingSteps } =
+		typeof error === 'string' ?
+			{ userMessage: error, technicalDetails: '', troubleshootingSteps: [] } :
+			buildErrorMessage(error);
+
 	const errorDiv = document.createElement('div');
 	errorDiv.id = 'connectionError';
-	errorDiv.className = 'connection-error';
+	errorDiv.className = 'connection-error visible';
+
+	let troubleshootingHtml = '';
+	if (troubleshootingSteps.length > 0) {
+		troubleshootingHtml = `
+			<div class="error-troubleshooting">
+				<h4>Try these steps:</h4>
+				<ul>
+					${troubleshootingSteps.map(step => `<li>${step}</li>`).join('')}
+				</ul>
+			</div>
+		`;
+	}
+
+	let technicalHtml = '';
+	if (technicalDetails) {
+		technicalHtml = `
+			<details class="error-technical">
+				<summary>Technical details</summary>
+				<code>${technicalDetails}</code>
+			</details>
+		`;
+	}
 
 	let buttonsHtml = '';
 	if (retryable && onRetry) {
 		buttonsHtml = `
-			<button id="retryConnectionBtn">Retry</button>
-			<button class="dismiss-btn" id="dismissErrorBtn">Dismiss</button>
+			<div class="error-buttons">
+				<button id="retryConnectionBtn" class="error-primary-btn">Retry Connection</button>
+				<button id="refreshPageBtn" class="error-secondary-btn">Refresh Page</button>
+				<button class="dismiss-btn" id="dismissErrorBtn">Dismiss</button>
+			</div>
 		`;
 	} else {
-		buttonsHtml = '<button id="dismissErrorBtn">OK</button>';
+		buttonsHtml = `
+			<div class="error-buttons">
+				<button id="refreshPageBtn" class="error-primary-btn">Refresh Page</button>
+				<button id="dismissErrorBtn" class="dismiss-btn">Dismiss</button>
+			</div>
+		`;
 	}
 
 	errorDiv.innerHTML = `
+		<div class="error-icon">
+			<svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor">
+				<path d="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16"/>
+			</svg>
+		</div>
 		<h3>Connection Error</h3>
-		<p>${message}</p>
+		<p class="error-message">${userMessage}</p>
+		${troubleshootingHtml}
+		${technicalHtml}
 		${buttonsHtml}
 	`;
 
@@ -160,16 +241,29 @@ function showConnectionError(message, retryable = true, onRetry = null) {
 
 	// Set up button handlers
 	const dismissBtn = document.getElementById('dismissErrorBtn');
-	dismissBtn.addEventListener('click', () => {
-		errorDiv.remove();
-	});
+	if (dismissBtn) {
+		dismissBtn.addEventListener('click', () => {
+			errorDiv.classList.remove('visible');
+			setTimeout(() => errorDiv.remove(), 300);
+		});
+	}
+
+	const refreshBtn = document.getElementById('refreshPageBtn');
+	if (refreshBtn) {
+		refreshBtn.addEventListener('click', () => {
+			window.location.reload();
+		});
+	}
 
 	if (retryable && onRetry) {
 		const retryBtn = document.getElementById('retryConnectionBtn');
-		retryBtn.addEventListener('click', () => {
-			errorDiv.remove();
-			onRetry();
-		});
+		if (retryBtn) {
+			retryBtn.addEventListener('click', () => {
+				errorDiv.classList.remove('visible');
+				setTimeout(() => errorDiv.remove(), 300);
+				onRetry();
+			});
+		}
 	}
 }
 

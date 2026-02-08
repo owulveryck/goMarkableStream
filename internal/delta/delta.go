@@ -32,9 +32,9 @@ const (
 	DefaultThreshold = 0.30
 
 	// Maximum values for short run encoding
-	maxShortOffset = 0xFFFF   // 64KB - 1
-	maxShortLength = 127      // 7 bits
-	bytesPerPixel  = 4        // BGRA format
+	maxShortOffset = 0xFFFF // 64KB - 1
+	maxShortLength = 127    // 7 bits
+	bytesPerPixel  = 4      // BGRA format
 )
 
 // Encoder holds the state for delta encoding between frames.
@@ -137,7 +137,7 @@ func (e *Encoder) compareFrames(current []byte) []changeRun {
 	numQwords := frameLen / 8
 
 	var runStart int = -1
-	var lastDiffEnd int = 0
+	var lastDiffEnd int
 
 	// Get pointers for fast comparison
 	currPtr := unsafe.Pointer(&current[0])

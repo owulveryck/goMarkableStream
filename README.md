@@ -326,7 +326,3 @@ If you have any ideas, bug reports, or feature requests, please submit them thro
 The reMarkable Screen Streaming Tool is released under the [MIT License](https://opensource.org/licenses/MIT) .
 Feel free to modify, distribute, and use the tool in accordance with the terms of the license.
 
-## Tipping
-
-If you plan to buy a reMarkable 2, you can use my [referral program link](https://remarkable.com/referral/PY5B-PH8U).
-It will provide a discount for you and also for me.
