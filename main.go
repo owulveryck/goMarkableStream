@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime/debug"
+	"strings"
 	"syscall"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	dbg "github.com/owulveryck/goMarkableStream/internal/debug"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
+	"github.com/owulveryck/goMarkableStream/internal/tlsutil"
 )
 
 type configuration struct {
@@ -30,6 +32,14 @@ type configuration struct {
 	DevMode        bool    `envconfig:"DEV_MODE" default:"false"`
 	DeltaThreshold float64 `envconfig:"DELTA_THRESHOLD" default:"0.30" description:"Change ratio threshold (0.0-1.0) above which full frame is sent"`
 	Debug          bool    `envconfig:"DEBUG" default:"false" description:"Enable debug logging"`
+
+	// TLS certificate configuration
+	TLSCertFile     string `envconfig:"TLS_CERT_FILE" default:"" description:"Path to custom TLS certificate file"`
+	TLSKeyFile      string `envconfig:"TLS_KEY_FILE" default:"" description:"Path to custom TLS key file"`
+	TLSCertDir      string `envconfig:"TLS_CERT_DIR" default:"/home/root/.config/goMarkableStream/certs" description:"Directory for auto-generated certificates"`
+	TLSAutoGenerate bool   `envconfig:"TLS_AUTO_GENERATE" default:"true" description:"Auto-generate device-specific certificates"`
+	TLSHostnames    string `envconfig:"TLS_HOSTNAMES" default:"" description:"Additional hostnames for certificate SANs (comma-separated)"`
+	TLSValidDays    int    `envconfig:"TLS_VALID_DAYS" default:"365" description:"Validity period for generated certificates in days"`
 
 	// Tailscale configuration
 	TailscaleEnabled   bool   `envconfig:"TAILSCALE_ENABLED" default:"false" description:"Enable Tailscale listener"`
@@ -62,6 +72,18 @@ var (
 
 func validateConfiguration(c *configuration) error {
 	return nil
+}
+
+// tlsErrorFilter filters out TLS handshake errors from logs.
+// These errors are expected when using self-signed certificates
+// and browsers initially reject the certificate.
+type tlsErrorFilter struct{}
+
+func (f *tlsErrorFilter) Write(p []byte) (n int, err error) {
+	if strings.Contains(string(p), "TLS handshake error") {
+		return len(p), nil // Silently discard
+	}
+	return os.Stderr.Write(p)
 }
 
 func main() {
@@ -135,7 +157,19 @@ func main() {
 
 	// Create HTTP server for graceful shutdown
 	server := &http.Server{
-		Handler: handler,
+		Handler:  handler,
+		ErrorLog: log.New(&tlsErrorFilter{}, "", 0),
+	}
+
+	// Create TLS manager if TLS is enabled
+	var tlsMgr *tlsutil.Manager
+	if listenerResult.UseTLS {
+		tlsMgr = createTLSManager(&c)
+		// Pre-load certificate to log information at startup
+		_, _, err := tlsMgr.GetCertificate()
+		if err != nil {
+			log.Printf("Warning: TLS certificate issue: %v", err)
+		}
 	}
 
 	// Setup signal handling for graceful shutdown
@@ -149,7 +183,7 @@ func main() {
 			log.Printf("Serving on %v", l.Addr())
 			var serveErr error
 			if listenerResult.UseTLS {
-				serveErr = runTLS(l, handler)
+				serveErr = runTLS(l, server, tlsMgr)
 			} else {
 				serveErr = server.Serve(l)
 			}

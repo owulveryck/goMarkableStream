@@ -14,6 +14,7 @@ import (
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 	"github.com/owulveryck/goMarkableStream/internal/stream"
+	"github.com/owulveryck/goMarkableStream/internal/tlsutil"
 )
 
 type stripFS struct {
@@ -175,30 +176,39 @@ func newIndexHandler(fs http.FileSystem) http.HandlerFunc {
 	}
 }
 
-func runTLS(l net.Listener, handler http.Handler) error {
-	// Load the certificate and key from embedded files
-	cert, err := tlsAssets.ReadFile("assets/cert.pem")
+func runTLS(l net.Listener, server *http.Server, tlsMgr *tlsutil.Manager) error {
+	tlsConfig, _, err := tlsMgr.GetTLSConfig()
 	if err != nil {
-		log.Fatal("Error reading embedded certificate:", err)
+		return fmt.Errorf("failed to get TLS config: %w", err)
 	}
 
-	key, err := tlsAssets.ReadFile("assets/key.pem")
-	if err != nil {
-		log.Fatal("Error reading embedded key:", err)
-	}
-
-	certPair, err := tls.X509KeyPair(cert, key)
-	if err != nil {
-		log.Fatal("Error creating X509 key pair:", err)
-	}
-
-	config := &tls.Config{
-		Certificates:       []tls.Certificate{certPair},
-		InsecureSkipVerify: true,
-	}
-
-	tlsListener := tls.NewListener(l, config)
+	tlsListener := tls.NewListener(l, tlsConfig)
 
 	// Start the server
-	return http.Serve(tlsListener, handler)
+	return server.Serve(tlsListener)
+}
+
+// createTLSManager creates a TLS manager from the configuration.
+func createTLSManager(cfg *configuration) *tlsutil.Manager {
+	// Load embedded certificates as fallback
+	embeddedCert, certErr := tlsAssets.ReadFile("assets/cert.pem")
+	embeddedKey, keyErr := tlsAssets.ReadFile("assets/key.pem")
+
+	var cert, key []byte
+	if certErr == nil && keyErr == nil {
+		cert = embeddedCert
+		key = embeddedKey
+	}
+
+	return tlsutil.NewManager(tlsutil.ManagerConfig{
+		CertFile:            cfg.TLSCertFile,
+		KeyFile:             cfg.TLSKeyFile,
+		CertDir:             cfg.TLSCertDir,
+		AutoGenerate:        cfg.TLSAutoGenerate,
+		Hostnames:           cfg.TLSHostnames,
+		ValidDays:           cfg.TLSValidDays,
+		ExpiryThresholdDays: 30,
+		EmbeddedCert:        cert,
+		EmbeddedKey:         key,
+	})
 }
