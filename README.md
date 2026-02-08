@@ -146,7 +146,7 @@ The easiest way to install goMarkableStream as a systemd service is using the bu
 ./goMarkableStream install
 ```
 
-This will create the service file and enable it to start automatically on boot.
+This will create the service file and enable it to start automatically on boot. You can change the settings by editing `/home/root/.config/goMarkableStream/env`
 
 Alternatively, you can manually create the service file after connecting via USB-C (`ssh root@10.11.99.1`):
 
