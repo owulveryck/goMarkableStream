@@ -882,6 +882,72 @@ canvas.hidden {
 }
 
 /* ============================================
+   Screenshot Download Button
+   ============================================ */
+
+.screenshot-btn {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    width: 48px;
+    height: 48px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    z-index: var(--z-status);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-normal);
+    color: var(--text-primary);
+}
+
+.screenshot-btn:hover {
+    transform: scale(1.1);
+}
+
+.screenshot-btn:active {
+    transform: scale(0.95);
+}
+
+.screenshot-btn:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+.screenshot-btn svg {
+    width: 20px;
+    height: 20px;
+    transition: transform var(--transition-fast);
+}
+
+
+.screenshot-btn.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.screenshot-btn.loading svg {
+    animation: spin 0.8s linear infinite;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+    .screenshot-btn {
+        top: max(16px, env(safe-area-inset-top));
+        right: max(70px, calc(env(safe-area-inset-right) + 70px));
+        width: 44px;
+        height: 44px;
+    }
+
+    .screenshot-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+/* ============================================
    Connection Error Dialog
    ============================================ */
 
