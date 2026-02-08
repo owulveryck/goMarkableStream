@@ -26,6 +26,8 @@ type TailscaleManager struct {
 	funnelEnabled bool         // Current Funnel state
 	tsListener    net.Listener // Current Tailscale listener
 	mu            sync.Mutex   // Protect concurrent access
+	ready         chan struct{} // Closed when Tailscale is ready (for async startup)
+	startErr      error         // Error from background startup
 }
 
 // NewTailscaleManager creates a new TailscaleManager with the given configuration
@@ -260,4 +262,38 @@ func (tm *TailscaleManager) GetListener() net.Listener {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 	return tm.tsListener
+}
+
+// StartAsync begins Tailscale initialization in background (non-blocking)
+func (tm *TailscaleManager) StartAsync(ctx context.Context) {
+	tm.mu.Lock()
+	tm.ready = make(chan struct{})
+	tm.mu.Unlock()
+
+	go func() {
+		listener, err := tm.Start(ctx)
+		tm.mu.Lock()
+		if err != nil {
+			tm.startErr = err
+			log.Printf("Tailscale startup failed: %v", err)
+		} else {
+			log.Printf("Tailscale ready: %v", listener.Addr())
+		}
+		tm.mu.Unlock()
+		close(tm.ready)
+	}()
+}
+
+// Ready returns a channel that's closed when Tailscale startup completes (success or failure)
+func (tm *TailscaleManager) Ready() <-chan struct{} {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	return tm.ready
+}
+
+// IsReady returns true if Tailscale has started successfully
+func (tm *TailscaleManager) IsReady() bool {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	return tm.started && tm.startErr == nil
 }

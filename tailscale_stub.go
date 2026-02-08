@@ -39,3 +39,16 @@ func (tm *TailscaleManager) ToggleFunnel(enable bool) (net.Listener, error) {
 func (tm *TailscaleManager) GetListener() net.Listener {
 	return nil
 }
+
+// StartAsync is a stub when Tailscale is not compiled in
+func (tm *TailscaleManager) StartAsync(ctx context.Context) {}
+
+// Ready is a stub that returns nil when Tailscale is not compiled in
+func (tm *TailscaleManager) Ready() <-chan struct{} {
+	return nil
+}
+
+// IsReady is a stub that returns false when Tailscale is not compiled in
+func (tm *TailscaleManager) IsReady() bool {
+	return false
+}

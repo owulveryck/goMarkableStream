@@ -2,10 +2,10 @@ package delta
 
 import (
 	"bytes"
-	"compress/gzip"
 	"encoding/binary"
-	"io"
 	"testing"
+
+	"github.com/klauspost/compress/zstd"
 )
 
 func TestNewEncoder(t *testing.T) {
@@ -46,9 +46,9 @@ func TestEncode_FullFrame_NoPrevious(t *testing.T) {
 
 	result := buf.Bytes()
 
-	// Check header - now expecting compressed full frame
-	if result[0] != FrameTypeFullCompressed {
-		t.Errorf("expected compressed full frame type (0x02), got %d", result[0])
+	// Check header - now expecting zstd compressed full frame
+	if result[0] != FrameTypeFullZstd {
+		t.Errorf("expected zstd compressed full frame type (0x03), got %d", result[0])
 	}
 
 	// Check payload length (24-bit LE)
@@ -56,12 +56,12 @@ func TestEncode_FullFrame_NoPrevious(t *testing.T) {
 
 	// Decompress and verify payload
 	compressedPayload := result[4 : 4+payloadLen]
-	gz, err := gzip.NewReader(bytes.NewReader(compressedPayload))
+	dec, err := zstd.NewReader(nil)
 	if err != nil {
-		t.Fatalf("failed to create gzip reader: %v", err)
+		t.Fatalf("failed to create zstd reader: %v", err)
 	}
-	decompressed, err := io.ReadAll(gz)
-	gz.Close()
+	defer dec.Close()
+	decompressed, err := dec.DecodeAll(compressedPayload, nil)
 	if err != nil {
 		t.Fatalf("failed to decompress payload: %v", err)
 	}
@@ -77,7 +77,9 @@ func TestEncode_FullFrame_SizeChange(t *testing.T) {
 	// First frame
 	frame1 := make([]byte, 160)
 	var buf1 bytes.Buffer
-	enc.Encode(frame1, &buf1)
+	if err := enc.Encode(frame1, &buf1); err != nil {
+		t.Fatalf("unexpected error on first frame: %v", err)
+	}
 
 	// Second frame with different size - should send full frame
 	frame2 := make([]byte, 320)
@@ -91,7 +93,7 @@ func TestEncode_FullFrame_SizeChange(t *testing.T) {
 	}
 
 	result := buf2.Bytes()
-	if result[0] != FrameTypeFullCompressed {
+	if result[0] != FrameTypeFullZstd {
 		t.Errorf("expected compressed full frame for size change (0x02), got %d", result[0])
 	}
 }
@@ -103,7 +105,9 @@ func TestEncode_DeltaFrame_SmallChange(t *testing.T) {
 	// First frame - all zeros
 	frame1 := make([]byte, frameSize)
 	var buf1 bytes.Buffer
-	enc.Encode(frame1, &buf1)
+	if err := enc.Encode(frame1, &buf1); err != nil {
+		t.Fatalf("unexpected error on first frame: %v", err)
+	}
 
 	// Second frame - change only first 4 pixels (16 bytes = 1% change)
 	frame2 := make([]byte, frameSize)
@@ -140,7 +144,9 @@ func TestEncode_FullFrame_ExceedsThreshold(t *testing.T) {
 	// First frame - all zeros
 	frame1 := make([]byte, frameSize)
 	var buf1 bytes.Buffer
-	enc.Encode(frame1, &buf1)
+	if err := enc.Encode(frame1, &buf1); err != nil {
+		t.Fatalf("unexpected error on first frame: %v", err)
+	}
 
 	// Second frame - change 50% of pixels (exceeds 10% threshold)
 	frame2 := make([]byte, frameSize)
@@ -157,7 +163,7 @@ func TestEncode_FullFrame_ExceedsThreshold(t *testing.T) {
 	result := buf2.Bytes()
 
 	// Should be compressed full frame since change exceeds threshold
-	if result[0] != FrameTypeFullCompressed {
+	if result[0] != FrameTypeFullZstd {
 		t.Errorf("expected compressed full frame when threshold exceeded (0x02), got %d", result[0])
 	}
 }
@@ -169,7 +175,9 @@ func TestEncode_Reset(t *testing.T) {
 	// First frame
 	frame1 := make([]byte, frameSize)
 	var buf1 bytes.Buffer
-	enc.Encode(frame1, &buf1)
+	if err := enc.Encode(frame1, &buf1); err != nil {
+		t.Fatalf("unexpected error on first frame: %v", err)
+	}
 
 	// Second frame with small change (would normally be delta)
 	frame2 := make([]byte, frameSize)
@@ -187,7 +195,7 @@ func TestEncode_Reset(t *testing.T) {
 	result := buf2.Bytes()
 
 	// Should be compressed full frame after reset
-	if result[0] != FrameTypeFullCompressed {
+	if result[0] != FrameTypeFullZstd {
 		t.Errorf("expected compressed full frame after reset (0x02), got %d", result[0])
 	}
 }
@@ -209,6 +217,46 @@ func TestCompareFrames_NoChanges(t *testing.T) {
 
 	if len(runs) != 0 {
 		t.Errorf("expected 0 runs for identical frames, got %d", len(runs))
+	}
+}
+
+func TestEncode_NoChanges_EmptyDelta(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 1600 // 400 pixels
+
+	// First frame - establish baseline
+	frame := make([]byte, frameSize)
+	for i := range frame {
+		frame[i] = byte(i % 256)
+	}
+	var buf1 bytes.Buffer
+	if err := enc.Encode(frame, &buf1); err != nil {
+		t.Fatalf("unexpected error on first frame: %v", err)
+	}
+
+	// Second frame - identical to first (no changes)
+	var buf2 bytes.Buffer
+	err := enc.Encode(frame, &buf2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	result := buf2.Bytes()
+
+	// Should be empty delta frame (type 0x01, payload size 0)
+	if result[0] != FrameTypeDelta {
+		t.Errorf("expected delta frame type (0x01), got %d", result[0])
+	}
+
+	// Check payload length is 0
+	payloadLen := int(result[1]) | int(result[2])<<8 | int(result[3])<<16
+	if payloadLen != 0 {
+		t.Errorf("expected empty payload (length 0), got %d", payloadLen)
+	}
+
+	// Total frame should be just the 4-byte header
+	if len(result) != 4 {
+		t.Errorf("expected 4 bytes (header only), got %d", len(result))
 	}
 }
 
@@ -395,6 +443,6 @@ func BenchmarkEncode_Delta(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
-		enc.Encode(frame1, &buf)
+		_ = enc.Encode(frame1, &buf)
 	}
 }

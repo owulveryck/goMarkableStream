@@ -21,7 +21,8 @@ var (
 
 var rawFrameBuffer = sync.Pool{
 	New: func() any {
-		return make([]uint8, remarkable.Config.SizeBytes)
+		buf := make([]uint8, remarkable.Config.SizeBytes)
+		return &buf
 	},
 }
 
@@ -89,8 +90,9 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ticker.Reset(rate * time.Millisecond)
 	defer ticker.Stop()
 
-	rawData := rawFrameBuffer.Get().([]uint8)
-	defer rawFrameBuffer.Put(rawData) // Return the slice to the pool when done
+	rawDataPtr := rawFrameBuffer.Get().(*[]uint8)
+	rawData := *rawDataPtr
+	defer rawFrameBuffer.Put(rawDataPtr)
 	writing := true
 	stopWriting := time.NewTicker(2 * time.Second)
 	defer stopWriting.Stop()

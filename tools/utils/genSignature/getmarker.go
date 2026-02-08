@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"go/format"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -60,7 +59,7 @@ func main() {
 		}
 	*/
 	b := make([]byte, 1)
-	content, err := ioutil.ReadAll(f)
+	content, err := io.ReadAll(f)
 	rdr := bytes.NewReader(content)
 	groups := make([][2]int, 0)
 	window := 200
@@ -115,8 +114,10 @@ func displayCodeChecking(name string, content []byte, g [2]int) {
 		End   int
 	}
 	var b bytes.Buffer
+	lowered := strings.ToLower(name)
+	titleName := strings.ToUpper(lowered[:1]) + lowered[1:]
 	err := t.Execute(&b, data{
-		Name:  strings.Title(strings.ToLower(name)),
+		Name:  titleName,
 		Sig:   strings.Replace(strings.Trim(fmt.Sprint(md5.Sum(content[g[0]:g[1]])), "[]"), " ", ",", -1),
 		Start: g[0],
 		End:   g[1],

@@ -17,42 +17,35 @@ type ListenerResult struct {
 func setupListener(ctx context.Context, s *configuration) (*ListenerResult, error) {
 	var listeners []net.Listener
 	var tm *TailscaleManager
-	var cleanup func() error
 
-	// Always create local listener using BindAddr
+	// Always create local listener first - this is immediately usable
 	localListener, err := net.Listen("tcp", s.BindAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create local listener on %s: %w", s.BindAddr, err)
 	}
 	listeners = append(listeners, localListener)
 
-	// If Tailscale is enabled, create additional Tailscale listener
+	// If Tailscale is enabled, start it in background (non-blocking)
 	if s.TailscaleEnabled {
 		tm = NewTailscaleManager(s)
 		if tm == nil {
 			localListener.Close()
-			return nil, fmt.Errorf("Tailscale support not compiled in. Build with: go build -tags tailscale")
+			return nil, fmt.Errorf("tailscale support not compiled in: build with 'go build -tags tailscale'")
 		}
+		// Start Tailscale in background - does not block
+		tm.StartAsync(ctx)
+	}
 
-		tsListener, err := tm.Start(ctx)
-		if err != nil {
-			localListener.Close()
-			return nil, fmt.Errorf("failed to start Tailscale: %w", err)
-		}
-
-		// Prepend Tailscale listener (index 0 is used for Tailscale detection in main.go)
-		listeners = append([]net.Listener{tsListener}, listeners...)
-
-		cleanup = func() error {
-			localListener.Close()
+	cleanup := func() error {
+		localListener.Close()
+		if tm != nil {
 			return tm.Close()
 		}
-	} else {
-		cleanup = func() error { return localListener.Close() }
+		return nil
 	}
 
 	return &ListenerResult{
-		Listeners:        listeners,
+		Listeners:        listeners, // Only local listener initially
 		Cleanup:          cleanup,
 		UseTLS:           s.TLS && !s.TailscaleEnabled,
 		TailscaleManager: tm,

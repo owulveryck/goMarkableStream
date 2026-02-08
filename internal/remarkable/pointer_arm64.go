@@ -97,7 +97,9 @@ func calculateFramePointer(pid string, startAddress int64) (int64, error) {
 
 		// Seek to the start address plus offset and read the header
 		// The header helps identify the size of the subsequent memory block.
-		file.Seek(startAddress+offset+8, 0)
+		if _, err := file.Seek(startAddress+offset+8, 0); err != nil {
+			return 0, fmt.Errorf("failed to seek in memory file: %w", err)
+		}
 		header := make([]byte, 8)
 		_, err := file.Read(header)
 		if err != nil {

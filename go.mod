@@ -4,6 +4,7 @@ go 1.25.5
 
 require (
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/klauspost/compress v1.18.2
 	tailscale.com v1.94.1
 )
 
@@ -38,7 +39,6 @@ require (
 	github.com/hdevalence/ed25519consensus v0.2.0 // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
 	github.com/jsimonetti/rtnetlink v1.4.0 // indirect
-	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/mdlayher/netlink v1.7.3-0.20250113171957-fbb4dce95f42 // indirect
 	github.com/mdlayher/socket v0.5.0 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
