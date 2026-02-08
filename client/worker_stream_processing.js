@@ -1,6 +1,7 @@
 let height;
 let width;
 let rate;
+let authToken = null;
 
 // Delta decoding state
 let previousFrame = null;
@@ -26,6 +27,7 @@ onmessage = (event) => {
 			height = event.data.height;
 			width = event.data.width;
 			rate = event.data.rate;
+			authToken = event.data.authToken || null;
 			initiateStream();
 			break;
 		case 'terminate':
@@ -42,7 +44,16 @@ async function initiateStream() {
 	try {
 		// Create AbortController to allow canceling the fetch
 		abortController = new AbortController();
-		const response = await fetch('/stream?rate=' + rate, { signal: abortController.signal });
+
+		// Build fetch options
+		const fetchOptions = { signal: abortController.signal };
+		if (authToken) {
+			fetchOptions.headers = {
+				'Authorization': `Bearer ${authToken}`
+			};
+		}
+
+		const response = await fetch('/stream?rate=' + rate, fetchOptions);
 
 		// Handle rate limiting (429)
 		if (response.status === 429) {

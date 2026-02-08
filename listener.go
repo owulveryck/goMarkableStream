@@ -47,7 +47,7 @@ func setupListener(ctx context.Context, s *configuration) (*ListenerResult, erro
 	return &ListenerResult{
 		Listeners:        listeners, // Only local listener initially
 		Cleanup:          cleanup,
-		UseTLS:           s.TLS && !s.TailscaleEnabled,
+		UseTLS:           s.TLS,
 		TailscaleManager: tm,
 	}, nil
 }

@@ -121,6 +121,7 @@ function initStreamWorker() {
 		width: screenWidth,
 		height: screenHeight,
 		rate: rate,
+		authToken: typeof getAuthToken === 'function' ? getAuthToken() : null,
 	});
 }
 
@@ -131,17 +132,19 @@ initStreamWorker();
 // Determine the WebSocket protocol based on the current window protocol
 const eventURL = `/events`;
 // Send the OffscreenCanvas to the worker for initialization
-eventWorker.postMessage({ 
-	type: 'init', 
+eventWorker.postMessage({
+	type: 'init',
 	width: screenWidth,
 	height: screenHeight,
 	portrait: portrait,
 	eventURL: eventURL,
     maxXValue: MaxXValue,
     maxYValue: MaxYValue,
+	authToken: typeof getAuthToken === 'function' ? getAuthToken() : null,
 });
-gestureWorker.postMessage({ 
-	type: 'init', 
+gestureWorker.postMessage({
+	type: 'init',
+	authToken: typeof getAuthToken === 'function' ? getAuthToken() : null,
 });
 
 gestureWorker.onmessage = (event) => {

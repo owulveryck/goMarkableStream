@@ -7,6 +7,7 @@ let latestX;
 let latestY;
 let maxXValue;
 let maxYValue;
+let authToken = null;
 
 // Throttling variables for laser pointer updates
 let pendingUpdate = false;
@@ -25,6 +26,7 @@ onmessage = (event) => {
 			portrait = event.data.portrait;
             maxXValue = event.data.maxXValue;
             maxYValue = event.data.maxYValue;
+			authToken = event.data.authToken || null;
 			initiateEventsListener();
 			break;
 		case 'portrait':
@@ -40,7 +42,13 @@ onmessage = (event) => {
 
 
 async function initiateEventsListener() {
-	const eventSource = new EventSource(eventURL);
+	// EventSource doesn't support custom headers, so pass token as query param
+	let url = eventURL;
+	if (authToken) {
+		const separator = url.includes('?') ? '&' : '?';
+		url = `${url}${separator}token=${encodeURIComponent(authToken)}`;
+	}
+	const eventSource = new EventSource(url);
 	draw = true;
 	eventSource.onmessage = (event) => {
 		const message = JSON.parse(event.data);

@@ -391,7 +391,7 @@ document.getElementById('funnelButton').addEventListener('click', async function
 
     try {
         // Get current status
-        let response = await fetch('/funnel');
+        let response = await authFetch('/funnel');
         if (!response.ok) throw new Error('Failed to fetch funnel status');
         let data = await response.json();
 
@@ -412,9 +412,16 @@ document.getElementById('funnelButton').addEventListener('click', async function
             showMessage('Disabling public sharing...', MessageDuration.NORMAL);
         }
 
+        // Build headers with auth token
+        const headers = { 'Content-Type': 'application/json' };
+        const token = typeof getAuthToken === 'function' ? getAuthToken() : null;
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         response = await fetch('/funnel', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify({ enable: newState })
         });
 
