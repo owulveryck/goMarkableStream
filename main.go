@@ -142,39 +142,61 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// Start server goroutines for each listener
+	// Start server goroutines for each listener (local listeners)
 	serverErr := make(chan error, len(listenerResult.Listeners)+1)
-	for i, listener := range listenerResult.Listeners {
-		isTailscale := i == 0 && listenerResult.TailscaleManager != nil
-		go func(l net.Listener, isTailscale bool) {
-			for {
-				log.Printf("Serving on %v", l.Addr())
-				var serveErr error
-				if listenerResult.UseTLS {
-					serveErr = runTLS(l, handler)
-				} else {
-					serveErr = server.Serve(l)
-				}
+	for _, listener := range listenerResult.Listeners {
+		go func(l net.Listener) {
+			log.Printf("Serving on %v", l.Addr())
+			var serveErr error
+			if listenerResult.UseTLS {
+				serveErr = runTLS(l, handler)
+			} else {
+				serveErr = server.Serve(l)
+			}
 
-				if serveErr == http.ErrServerClosed {
+			if serveErr != http.ErrServerClosed {
+				serverErr <- serveErr
+			}
+		}(listener)
+	}
+
+	// If Tailscale is enabled, wait for it to be ready in background and start serving
+	if listenerResult.TailscaleManager != nil {
+		go func() {
+			tm := listenerResult.TailscaleManager
+			select {
+			case <-tm.Ready():
+				if !tm.IsReady() {
+					log.Println("Tailscale failed to start, continuing with local listener only")
 					return
 				}
-
-				// If Tailscale listener, wait for restart signal
-				if isTailscale && listenerResult.TailscaleManager != nil {
+				// Tailscale is ready, start serving on its listener
+				l := tm.GetListener()
+				if l == nil {
+					return
+				}
+				for {
+					log.Printf("Serving on Tailscale: %v", l.Addr())
+					serveErr := server.Serve(l)
+					if serveErr == http.ErrServerClosed {
+						return
+					}
+					// Handle restart for funnel toggle
 					select {
 					case <-restartCh:
-						l = listenerResult.TailscaleManager.GetListener()
+						l = tm.GetListener()
+						if l == nil {
+							return
+						}
 						continue
 					case <-ctx.Done():
 						return
 					}
 				}
-
-				serverErr <- serveErr
+			case <-ctx.Done():
 				return
 			}
-		}(listener, isTailscale)
+		}()
 	}
 
 	// Wait for shutdown signal or server error
