@@ -8,8 +8,11 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"runtime/debug"
+	"runtime"
+	godebug "runtime/debug"
 
+	"github.com/owulveryck/goMarkableStream/internal/delta"
+	internalDebug "github.com/owulveryck/goMarkableStream/internal/debug"
 	"github.com/owulveryck/goMarkableStream/internal/eventhttphandler"
 	"github.com/owulveryck/goMarkableStream/internal/jwtutil"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
@@ -38,6 +41,18 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 	streamHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher, c.DeltaThreshold)
 	mux.Handle("/stream", stream.ThrottlingMiddleware(streamHandler))
 
+	// Register idle callback to release memory when streaming ends
+	stream.SetOnIdleCallback(func() {
+		internalDebug.Log("Idle: releasing memory pools")
+		stream.ResetFrameBufferPool()
+		delta.ResetEncoderPool()
+		streamHandler.ReleaseMemory()
+		// Force garbage collection and return memory to OS
+		runtime.GC()
+		godebug.FreeOSMemory()
+		internalDebug.Log("Idle: memory returned to OS")
+	})
+
 	wsHandler := eventhttphandler.NewEventHandler(eventPublisher)
 	mux.Handle("/events", wsHandler)
 	gestureHandler := eventhttphandler.NewGestureHandler(eventPublisher)
@@ -48,7 +63,7 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 
 	// Version endpoint
 	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
-		bi, ok := debug.ReadBuildInfo()
+		bi, ok := godebug.ReadBuildInfo()
 		if !ok {
 			http.Error(w, "Unable to read build info", http.StatusInternalServerError)
 			return

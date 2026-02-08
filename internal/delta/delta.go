@@ -21,6 +21,17 @@ var zstdEncoderPool = sync.Pool{
 	},
 }
 
+// ResetEncoderPool replaces the zstd encoder pool with a fresh one,
+// allowing old encoders to be garbage collected.
+func ResetEncoderPool() {
+	zstdEncoderPool = sync.Pool{
+		New: func() any {
+			enc, _ := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedFastest))
+			return enc
+		},
+	}
+}
+
 const (
 	// Frame type constants for wire protocol
 	FrameTypeFull           = 0x00 // Deprecated: uncompressed full frame
@@ -312,4 +323,12 @@ func (e *Encoder) writeLongRun(run changeRun, w io.Writer) error {
 // Reset clears the encoder state, forcing the next frame to be a full frame.
 func (e *Encoder) Reset() {
 	e.hasPrev = false
+}
+
+// ReleaseMemory releases large buffers held by the encoder to reduce memory usage.
+// After calling this, the encoder remains usable but will reallocate buffers as needed.
+func (e *Encoder) ReleaseMemory() {
+	e.hasPrev = false
+	e.prevFrame = nil
+	e.runsBuf = nil
 }
