@@ -110,6 +110,22 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 			}
 			log.Printf("Funnel toggle: success, enabled=%v", req.Enable)
 
+			// Manage temporary credentials based on Funnel state
+			if req.Enable {
+				// Generate temporary credentials when enabling Funnel
+				if funnelCreds != nil {
+					username, password := funnelCreds.Generate()
+					log.Printf("Funnel: temporary credentials generated (user: %s)", username)
+					_ = password // password is returned in response
+				}
+			} else {
+				// Clear temporary credentials when disabling Funnel
+				if funnelCreds != nil {
+					funnelCreds.Clear()
+					log.Println("Funnel: temporary credentials cleared")
+				}
+			}
+
 			// Signal main to restart Tailscale server goroutine
 			if restartCh != nil {
 				select {
@@ -127,11 +143,24 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 			return
 		}
 
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{
+		response := map[string]interface{}{
 			"available": true,
 			"enabled":   enabled,
 			"url":       url,
-		}); err != nil {
+		}
+
+		// Include temporary credentials if Funnel is enabled and credentials are active
+		if enabled && funnelCreds != nil {
+			username, password, active := funnelCreds.GetCredentials()
+			if active {
+				response["tempCredentials"] = map[string]string{
+					"username": username,
+					"password": password,
+				}
+			}
+		}
+
+		if err := json.NewEncoder(w).Encode(response); err != nil {
 			log.Printf("failed to encode JSON response: %v", err)
 		}
 	})

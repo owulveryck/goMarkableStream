@@ -705,6 +705,103 @@ canvas.hidden {
 }
 
 /* ============================================
+   Credentials Container
+   ============================================ */
+
+#credentialsContainer {
+    padding: 12px;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-md);
+    margin: 0 16px 12px 16px;
+    border: 1px solid var(--glass-border);
+    font-size: 12px;
+}
+
+.credentials-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.credentials-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.credentials-row:last-child {
+    margin-bottom: 0;
+}
+
+.credentials-field-label {
+    color: var(--text-secondary);
+    font-size: 12px;
+    min-width: 36px;
+}
+
+.credentials-row code {
+    flex: 1;
+    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+    font-size: 12px;
+    background: var(--bg-surface);
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    border: 1px solid var(--glass-border);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.copy-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: var(--glass-bg-hover);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.copy-btn:hover {
+    background: var(--accent-light);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.copy-btn:active {
+    transform: scale(0.95);
+}
+
+.copy-btn.copied {
+    background: var(--color-success-light);
+    border-color: var(--color-success);
+    color: var(--color-success);
+}
+
+/* Mobile adjustments for credentials */
+@media (max-width: 768px) {
+    #credentialsContainer {
+        margin: 0 8px 8px 8px;
+        padding: 10px;
+    }
+
+    .credentials-row code {
+        font-size: 11px;
+    }
+}
+
+/* ============================================
    Status Indicator Pill - Ark Style
    ============================================ */
 

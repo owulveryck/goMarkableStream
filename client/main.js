@@ -82,6 +82,9 @@ window.onload = async function() {
 				document.getElementById('funnelMenuItem').style.display = '';
 				if (funnelData.enabled) {
 					document.getElementById('funnelButton').classList.add('toggled');
+					document.getElementById('funnelButton').setAttribute('aria-pressed', 'true');
+
+					const footerElement = document.querySelector('.sidebar-footer small');
 					// Show Funnel URL in footer
 					if (footerElement && funnelData.url) {
 						footerElement.textContent = funnelData.url;
@@ -94,6 +97,11 @@ window.onload = async function() {
 							qrContainer.innerHTML = qrSvg;
 							qrContainer.style.display = 'flex';
 						}
+					}
+
+					// Display temporary credentials if available
+					if (funnelData.tempCredentials && typeof displayFunnelCredentials === 'function') {
+						displayFunnelCredentials(funnelData.tempCredentials);
 					}
 				}
 			}

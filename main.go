@@ -72,6 +72,8 @@ var (
 	c configuration
 	// JWT manager for token authentication
 	jwtMgr *jwtutil.Manager
+	// Temporary credentials for Funnel access
+	funnelCreds *FunnelCredentials
 
 	//go:embed client/*
 	assetsFS embed.FS
@@ -140,6 +142,9 @@ func main() {
 			jwtMgr = nil
 		}
 	}
+
+	// Initialize temporary credentials manager for Funnel
+	funnelCreds = NewFunnelCredentials()
 
 	file, pointerAddr, err = remarkable.GetFileAndPointer()
 	if err != nil {

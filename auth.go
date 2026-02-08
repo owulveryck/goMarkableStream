@@ -76,6 +76,15 @@ func AuthMiddleware(next http.Handler, jwtMgr *jwtutil.Manager) http.Handler {
 
 // checkCredentials validates the username and password against configuration.
 // Used by the /login endpoint.
+// Checks both main credentials and temporary funnel credentials if active.
 func checkCredentials(username, password string) bool {
-	return username == c.Username && password == c.Password
+	// Check main credentials first
+	if username == c.Username && password == c.Password {
+		return true
+	}
+	// Check temporary funnel credentials if active
+	if funnelCreds != nil && funnelCreds.Validate(username, password) {
+		return true
+	}
+	return false
 }

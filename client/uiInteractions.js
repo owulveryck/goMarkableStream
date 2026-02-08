@@ -500,6 +500,12 @@ document.getElementById('funnelButton').addEventListener('click', async function
                 footerElement.textContent = data.url;
                 footerElement.title = 'Public Funnel URL';
             }
+
+            // Show temporary credentials if available
+            if (data.tempCredentials) {
+                displayFunnelCredentials(data.tempCredentials);
+            }
+
             // Try to copy URL to clipboard (requires secure context)
             try {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -520,6 +526,9 @@ document.getElementById('funnelButton').addEventListener('click', async function
             if (qrContainer) {
                 qrContainer.style.display = 'none';
             }
+
+            // Hide temporary credentials
+            hideFunnelCredentials();
 
             // Restore footer text
             if (footerElement) {
@@ -547,6 +556,74 @@ document.getElementById('funnelButton').addEventListener('click', async function
         funnelBtn.classList.remove('loading');
     }
 });
+
+// ============================================
+// Funnel Credentials Display
+// ============================================
+
+// Display temporary credentials in the UI
+function displayFunnelCredentials(credentials) {
+    const container = document.getElementById('credentialsContainer');
+    const usernameEl = document.getElementById('tempUsername');
+    const passwordEl = document.getElementById('tempPassword');
+
+    if (!container || !usernameEl || !passwordEl) return;
+
+    if (credentials && credentials.username && credentials.password) {
+        usernameEl.textContent = credentials.username;
+        passwordEl.textContent = credentials.password;
+        container.style.display = 'block';
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+// Hide credentials from UI
+function hideFunnelCredentials() {
+    const container = document.getElementById('credentialsContainer');
+    if (container) {
+        container.style.display = 'none';
+    }
+}
+
+// Initialize copy buttons for credentials
+function initCredentialsCopyButtons() {
+    const copyButtons = document.querySelectorAll('#credentialsContainer .copy-btn');
+    copyButtons.forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            const copyType = this.dataset.copy;
+            let textToCopy = '';
+
+            if (copyType === 'username') {
+                textToCopy = document.getElementById('tempUsername')?.textContent || '';
+            } else if (copyType === 'password') {
+                textToCopy = document.getElementById('tempPassword')?.textContent || '';
+            }
+
+            if (!textToCopy) return;
+
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+
+                // Visual feedback
+                this.classList.add('copied');
+                showToast(`${copyType === 'username' ? 'Username' : 'Password'} copied`);
+
+                // Reset after animation
+                setTimeout(() => {
+                    this.classList.remove('copied');
+                }, 1500);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                showToast('Failed to copy');
+            }
+        });
+    });
+}
+
+// Initialize copy buttons on page load
+document.addEventListener('DOMContentLoaded', initCredentialsCopyButtons);
 
 // Screenshot download functionality
 async function downloadScreenshot() {
