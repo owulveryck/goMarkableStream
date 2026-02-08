@@ -12,7 +12,11 @@ let abortController = null;
 // Frame type constants (must match server)
 const FRAME_TYPE_FULL = 0x00;  // Deprecated: uncompressed full frame
 const FRAME_TYPE_DELTA = 0x01;
-const FRAME_TYPE_FULL_COMPRESSED = 0x02;  // Gzip-compressed full frame
+const FRAME_TYPE_FULL_COMPRESSED = 0x02;  // Gzip-compressed full frame (legacy)
+const FRAME_TYPE_FULL_ZSTD = 0x03;  // Zstd-compressed full frame
+
+// Import fzstd for zstd decompression (vendored locally for offline use)
+importScripts('/lib/fzstd.min.js');
 
 onmessage = (event) => {
 	const data = event.data;
@@ -155,9 +159,11 @@ async function processDeltaData(chunkData, imageData, pixelDataSize) {
 		pendingBuffer = pendingBuffer.slice(4 + payloadLen);
 
 		if (frameType === FRAME_TYPE_FULL) {
-			await handleFullFrame(payload, imageData, pixelDataSize, false);
+			await handleFullFrame(payload, imageData, pixelDataSize, 'none');
 		} else if (frameType === FRAME_TYPE_FULL_COMPRESSED) {
-			await handleFullFrame(payload, imageData, pixelDataSize, true);
+			await handleFullFrame(payload, imageData, pixelDataSize, 'gzip');
+		} else if (frameType === FRAME_TYPE_FULL_ZSTD) {
+			await handleFullFrame(payload, imageData, pixelDataSize, 'zstd');
 		} else if (frameType === FRAME_TYPE_DELTA) {
 			handleDeltaFrame(payload, imageData, pixelDataSize);
 		}
@@ -165,11 +171,19 @@ async function processDeltaData(chunkData, imageData, pixelDataSize) {
 }
 
 // Handle full frame: decompress if needed, copy to previousFrame and render
-async function handleFullFrame(payload, imageData, pixelDataSize, isCompressed) {
+async function handleFullFrame(payload, imageData, pixelDataSize, compressionType) {
 	let frameData = payload;
 
-	if (isCompressed) {
-		// Decompress using DecompressionStream API
+	if (compressionType === 'zstd') {
+		// Decompress using fzstd library
+		try {
+			frameData = fzstd.decompress(payload);
+		} catch (err) {
+			console.error('Zstd decompression failed:', err);
+			return;
+		}
+	} else if (compressionType === 'gzip') {
+		// Decompress using DecompressionStream API (legacy support)
 		const ds = new DecompressionStream('gzip');
 		const writer = ds.writable.getWriter();
 		writer.write(payload);
