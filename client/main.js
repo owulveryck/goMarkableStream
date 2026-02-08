@@ -51,6 +51,15 @@ function getBoolQueryParam(param, defaultValue = false) {
 }
 
 window.onload = async function() {
+	// Initialize auth UI
+	initAuthUI();
+
+	// Check if JWT auth is enabled and user is not authenticated
+	if (JWTEnabled && !isAuthenticated()) {
+		showLoginModal();
+		return; // Don't proceed until user logs in
+	}
+
 	// Function to get the value of a query parameter by name
 	// Get the 'present' parameter from the URL
 	const presentURL = getQueryParam('present');
@@ -66,7 +75,7 @@ window.onload = async function() {
 
 	// Check Funnel availability and status
 	try {
-		const funnelResponse = await fetch('/funnel');
+		const funnelResponse = await authFetch('/funnel');
 		if (funnelResponse.ok) {
 			const funnelData = await funnelResponse.json();
 			if (funnelData.available) {

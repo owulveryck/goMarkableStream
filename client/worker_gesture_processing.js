@@ -1,11 +1,13 @@
 // Constants for the maximum values from the WebSocket messages
 const SWIPE_DISTANCE = 200;
+let authToken = null;
 
 onmessage = (event) => {
 	const data = event.data;
 
 	switch (data.type) {
 		case 'init':
+			authToken = event.data.authToken || null;
 			fetchStream();
 			break;
 		case 'terminate':
@@ -16,7 +18,13 @@ onmessage = (event) => {
 };
 
 async function fetchStream() {
-	const response = await fetch('/gestures');
+	const fetchOptions = {};
+	if (authToken) {
+		fetchOptions.headers = {
+			'Authorization': `Bearer ${authToken}`
+		};
+	}
+	const response = await fetch('/gestures', fetchOptions);
 
 	const reader = response.body.getReader();
 	const decoder = new TextDecoder('utf-8');

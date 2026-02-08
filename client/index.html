@@ -13,6 +13,7 @@
 			const DeviceModel = {{ .DeviceModel }};
 			const UseBGRA = {{ .UseBGRA }};
 			const TextureFlipped = {{ .TextureFlipped }};
+			const JWTEnabled = {{ .JWTEnabled }};
         </script>
 	</head>
 	<body>
@@ -202,7 +203,27 @@ Currently: <span id="layerOrderStatus">Drawing on Top</span></div>
 			Press <kbd>ESC</kbd> or <kbd>F</kbd> to exit fullscreen
 		</div>
 
+		<!-- Login Modal -->
+		<div id="loginModal" class="login-modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+			<div class="login-content">
+				<h2 id="loginTitle">Login</h2>
+				<form id="loginForm">
+					<div class="form-group">
+						<label for="loginUsername">Username</label>
+						<input type="text" id="loginUsername" name="username" required autocomplete="username">
+					</div>
+					<div class="form-group">
+						<label for="loginPassword">Password</label>
+						<input type="password" id="loginPassword" name="password" required autocomplete="current-password">
+					</div>
+					<div id="loginError" class="login-error" style="display: none;"></div>
+					<button type="submit" id="loginSubmit" class="login-button">Login</button>
+				</form>
+			</div>
+		</div>
+
 		<script src="qrcode.js"></script>
+		<script src="auth.js"></script>
 		<script src="main.js"></script>
 		<script src="utilities.js"></script>
 		<script src="glCanvas.js"></script>

@@ -143,14 +143,15 @@ func (tm *TailscaleManager) logConnectionInfo(status *ipnstate.Status) {
 		log.Printf("Tailscale DNS name: %s", dnsName)
 	}
 
-	// Log the access URL
-	port := tm.config.TailscalePort
+	// Log the access URL (strip trailing dot, format port properly)
+	cleanDNS := strings.TrimSuffix(dnsName, ".")
+	portNum := strings.TrimPrefix(tm.config.TailscalePort, ":")
 	if tm.config.TailscaleFunnel {
-		log.Printf("Funnel URL: https://%s%s", dnsName, port)
+		log.Printf("Funnel URL: https://%s:%s", cleanDNS, portNum)
 	} else if tm.config.TailscaleUseTLS {
-		log.Printf("Access URL: https://%s%s", dnsName, port)
+		log.Printf("Access URL: https://%s:%s", cleanDNS, portNum)
 	} else {
-		log.Printf("Access URL: http://%s%s", dnsName, port)
+		log.Printf("Access URL: http://%s:%s", cleanDNS, portNum)
 	}
 }
 

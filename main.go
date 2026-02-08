@@ -19,6 +19,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 
 	dbg "github.com/owulveryck/goMarkableStream/internal/debug"
+	"github.com/owulveryck/goMarkableStream/internal/jwtutil"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 	"github.com/owulveryck/goMarkableStream/internal/tlsutil"
@@ -51,6 +52,12 @@ type configuration struct {
 	TailscaleFunnel    bool   `envconfig:"TAILSCALE_FUNNEL" default:"false" description:"Enable public internet access via Funnel"`
 	TailscaleUseTLS    bool   `envconfig:"TAILSCALE_USE_TLS" default:"false" description:"Use Tailscale's TLS certs"`
 	TailscaleVerbose   bool   `envconfig:"TAILSCALE_VERBOSE" default:"false" description:"Verbose Tailscale logging"`
+
+	// JWT configuration
+	JWTEnabled       bool   `envconfig:"JWT_ENABLED" default:"true" description:"Enable JWT authentication"`
+	JWTSecretDir     string `envconfig:"JWT_SECRET_DIR" default:"/home/root/.config/goMarkableStream/secrets" description:"Directory for JWT secret key"`
+	JWTTokenLifetime string `envconfig:"JWT_TOKEN_LIFETIME" default:"24h" description:"JWT token validity duration"`
+	JWTAutoGenerate  bool   `envconfig:"JWT_AUTO_GENERATE" default:"true" description:"Auto-generate JWT secret key"`
 }
 
 const (
@@ -63,6 +70,8 @@ var (
 	file        io.ReaderAt
 	// Define the username and password for authentication
 	c configuration
+	// JWT manager for token authentication
+	jwtMgr *jwtutil.Manager
 
 	//go:embed client/*
 	assetsFS embed.FS
@@ -114,6 +123,24 @@ func main() {
 
 	dbg.Enabled = c.Debug
 
+	// Initialize JWT manager if enabled
+	if c.JWTEnabled {
+		tokenLifetime, err := time.ParseDuration(c.JWTTokenLifetime)
+		if err != nil {
+			log.Printf("Invalid JWT token lifetime %q, using default 24h", c.JWTTokenLifetime)
+			tokenLifetime = 24 * time.Hour
+		}
+		jwtMgr = jwtutil.NewManager(jwtutil.ManagerConfig{
+			SecretDir:     c.JWTSecretDir,
+			TokenLifetime: tokenLifetime,
+			AutoGenerate:  c.JWTAutoGenerate,
+		})
+		if err := jwtMgr.Initialize(); err != nil {
+			log.Printf("Warning: JWT initialization failed: %v (falling back to Basic Auth only)", err)
+			jwtMgr = nil
+		}
+	}
+
 	file, pointerAddr, err = remarkable.GetFileAndPointer()
 	if err != nil {
 		log.Fatal(err)
@@ -147,10 +174,10 @@ func main() {
 	restartCh := make(chan bool, 1)
 
 	// Pass TailscaleManager and restart channel to setMuxer
-	mux := setMuxer(eventPublisher, listenerResult.TailscaleManager, restartCh)
+	mux := setMuxer(eventPublisher, listenerResult.TailscaleManager, restartCh, jwtMgr)
 
 	var handler http.Handler
-	handler = BasicAuthMiddleware(mux)
+	handler = AuthMiddleware(mux, jwtMgr)
 	if *unsafe {
 		handler = mux
 	}

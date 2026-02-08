@@ -11,6 +11,7 @@ import (
 	"runtime/debug"
 
 	"github.com/owulveryck/goMarkableStream/internal/eventhttphandler"
+	"github.com/owulveryck/goMarkableStream/internal/jwtutil"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 	"github.com/owulveryck/goMarkableStream/internal/stream"
@@ -25,11 +26,14 @@ func (s stripFS) Open(name string) (http.File, error) {
 	return s.fs.Open("client" + name)
 }
 
-func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh chan<- bool) *http.ServeMux {
+func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh chan<- bool, jwtMgr *jwtutil.Manager) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// Custom handler to serve index.html for root path
-	mux.HandleFunc("/", newIndexHandler(stripFS{http.FS(assetsFS)}))
+	mux.HandleFunc("/", newIndexHandler(stripFS{http.FS(assetsFS)}, jwtMgr != nil))
+
+	// Login endpoint for JWT authentication
+	mux.HandleFunc("/login", handleLogin(jwtMgr))
 
 	streamHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher, c.DeltaThreshold)
 	mux.Handle("/stream", stream.ThrottlingMiddleware(streamHandler))
@@ -135,7 +139,60 @@ func parseIndexTemplate(templatePath string) (*template.Template, error) {
 	return tmpl, nil
 }
 
-func newIndexHandler(fs http.FileSystem) http.HandlerFunc {
+// handleLogin handles the /login endpoint for JWT authentication.
+func handleLogin(jwtMgr *jwtutil.Manager) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Check if JWT is enabled
+		if jwtMgr == nil {
+			http.Error(w, "JWT authentication not enabled", http.StatusServiceUnavailable)
+			return
+		}
+
+		// Parse request body
+		var req struct {
+			Username string `json:"username"`
+			Password string `json:"password"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
+			return
+		}
+
+		// Validate credentials
+		if !checkCredentials(req.Username, req.Password) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
+			return
+		}
+
+		// Create JWT token
+		token, err := jwtMgr.CreateToken(req.Username)
+		if err != nil {
+			log.Printf("Failed to create JWT token: %v", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Failed to create token"})
+			return
+		}
+
+		// Return token
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"token":     token,
+			"expiresIn": int64(jwtMgr.GetTokenLifetime().Seconds()),
+		})
+	}
+}
+
+func newIndexHandler(fs http.FileSystem, jwtEnabled bool) http.HandlerFunc {
 	tmpl, err := parseIndexTemplate("client/index.html")
 	if err != nil {
 		log.Fatalf("Error parsing index template: %v", err)
@@ -152,6 +209,7 @@ func newIndexHandler(fs http.FileSystem) http.HandlerFunc {
 		DeviceModel    string
 		UseBGRA        bool
 		TextureFlipped bool
+		JWTEnabled     bool
 	}{
 		ScreenWidth:    remarkable.Config.Width,
 		ScreenHeight:   remarkable.Config.Height,
@@ -160,6 +218,7 @@ func newIndexHandler(fs http.FileSystem) http.HandlerFunc {
 		DeviceModel:    remarkable.Model.String(),
 		UseBGRA:        remarkable.Config.UseBGRA,
 		TextureFlipped: remarkable.Config.TextureFlipped,
+		JWTEnabled:     jwtEnabled,
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
