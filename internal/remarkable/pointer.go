@@ -4,7 +4,7 @@ package remarkable
 
 import (
 	"bufio"
-	"log"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -15,10 +15,18 @@ func init() {
 	initConfigForFirmware()
 }
 
+// getFramePointer locates the framebuffer in memory for RM2.
+//
+// RM2 uses the classic Linux framebuffer device (/dev/fb0). This function
+// scans /proc/[pid]/maps to find the memory mapping for /dev/fb0, then
+// applies the configured PointerOffset to locate the actual pixel data.
+//
+// For firmware 3.24+, the offset is 2629632 bytes; for legacy firmware it's 0.
+// This differs from RMPP's approach which uses the modern GPU/DRM stack.
 func getFramePointer(pid string) (int64, error) {
 	file, err := os.OpenFile("/proc/"+pid+"/maps", os.O_RDONLY, os.ModeDevice)
 	if err != nil {
-		log.Fatal("cannot open file: ", err)
+		return 0, fmt.Errorf("cannot open maps file: %w", err)
 	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)

@@ -45,7 +45,14 @@ const (
 	// Maximum values for short run encoding
 	maxShortOffset = 0xFFFF // 64KB - 1
 	maxShortLength = 127    // 7 bits
-	bytesPerPixel  = 4      // BGRA format
+
+	// bytesPerPixel defines the pixel format for delta encoding.
+	// Hardcoded to 4 for BGRA32 format (matches remarkable.BytesPerPixelBGRA).
+	// All current reMarkable devices use BGRA in streaming mode:
+	// - RM2 firmware 3.24+ uses BGRA
+	// - RMPP uses BGRA
+	// - RM2 legacy firmware uses gray16 but is converted to BGRA server-side
+	bytesPerPixel = 4
 )
 
 // Encoder holds the state for delta encoding between frames.
@@ -54,9 +61,9 @@ type Encoder struct {
 	threshold float64
 	hasPrev   bool
 	// Reusable buffers to avoid allocations
-	headerBuf   [5]byte       // Max header size (long run: 5 bytes)
-	frameHeader [4]byte       // Frame header buffer
-	runsBuf     []changeRun   // Reusable runs slice
+	headerBuf   [5]byte     // Max header size (long run: 5 bytes)
+	frameHeader [4]byte     // Frame header buffer
+	runsBuf     []changeRun // Reusable runs slice
 }
 
 // NewEncoder creates a new delta encoder with the given threshold.

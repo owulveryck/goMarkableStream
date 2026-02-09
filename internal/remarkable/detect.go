@@ -27,7 +27,6 @@ const (
 	// New format constants (firmware 3.24+)
 	newFormatWidth         = 1404
 	newFormatHeight        = 1872
-	newFormatBytesPerPixel = 4
 	newFormatPointerOffset = int64(2629632)
 )
 
@@ -98,8 +97,8 @@ func initConfigForFirmware() {
 		Config = FramebufferConfig{
 			Width:          newFormatWidth,
 			Height:         newFormatHeight,
-			BytesPerPixel:  newFormatBytesPerPixel,
-			SizeBytes:      newFormatWidth * newFormatHeight * newFormatBytesPerPixel,
+			BytesPerPixel:  BytesPerPixelBGRA,
+			SizeBytes:      newFormatWidth * newFormatHeight * BytesPerPixelBGRA,
 			PointerOffset:  newFormatPointerOffset,
 			UseBGRA:        true,
 			TextureFlipped: true,
@@ -109,8 +108,8 @@ func initConfigForFirmware() {
 		Config = FramebufferConfig{
 			Width:          ScreenWidth,
 			Height:         ScreenHeight,
-			BytesPerPixel:  2,
-			SizeBytes:      ScreenWidth * ScreenHeight * 2,
+			BytesPerPixel:  BytesPerPixelGray16,
+			SizeBytes:      ScreenWidth * ScreenHeight * BytesPerPixelGray16,
 			PointerOffset:  0,
 			UseBGRA:        false,
 			TextureFlipped: false,
