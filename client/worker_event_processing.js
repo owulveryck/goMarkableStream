@@ -68,10 +68,10 @@ async function initiateEventsListener() {
 			// Code 0 = device Y-axis = horizontal movement on device
 			// Code 1 = device X-axis = vertical movement on device
 			if (portrait) {
-				if (message.Code === 0) { // device Y (horizontal) → screen X (inverted)
-					latestX = width - scaleValue(message.Value, maxYValue, width);
-				} else if (message.Code === 1) { // device X (vertical) → screen Y (inverted)
-					latestY = height - scaleValue(message.Value, maxXValue, height);
+				if (message.Code === 0) { // device Y (horizontal) → screen X (NOT inverted)
+					latestX = scaleValue(message.Value, maxYValue, width);
+				} else if (message.Code === 1) { // device X (vertical) → screen Y (NOT inverted)
+					latestY = scaleValue(message.Value, maxXValue, height);
 				}
 			} else {
 				if (message.Code === 0) { // device Y → screen Y (inverted)
