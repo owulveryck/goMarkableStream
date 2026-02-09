@@ -67,6 +67,14 @@ async function initiateEventsListener() {
 			// Device axes are rotated 90° from screen coordinates:
 			// Code 0 = device Y-axis = horizontal movement on device
 			// Code 1 = device X-axis = vertical movement on device
+			//
+			// Coordinate transformation for laser pointer events
+			// Tested and working on:
+			//   - RM2 (1872×1404, natively landscape)
+			// Not yet tested on:
+			//   - RMPP (1632×2154, natively portrait)
+			// If RMPP users experience coordinate issues, this logic may need
+			// device-specific branches based on native orientation.
 			if (portrait) {
 				if (message.Code === 0) { // device Y (horizontal) → screen X (NOT inverted)
 					latestX = scaleValue(message.Value, maxYValue, width);
