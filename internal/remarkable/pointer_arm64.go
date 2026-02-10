@@ -10,6 +10,17 @@ import (
 	"strings"
 )
 
+// getFramePointer locates the framebuffer in memory for RMPP.
+//
+// RMPP uses a modern GPU/DRM display stack (/dev/dri/card0) rather than
+// the classic framebuffer device. This requires a more complex algorithm:
+// 1. Find the last /dev/dri/card0 mapping in /proc/[pid]/maps
+// 2. Read memory headers to dynamically calculate the buffer offset
+// 3. Iterate until the correct buffer size is found
+//
+// This differs from RM2's simpler /dev/fb0 approach due to the GPU architecture.
+// Both devices now use BGRA format, but the underlying hardware architecture
+// necessitates different pointer detection methods.
 func getFramePointer(pid string) (int64, error) {
 	// Find the memory range for the framebuffer
 	startAddress, err := getMemoryRange(pid)

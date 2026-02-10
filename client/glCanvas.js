@@ -2,12 +2,22 @@
 // Use -10,-10 as the default laser coordinate (off-screen) to hide the pointer initially
 let laserX = -10; 
 let laserY = -10;
-const gl = canvas.getContext('webgl', { 
+const gl = canvas.getContext('webgl', {
     antialias: true,
     preserveDrawingBuffer: true,  // Important for proper rendering
     alpha: true                   // Enable transparency
 });
 
+// Check for anisotropic filtering extension
+const anisoExt = gl.getExtension('EXT_texture_filter_anisotropic') ||
+                 gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
+                 gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic');
+
+let maxAnisotropy = 1;
+if (anisoExt) {
+	maxAnisotropy = gl.getParameter(anisoExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+	console.log('Anisotropic filtering available, max:', maxAnisotropy);
+}
 
 if (!gl) {
 	// Wait for DOM to be ready, then show styled error
@@ -186,12 +196,18 @@ gl.bindTexture(gl.TEXTURE_2D, texture);
 // Set the parameters so we can render any size image.
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-// To apply a smoothing algorithm, you'll likely want to adjust the texture filtering parameters in your WebGL setup. 
+// To apply a smoothing algorithm, you'll likely want to adjust the texture filtering parameters in your WebGL setup.
 // For smoothing, typically gl.LINEAR is used for both gl.TEXTURE_MIN_FILTER and gl.TEXTURE_MAG_FILTER
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+// Enable anisotropic filtering if available
+if (anisoExt) {
+	gl.texParameterf(gl.TEXTURE_2D, anisoExt.TEXTURE_MAX_ANISOTROPY_EXT, maxAnisotropy);
+	console.log('Anisotropic filtering enabled with max samples:', maxAnisotropy);
+}
 
 // Upload the image into the texture.
 let imageData = new ImageData(screenWidth, screenHeight);
@@ -290,17 +306,24 @@ function redrawScene(shouldRotate, scaleFactor) {
     drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 }
 
-// Let's create a function that resizes the canvas element. 
+// Let's create a function that resizes the canvas element.
 // This function will adjust the canvas's width and height attributes based on its display size, which can be set using CSS or directly in JavaScript.
 function resizeGLCanvas(canvas) {
+	// Get device pixel ratio for high-DPI displays
+	const dpr = window.devicePixelRatio || 1;
+
 	const displayWidth = canvas.clientWidth;
 	const displayHeight = canvas.clientHeight;
 
+	// Calculate backing store size with DPR
+	const width = Math.floor(displayWidth * dpr);
+	const height = Math.floor(displayHeight * dpr);
+
 	// Check if the canvas size is different from its display size
-	if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-		// Make the canvas the same size as its display size
-		canvas.width = displayWidth;
-		canvas.height = displayHeight;
+	if (canvas.width !== width || canvas.height !== height) {
+		// Make the canvas the same size as its backing store
+		canvas.width = width;
+		canvas.height = height;
 		return true; // indicates that the size was changed
 	}
 
