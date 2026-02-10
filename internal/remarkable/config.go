@@ -1,5 +1,15 @@
 package remarkable
 
+const (
+	// BytesPerPixelBGRA is the size in bytes for BGRA32 color format.
+	// Used by RM2 firmware 3.24+ and RMPP.
+	BytesPerPixelBGRA = 4
+
+	// BytesPerPixelGray16 is the size in bytes for 16-bit grayscale format.
+	// Used by RM2 firmware versions before 3.24.
+	BytesPerPixelGray16 = 2
+)
+
 // FramebufferConfig holds runtime configuration for the framebuffer
 // that varies based on device model and firmware version.
 type FramebufferConfig struct {
