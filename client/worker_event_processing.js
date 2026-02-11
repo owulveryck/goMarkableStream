@@ -68,22 +68,21 @@ async function initiateEventsListener() {
 			// Device-specific coordinate transformations
 			// RM2 (landscape native): Code 0=Y-axis, Code 1=X-axis
 			// RMPP (portrait native): Code 0=X-axis, Code 1=Y-axis
-
 			if (deviceModel === "RemarkablePaperPro") {
 				// RMPP transformations
 				if (portrait) {
-					// Portrait (native orientation)
-					if (message.Code === 0) {
-						latestX = scaleValue(message.Value, maxXValue, width);
-					} else if (message.Code === 1) {
-						latestY = scaleValue(message.Value, maxYValue, height);
-					}
-				} else {
-					// Landscape (rotated 90° CW)
+					// this is landscape
 					if (message.Code === 0) {
 						latestY = scaleValue(message.Value, maxXValue, height);
 					} else if (message.Code === 1) {
 						latestX = width - scaleValue(message.Value, maxYValue, width);
+					}
+				} else {
+					// this is portrait
+					if (message.Code === 0) {
+						latestX = scaleValue(message.Value, maxXValue, width);
+					} else if (message.Code === 1) {
+						latestY = scaleValue(message.Value, maxYValue, height);
 					}
 				}
 			} else {
