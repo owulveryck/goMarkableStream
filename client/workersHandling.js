@@ -140,6 +140,7 @@ eventWorker.postMessage({
 	eventURL: eventURL,
     maxXValue: MaxXValue,
     maxYValue: MaxYValue,
+	deviceModel: DeviceModel,
 	authToken: typeof getAuthToken === 'function' ? getAuthToken() : null,
 });
 gestureWorker.postMessage({

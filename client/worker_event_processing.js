@@ -7,6 +7,7 @@ let latestX;
 let latestY;
 let maxXValue;
 let maxYValue;
+let deviceModel = "Remarkable2";  // default
 let authToken = null;
 
 // Throttling variables for laser pointer updates
@@ -26,6 +27,7 @@ onmessage = (event) => {
 			portrait = event.data.portrait;
             maxXValue = event.data.maxXValue;
             maxYValue = event.data.maxYValue;
+			deviceModel = event.data.deviceModel || "Remarkable2";
 			authToken = event.data.authToken || null;
 			initiateEventsListener();
 			break;
@@ -63,40 +65,51 @@ async function initiateEventsListener() {
 			}
 		}
 		if (message.Type === 3) {
-			// Code 3: Update and draw laser pointer
-			// Device axes are rotated 90° from screen coordinates:
-			// Code 0 = device Y-axis = horizontal movement on device
-			// Code 1 = device X-axis = vertical movement on device
-			//
-			// Coordinate transformation for laser pointer events
-			// Tested and working on:
-			//   - RM2 (1872×1404, natively landscape)
-			// Not yet tested on:
-			//   - RMPP (1632×2154, natively portrait)
-			// If RMPP users experience coordinate issues, this logic may need
-			// device-specific branches based on native orientation.
-			if (portrait) {
-				if (message.Code === 0) { // device Y (horizontal) → screen X (NOT inverted)
-					latestX = scaleValue(message.Value, maxYValue, width);
-				} else if (message.Code === 1) { // device X (vertical) → screen Y (NOT inverted)
-					latestY = scaleValue(message.Value, maxXValue, height);
+			// Device-specific coordinate transformations
+			// RM2 (landscape native): Code 0=Y-axis, Code 1=X-axis
+			// RMPP (portrait native): Code 0=X-axis, Code 1=Y-axis
+			if (deviceModel === "RemarkablePaperPro") {
+				// RMPP transformations
+				if (portrait) {
+					// this is landscape
+					if (message.Code === 0) {
+						latestY = scaleValue(message.Value, maxXValue, height);
+					} else if (message.Code === 1) {
+						latestX = width - scaleValue(message.Value, maxYValue, width);
+					}
+				} else {
+					// this is portrait
+					if (message.Code === 0) {
+						latestX = scaleValue(message.Value, maxXValue, width);
+					} else if (message.Code === 1) {
+						latestY = scaleValue(message.Value, maxYValue, height);
+					}
 				}
 			} else {
-				if (message.Code === 0) { // device Y → screen Y (inverted)
-					latestY = height - scaleValue(message.Value, maxYValue, height);
-				} else if (message.Code === 1) { // device X → screen X
-					latestX = scaleValue(message.Value, maxXValue, width);
+				// RM2 transformations (keep existing working logic)
+				if (portrait) {
+					if (message.Code === 0) {
+						latestX = scaleValue(message.Value, maxYValue, width);
+					} else if (message.Code === 1) {
+						latestY = scaleValue(message.Value, maxXValue, height);
+					}
+				} else {
+					if (message.Code === 0) {
+						latestY = height - scaleValue(message.Value, maxYValue, height);
+					} else if (message.Code === 1) {
+						latestX = scaleValue(message.Value, maxXValue, width);
+					}
 				}
 			}
+
 			if (draw) {
-				// Skip if position hasn't changed meaningfully
+				// Existing throttling logic remains unchanged
 				const dx = Math.abs(latestX - lastSentX);
 				const dy = Math.abs(latestY - lastSentY);
 				if (dx < MIN_DELTA && dy < MIN_DELTA) return;
 
 				if (!pendingUpdate) {
 					pendingUpdate = true;
-					// Align with display refresh (~60fps = 16ms)
 					setTimeout(() => {
 						postMessage({ type: 'update', X: latestX, Y: latestY });
 						lastSentX = latestX;
