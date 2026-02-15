@@ -3,11 +3,11 @@
 package remarkable
 
 import (
+	"context"
 	"log"
 	"os"
+	"time"
 	"unsafe"
-
-	"context"
 
 	"github.com/owulveryck/goMarkableStream/internal/events"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
@@ -57,39 +57,59 @@ func (e *EventScanner) StartAndPublish(ctx context.Context, pubsub *pubsub.PubSu
 	// Start a goroutine to read events and send them on the channel
 	go func() {
 		for {
+			// Check context before blocking read
 			select {
 			case <-ctx.Done():
 				return
 			default:
-				ev, err := readEvent(e.pen)
-				if err != nil {
-					log.Println(err)
+			}
+
+			// Blocking read with timeout to allow context cancellation checks
+			e.pen.SetReadDeadline(time.Now().Add(1 * time.Second))
+			ev, err := readEvent(e.pen)
+
+			if err != nil {
+				// Check if it's a timeout (expected)
+				if os.IsTimeout(err) {
 					continue
 				}
-				pubsub.Publish(events.InputEventFromSource{
-					Source:     events.Pen,
-					InputEvent: ev,
-				})
+				log.Println(err)
+				continue
 			}
+
+			pubsub.Publish(events.InputEventFromSource{
+				Source:     events.Pen,
+				InputEvent: ev,
+			})
 		}
 	}()
 	// Start a goroutine to read events and send them on the channel
 	go func() {
 		for {
+			// Check context before blocking read
 			select {
 			case <-ctx.Done():
 				return
 			default:
-				ev, err := readEvent(e.touch)
-				if err != nil {
-					log.Println(err)
+			}
+
+			// Blocking read with timeout to allow context cancellation checks
+			e.touch.SetReadDeadline(time.Now().Add(1 * time.Second))
+			ev, err := readEvent(e.touch)
+
+			if err != nil {
+				// Check if it's a timeout (expected)
+				if os.IsTimeout(err) {
 					continue
 				}
-				pubsub.Publish(events.InputEventFromSource{
-					Source:     events.Touch,
-					InputEvent: ev,
-				})
+				log.Println(err)
+				continue
 			}
+
+			pubsub.Publish(events.InputEventFromSource{
+				Source:     events.Touch,
+				InputEvent: ev,
+			})
 		}
 	}()
 }

@@ -17,6 +17,9 @@ import (
 
 var (
 	defaultRate time.Duration = 200
+	// pressureThreshold defines the minimum pressure value to consider the pen as "touching"
+	// Values below this are considered "hovering" and should not trigger frame streaming
+	pressureThreshold int32 = 100
 )
 
 var rawFrameBuffer = sync.Pool{
@@ -99,12 +102,16 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eventC := h.inputEventsBus.Subscribe("stream")
+	// Subscribe only to EvAbs events (pen position and pressure)
+	// This filters out unnecessary EvSyn, EvKey, etc.
+	absType := uint16(events.EvAbs)
+	eventC := h.inputEventsBus.SubscribeWithFilter("stream", pubsub.EventFilter{
+		Type: &absType,
+	})
 	defer h.inputEventsBus.Unsubscribe(eventC)
-	debug.Log("Stream: subscribed to events")
+	debug.Log("Stream: subscribed to EvAbs events")
 
 	ticker := time.NewTicker(rate * time.Millisecond)
-	ticker.Reset(rate * time.Millisecond)
 	defer ticker.Stop()
 
 	rawDataPtr, ok := rawFrameBuffer.Get().(*[]uint8)
@@ -118,6 +125,9 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	stopWriting := time.NewTicker(2 * time.Second)
 	defer stopWriting.Stop()
 
+	// Track current pressure value to distinguish hover from touch
+	var currentPressure int32
+
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Connection", "close")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -129,12 +139,31 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			debug.Log("Stream: client disconnected (%s)", r.RemoteAddr)
 			return
 		case event := <-eventC:
-			if event.Code == 24 || event.Source == events.Touch {
+			// Track pressure value from ABS_PRESSURE events (code 24)
+			if event.Code == 24 {
+				currentPressure = event.Value
+			}
+
+			// Only trigger frame streaming when:
+			// 1. Touch events (finger touch, always active)
+			// 2. Pen events with pressure above threshold (pen touching, not hovering)
+			shouldWrite := false
+			if event.Source == events.Touch {
+				shouldWrite = true
+			} else if event.Source == events.Pen && currentPressure > pressureThreshold {
+				shouldWrite = true
+			}
+
+			if shouldWrite {
 				if !writing {
-					debug.Log("Stream: writing resumed (input event code=%d, source=%v)", event.Code, event.Source)
+					debug.Log("Stream: writing resumed (source=%v, pressure=%d)", event.Source, currentPressure)
 				}
 				writing = true
 				stopWriting.Reset(2000 * time.Millisecond)
+			} else if writing && event.Source == events.Pen && currentPressure <= pressureThreshold {
+				// Pen lifted or hovering - stop writing immediately
+				debug.Log("Stream: writing paused (pen hover/lifted, pressure=%d)", currentPressure)
+				writing = false
 			}
 		case <-stopWriting.C:
 			if writing {

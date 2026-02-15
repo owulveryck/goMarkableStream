@@ -57,7 +57,13 @@ func (g *gesture) reset() {
 
 // ServeHTTP implements http.Handler
 func (h *GestureHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	eventC := h.inputEventBus.Subscribe("eventListener")
+	// Subscribe only to Touch events of type EvAbs
+	touchSource := events.Touch
+	absType := uint16(events.EvAbs)
+	eventC := h.inputEventBus.SubscribeWithFilter("eventListener", pubsub.EventFilter{
+		Source: &touchSource,
+		Type:   &absType,
+	})
 	defer func() {
 		h.inputEventBus.Unsubscribe(eventC)
 	}()
@@ -98,12 +104,6 @@ func (h *GestureHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			lastEventX = events.InputEventFromSource{}
 			lastEventY = events.InputEventFromSource{}
 		case event := <-eventC:
-			if event.Source != events.Touch {
-				continue
-			}
-			if event.Type != events.EvAbs {
-				continue
-			}
 			switch event.Code {
 			case codeXAxis:
 				// This is the initial event, do not compute the distance
