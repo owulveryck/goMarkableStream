@@ -23,6 +23,7 @@ import (
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 	"github.com/owulveryck/goMarkableStream/internal/tlsutil"
+	"github.com/owulveryck/goMarkableStream/internal/trace"
 )
 
 type configuration struct {
@@ -58,6 +59,14 @@ type configuration struct {
 	JWTSecretDir     string `envconfig:"JWT_SECRET_DIR" default:"/home/root/.config/goMarkableStream/secrets" description:"Directory for JWT secret key"`
 	JWTTokenLifetime string `envconfig:"JWT_TOKEN_LIFETIME" default:"24h" description:"JWT token validity duration"`
 	JWTAutoGenerate  bool   `envconfig:"JWT_AUTO_GENERATE" default:"true" description:"Auto-generate JWT secret key"`
+
+	// Trace configuration
+	TraceEnabled     bool   `envconfig:"TRACE_ENABLED" default:"false" description:"Enable runtime tracing system"`
+	TraceMode        string `envconfig:"TRACE_MODE" default:"both" description:"Tracing mode: runtime, spans, or both"`
+	TraceDir         string `envconfig:"TRACE_DIR" default:"/home/root/traces" description:"Directory for trace files"`
+	TraceMaxSizeMB   int    `envconfig:"TRACE_MAX_SIZE_MB" default:"50" description:"Max trace file size in MB before rotation"`
+	TraceMaxFiles    int    `envconfig:"TRACE_MAX_FILES" default:"3" description:"Maximum number of trace files to keep"`
+	TraceAutoStart   bool   `envconfig:"TRACE_AUTO_START" default:"false" description:"Start tracing automatically on startup"`
 }
 
 const (
@@ -161,6 +170,29 @@ func main() {
 
 	// Initialize temporary credentials manager for Funnel
 	funnelCreds = NewFunnelCredentials()
+
+	// Initialize tracing system if enabled AND compiled in
+	if hasTraceSupport && c.TraceEnabled {
+		traceCfg := trace.Config{
+			Enabled:   c.TraceEnabled,
+			Mode:      c.TraceMode,
+			Dir:       c.TraceDir,
+			MaxSizeMB: c.TraceMaxSizeMB,
+			MaxFiles:  c.TraceMaxFiles,
+			AutoStart: c.TraceAutoStart,
+		}
+		if err := trace.Initialize(traceCfg); err != nil {
+			log.Fatalf("Failed to initialize tracing: %v", err)
+		}
+
+		if c.TraceAutoStart {
+			if err := trace.Start(c.TraceMode); err != nil {
+				log.Printf("Failed to auto-start tracing: %v", err)
+			} else {
+				log.Printf("Tracing auto-started in %s mode", c.TraceMode)
+			}
+		}
+	}
 
 	file, pointerAddr, err = remarkable.GetFileAndPointer()
 	if err != nil {

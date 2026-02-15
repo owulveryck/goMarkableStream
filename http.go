@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"runtime"
 	godebug "runtime/debug"
+	"strings"
 
 	"github.com/owulveryck/goMarkableStream/internal/delta"
 	internalDebug "github.com/owulveryck/goMarkableStream/internal/debug"
@@ -19,6 +22,7 @@ import (
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
 	"github.com/owulveryck/goMarkableStream/internal/stream"
 	"github.com/owulveryck/goMarkableStream/internal/tlsutil"
+	"github.com/owulveryck/goMarkableStream/internal/trace"
 )
 
 type stripFS struct {
@@ -164,6 +168,20 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 			log.Printf("failed to encode JSON response: %v", err)
 		}
 	})
+
+	// Trace endpoints (only when tracing build tag is enabled)
+	if hasTraceSupport && c.TraceEnabled {
+		mux.HandleFunc("/trace/status", handleTraceStatus)
+		mux.HandleFunc("/trace/start", handleTraceStart)
+		mux.HandleFunc("/trace/stop", handleTraceStop)
+		mux.HandleFunc("/trace/files", handleTraceFiles)
+		mux.HandleFunc("/trace/download/", handleTraceDownload)
+
+		// pprof endpoints with authentication
+		// pprof handlers are registered at /debug/pprof/ by the import
+		// We need to wrap them with our auth middleware
+		mux.Handle("/debug/pprof/", http.StripPrefix("/debug/pprof", http.DefaultServeMux))
+	}
 
 	if c.DevMode {
 		rawHandler := stream.NewRawHandler(file, pointerAddr)
@@ -317,4 +335,150 @@ func createTLSManager(cfg *configuration) *tlsutil.Manager {
 		EmbeddedCert:        cert,
 		EmbeddedKey:         key,
 	})
+}
+
+// Trace HTTP handlers
+
+func handleTraceStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	status := trace.GetStatus()
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(status); err != nil {
+		log.Printf("Failed to encode trace status: %v", err)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+func handleTraceStart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Mode string `json:"mode"` // "runtime", "spans", or "both"
+	}
+
+	// Default to configured mode if not specified
+	req.Mode = c.TraceMode
+
+	// Try to decode request body
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
+		log.Printf("Trace start: failed to decode request: %v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := trace.Start(req.Mode); err != nil {
+		log.Printf("Failed to start trace: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "started",
+		"mode":   req.Mode,
+	})
+}
+
+func handleTraceStop(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	files, err := trace.Stop()
+	if err != nil {
+		log.Printf("Failed to stop trace: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "stopped",
+		"files":  files,
+	})
+}
+
+func handleTraceFiles(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		// Delete a specific file
+		var req struct {
+			Filename string `json:"filename"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if err := trace.DeleteFile(req.Filename); err != nil {
+			log.Printf("Failed to delete trace file %s: %v", req.Filename, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"status": "deleted",
+			"file":   req.Filename,
+		})
+		return
+	}
+
+	// GET - list files
+	files, err := trace.ListFiles()
+	if err != nil {
+		log.Printf("Failed to list trace files: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(files); err != nil {
+		log.Printf("Failed to encode trace files: %v", err)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+func handleTraceDownload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract filename from path
+	filename := strings.TrimPrefix(r.URL.Path, "/trace/download/")
+	if filename == "" {
+		http.Error(w, "Filename required", http.StatusBadRequest)
+		return
+	}
+
+	// Get file path (validates filename)
+	filePath, err := trace.GetFilePath(filename)
+	if err != nil {
+		log.Printf("Failed to get trace file %s: %v", filename, err)
+		http.Error(w, "File not found", http.StatusNotFound)
+		return
+	}
+
+	// Set content type based on file extension
+	if strings.HasSuffix(filename, ".trace") {
+		w.Header().Set("Content-Type", "application/octet-stream")
+	} else if strings.HasSuffix(filename, ".jsonl") {
+		w.Header().Set("Content-Type", "application/x-ndjson")
+	}
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+
+	http.ServeFile(w, r, filePath)
 }

@@ -5,6 +5,8 @@ package remarkable
 import (
 	"io"
 	"os"
+
+	"github.com/owulveryck/goMarkableStream/internal/trace"
 )
 
 // FramebufferReader wraps an os.File to provide framebuffer reading with proper cleanup.
@@ -15,6 +17,14 @@ type FramebufferReader struct {
 
 // ReadAt implements io.ReaderAt interface.
 func (r *FramebufferReader) ReadAt(p []byte, off int64) (n int, err error) {
+	span := trace.BeginSpan("frame_capture")
+	defer func() {
+		trace.EndSpan(span, map[string]any{
+			"bytes_read": n,
+			"error":      err != nil,
+		})
+	}()
+
 	return r.file.ReadAt(p, off)
 }
 

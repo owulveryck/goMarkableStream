@@ -1,6 +1,7 @@
 package eventhttphandler
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -45,6 +46,13 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
+	// Cache flusher interface (avoid repeated type assertions)
+	flusher, _ := w.(http.Flusher)
+
+	// Reusable buffer and encoder for JSON serialization
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+
 	// Track current pressure to determine if pen is hovering or drawing
 	var currentPressure int32
 
@@ -62,16 +70,19 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// When pen is down (drawing), the frame stream provides visual feedback
 			// so individual coordinate events are redundant
 			if currentPressure <= pressureThreshold {
-				// Serialize the structure as JSON
-				jsonMessage, err := json.Marshal(event)
-				if err != nil {
-					http.Error(w, "cannot send json encode the message "+err.Error(), http.StatusInternalServerError)
+				// Reset buffer and encode JSON
+				buf.Reset()
+				if err := encoder.Encode(event); err != nil {
+					http.Error(w, "cannot json encode the message "+err.Error(), http.StatusInternalServerError)
 					return
 				}
+				// Remove trailing newline added by Encode
+				jsonBytes := bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
+
 				// Send the event
-				fmt.Fprintf(w, "data: %s\n\n", jsonMessage)
-				if f, ok := w.(http.Flusher); ok {
-					f.Flush() // Ensure client receives the message immediately
+				fmt.Fprintf(w, "data: %s\n\n", jsonBytes)
+				if flusher != nil {
+					flusher.Flush() // Ensure client receives the message immediately
 				}
 			}
 

@@ -13,6 +13,7 @@ import (
 	"github.com/owulveryck/goMarkableStream/internal/events"
 	"github.com/owulveryck/goMarkableStream/internal/pubsub"
 	"github.com/owulveryck/goMarkableStream/internal/remarkable"
+	"github.com/owulveryck/goMarkableStream/internal/trace"
 )
 
 var (
@@ -56,6 +57,7 @@ type StreamHandler struct {
 	pointerAddr    int64
 	inputEventsBus *pubsub.PubSub
 	deltaEncoder   *delta.Encoder
+	flusher        http.Flusher // Cached flusher interface per connection
 }
 
 // ReleaseMemory releases large buffers held by the stream handler's delta encoder.
@@ -66,6 +68,9 @@ func (h *StreamHandler) ReleaseMemory() {
 // ServeHTTP implements http.Handler
 func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	debug.Log("Stream: new connection from %s", r.RemoteAddr)
+
+	// Cache flusher interface for this connection
+	h.flusher, _ = w.(http.Flusher)
 
 	// Reset delta encoder to force a full frame for the new client
 	h.deltaEncoder.Reset()
@@ -179,6 +184,9 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *StreamHandler) fetchAndSendDelta(w io.Writer, rawData []uint8) {
+	span := trace.BeginSpan("fetch_and_send")
+	defer trace.EndSpan(span, nil)
+
 	n, err := h.file.ReadAt(rawData, h.pointerAddr)
 	if err != nil {
 		log.Println("Error reading framebuffer:", err)
@@ -194,7 +202,8 @@ func (h *StreamHandler) fetchAndSendDelta(w io.Writer, rawData []uint8) {
 		return
 	}
 	debug.Log("Stream: sent frame (%d bytes)", frameSize)
-	if f, ok := w.(http.Flusher); ok {
-		f.Flush()
+	// Use cached flusher (avoid type assertion on every frame)
+	if h.flusher != nil {
+		h.flusher.Flush()
 	}
 }

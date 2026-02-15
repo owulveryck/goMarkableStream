@@ -9,18 +9,26 @@ goMarkableStream is a Go application that streams reMarkable tablet screens to w
 ## Build Commands
 
 ```bash
-# Build for reMarkable 2 (ARM, GOARM=7)
+# Build for reMarkable 2 (ARM, GOARM=7) - standard
 make build-remarkable-2
 
-# Build for reMarkable Paper Pro (ARM64)
+# Build for reMarkable 2 with tracing support
+make build-remarkable-2-trace
+
+# Build for reMarkable Paper Pro (ARM64) - standard
 make build-remarkable-paper-pro
 
-# Manual build with Tailscale
-GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -v -trimpath -tags tailscale -ldflags="-s -w" .
+# Build for reMarkable Paper Pro with tracing support
+make build-remarkable-paper-pro-trace
 
-# Build without Tailscale (smaller binary)
+# Manual build with Tailscale and Tracing
+GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -v -trimpath -tags "tailscale,trace" -ldflags="-s -w" .
+
+# Build without Tailscale or Tracing (smallest binary)
 GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -v -trimpath -ldflags="-s -w" .
 ```
+
+**Important:** The `trace` build tag is optional. By default, tracing is NOT compiled in to minimize binary size. Use `-tags trace` only when you need tracing/profiling capabilities.
 
 ## Testing
 
