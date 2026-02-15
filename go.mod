@@ -3,6 +3,7 @@ module github.com/owulveryck/goMarkableStream
 go 1.26
 
 require (
+	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.18.2
 	tailscale.com v1.94.1

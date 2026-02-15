@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/cespare/xxhash/v2"
 	"github.com/klauspost/compress/zstd"
 )
 
@@ -713,5 +714,260 @@ func TestReleaseMemoryCompressedBuf(t *testing.T) {
 	}
 	if enc.prevFrame != nil {
 		t.Error("prevFrame not released by ReleaseMemory()")
+	}
+}
+
+// TestHashBasedEarlyExit_UnchangedFrame tests that unchanged frames use hash early exit
+func TestHashBasedEarlyExit_UnchangedFrame(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 1872 * 1404 * 4 // Full RM2 frame size
+
+	// Create a frame with some data
+	frame := make([]byte, frameSize)
+	for i := 0; i < frameSize; i++ {
+		frame[i] = byte(i % 256)
+	}
+
+	// First encode to establish baseline
+	var buf1 bytes.Buffer
+	if err := enc.Encode(frame, &buf1); err != nil {
+		t.Fatalf("First encode failed: %v", err)
+	}
+
+	// Verify hash was computed
+	expectedHash := xxhash.Sum64(frame)
+	if enc.prevFrameHash != expectedHash {
+		t.Errorf("prevFrameHash not set correctly: got %d, want %d", enc.prevFrameHash, expectedHash)
+	}
+
+	// Second encode with identical frame (should use hash early exit)
+	var buf2 bytes.Buffer
+	if err := enc.Encode(frame, &buf2); err != nil {
+		t.Fatalf("Second encode failed: %v", err)
+	}
+
+	// Should produce empty delta frame (type 0x01, payload size 0)
+	result := buf2.Bytes()
+	if result[0] != FrameTypeDelta {
+		t.Errorf("expected delta frame type (0x01), got %d", result[0])
+	}
+
+	payloadLen := int(result[1]) | int(result[2])<<8 | int(result[3])<<16
+	if payloadLen != 0 {
+		t.Errorf("expected empty payload (length 0), got %d", payloadLen)
+	}
+}
+
+// TestHashBasedEarlyExit_ChangedFrame tests that changed frames skip hash early exit
+func TestHashBasedEarlyExit_ChangedFrame(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 160
+
+	// First frame - all zeros
+	frame1 := make([]byte, frameSize)
+	var buf1 bytes.Buffer
+	if err := enc.Encode(frame1, &buf1); err != nil {
+		t.Fatalf("First encode failed: %v", err)
+	}
+
+	hash1 := enc.prevFrameHash
+
+	// Second frame - change one pixel
+	frame2 := make([]byte, frameSize)
+	frame2[0] = 0xFF // Change first byte
+
+	var buf2 bytes.Buffer
+	if err := enc.Encode(frame2, &buf2); err != nil {
+		t.Fatalf("Second encode failed: %v", err)
+	}
+
+	// Hash should be different
+	hash2 := enc.prevFrameHash
+	if hash1 == hash2 {
+		t.Error("hash should differ for changed frames")
+	}
+
+	// Should produce delta frame with changes
+	result := buf2.Bytes()
+	if result[0] != FrameTypeDelta {
+		t.Errorf("expected delta frame type (0x01), got %d", result[0])
+	}
+
+	payloadLen := int(result[1]) | int(result[2])<<8 | int(result[3])<<16
+	if payloadLen == 0 {
+		t.Error("expected non-empty payload for changed frame")
+	}
+}
+
+// TestHashBasedEarlyExit_Sequence tests alternating unchanged and changed frames
+func TestHashBasedEarlyExit_Sequence(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 1600
+
+	// Frame A - pattern
+	frameA := make([]byte, frameSize)
+	for i := range frameA {
+		frameA[i] = byte(i % 256)
+	}
+
+	// Frame B - different pattern
+	frameB := make([]byte, frameSize)
+	for i := range frameB {
+		frameB[i] = byte((i + 100) % 256)
+	}
+
+	var buf bytes.Buffer
+
+	// Sequence: A, A, B, B, A, A
+	// Should see: full, empty-delta, delta/full, empty-delta, delta/full, empty-delta
+	frames := [][]byte{frameA, frameA, frameB, frameB, frameA, frameA}
+	expectedTypes := []byte{
+		FrameTypeFullZstd, // First frame always full
+		FrameTypeDelta,    // A->A: empty delta (hash match)
+		FrameTypeFullZstd, // A->B: large change, full frame
+		FrameTypeDelta,    // B->B: empty delta (hash match)
+		FrameTypeFullZstd, // B->A: large change, full frame
+		FrameTypeDelta,    // A->A: empty delta (hash match)
+	}
+
+	for i, frame := range frames {
+		buf.Reset()
+		if err := enc.Encode(frame, &buf); err != nil {
+			t.Fatalf("Frame %d encode failed: %v", i, err)
+		}
+
+		result := buf.Bytes()
+		if result[0] != expectedTypes[i] {
+			t.Errorf("Frame %d: expected type %d, got %d", i, expectedTypes[i], result[0])
+		}
+	}
+}
+
+// TestHashComputation_Deterministic verifies hash is deterministic
+func TestHashComputation_Deterministic(t *testing.T) {
+	frame := make([]byte, 1000)
+	for i := range frame {
+		frame[i] = byte(i % 256)
+	}
+
+	hash1 := xxhash.Sum64(frame)
+	hash2 := xxhash.Sum64(frame)
+
+	if hash1 != hash2 {
+		t.Errorf("hash should be deterministic: got %d and %d", hash1, hash2)
+	}
+}
+
+// TestHashComputation_Sensitivity verifies hash changes on single byte change
+func TestHashComputation_Sensitivity(t *testing.T) {
+	frame1 := make([]byte, 1000)
+	for i := range frame1 {
+		frame1[i] = byte(i % 256)
+	}
+
+	frame2 := make([]byte, 1000)
+	copy(frame2, frame1)
+	frame2[500] = 0xFF // Change single byte
+
+	hash1 := xxhash.Sum64(frame1)
+	hash2 := xxhash.Sum64(frame2)
+
+	if hash1 == hash2 {
+		t.Error("hash should change when frame changes")
+	}
+}
+
+// TestCompareFrames_HashEarlyExit verifies compareFrames uses hash early exit
+func TestCompareFrames_HashEarlyExit(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 10000
+
+	frame := make([]byte, frameSize)
+	for i := range frame {
+		frame[i] = byte(i % 256)
+	}
+
+	// Set up encoder with previous frame
+	enc.prevFrame = make([]byte, frameSize)
+	copy(enc.prevFrame, frame)
+	enc.prevFrameHash = xxhash.Sum64(frame)
+	enc.hasPrev = true
+
+	// Compare with identical frame (should use hash early exit)
+	runs := enc.compareFrames(frame)
+
+	// Should return empty runs
+	if len(runs) != 0 {
+		t.Errorf("expected 0 runs with hash early exit, got %d", len(runs))
+	}
+
+	// Hash should remain the same
+	expectedHash := xxhash.Sum64(frame)
+	if enc.prevFrameHash != expectedHash {
+		t.Error("hash should be updated even on early exit")
+	}
+}
+
+// BenchmarkCompareFrames_Unchanged_WithHash benchmarks hash early exit performance
+func BenchmarkCompareFrames_Unchanged_WithHash(b *testing.B) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 1872 * 1404 * 4 // RM2 size
+
+	frame := make([]byte, frameSize)
+	for i := range frame {
+		frame[i] = byte(i % 256)
+	}
+
+	// Set up with previous frame
+	enc.prevFrame = make([]byte, frameSize)
+	copy(enc.prevFrame, frame)
+	enc.prevFrameHash = xxhash.Sum64(frame)
+	enc.hasPrev = true
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		enc.compareFrames(frame)
+	}
+}
+
+// BenchmarkCompareFrames_SmallChange_WithHash benchmarks small change performance
+func BenchmarkCompareFrames_SmallChange_WithHash(b *testing.B) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 1872 * 1404 * 4
+
+	prev := make([]byte, frameSize)
+	current := make([]byte, frameSize)
+
+	// 1% change
+	changeBytes := frameSize / 100
+	for i := 0; i < changeBytes; i++ {
+		current[i] = 0xFF
+	}
+
+	enc.prevFrame = prev
+	enc.prevFrameHash = xxhash.Sum64(prev)
+	enc.hasPrev = true
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		enc.compareFrames(current)
+		enc.prevFrameHash = xxhash.Sum64(prev) // Reset for next iteration
+	}
+}
+
+// BenchmarkHashComputation benchmarks just the hash computation speed
+func BenchmarkHashComputation(b *testing.B) {
+	frameSize := 1872 * 1404 * 4
+	frame := make([]byte, frameSize)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_ = xxhash.Sum64(frame)
 	}
 }

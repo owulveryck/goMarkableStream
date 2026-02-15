@@ -9,8 +9,10 @@ import (
 	"sync"
 	"unsafe"
 
+	"github.com/cespare/xxhash/v2"
 	"github.com/klauspost/compress/zstd"
 	"github.com/owulveryck/goMarkableStream/internal/debug"
+	"github.com/owulveryck/goMarkableStream/internal/trace"
 )
 
 // zstdEncoderPool reuses zstd encoders to avoid allocation overhead
@@ -57,9 +59,10 @@ const (
 
 // Encoder holds the state for delta encoding between frames.
 type Encoder struct {
-	prevFrame []byte
-	threshold float64
-	hasPrev   bool
+	prevFrame     []byte
+	prevFrameHash uint64 // XXHash64 of previous frame for fast equality check
+	threshold     float64
+	hasPrev       bool
 	// Reusable buffers to avoid allocations
 	headerBuf     [5]byte     // Max header size (long run: 5 bytes)
 	frameHeader   [4]byte     // Frame header buffer
@@ -95,13 +98,26 @@ func (e *Encoder) Encode(current []byte, w io.Writer) error {
 
 // EncodeWithSize writes the current frame to w, using delta encoding if beneficial.
 // Returns the number of bytes written and nil on success, or 0 and an error if writing fails.
-func (e *Encoder) EncodeWithSize(current []byte, w io.Writer) (int, error) {
+func (e *Encoder) EncodeWithSize(current []byte, w io.Writer) (n int, err error) {
+	span := trace.BeginSpan("delta_encode")
+	defer func() {
+		frameType := "delta"
+		if !e.hasPrev {
+			frameType = "full"
+		}
+		trace.EndSpan(span, map[string]any{
+			"bytes_written": n,
+			"frame_type":    frameType,
+		})
+	}()
+
 	frameSize := len(current)
 
 	// First frame or no previous: send full frame
 	if !e.hasPrev || len(e.prevFrame) != frameSize {
 		e.prevFrame = make([]byte, frameSize)
 		copy(e.prevFrame, current)
+		e.prevFrameHash = xxhash.Sum64(current)
 		e.hasPrev = true
 		debug.Log("Delta: first frame, sending full")
 		return e.writeFullFrame(current, w)
@@ -131,21 +147,44 @@ func (e *Encoder) EncodeWithSize(current []byte, w io.Writer) (int, error) {
 	// If change ratio exceeds threshold OR delta is larger than full frame, send full frame
 	if changeRatio > e.threshold || deltaSize >= frameSize {
 		copy(e.prevFrame, current)
+		// Hash already updated in compareFrames
 		debug.Log("Delta: changeRatio=%.2f%%, runs=%d, sending full", changeRatio*100, len(runs))
 		return e.writeFullFrame(current, w)
 	}
 
 	// Send delta frame - only copy prevFrame when we actually have changes
 	copy(e.prevFrame, current)
+	// Hash already updated in compareFrames
 	debug.Log("Delta: changeRatio=%.2f%%, runs=%d, sending delta", changeRatio*100, len(runs))
 	return e.writeDeltaFrame(runs, deltaSize, w)
 }
 
 // compareFrames compares current frame with previous and returns change runs.
-// Uses uint64 comparisons for speed. Reuses internal buffer to minimize allocations.
+// Uses hash-based early exit for unchanged frames, then uint64 comparisons for speed.
+// Reuses internal buffer to minimize allocations.
 // The returned slice references data in 'current', so current must not be modified
 // until after the runs are processed.
 func (e *Encoder) compareFrames(current []byte) []changeRun {
+	span := trace.BeginSpan("delta_compare")
+	earlyExit := false
+	defer func() {
+		changedBytes := 0
+		for _, run := range e.runsBuf {
+			changedBytes += len(run.data)
+		}
+		changeRatio := 0.0
+		if len(current) > 0 {
+			changeRatio = float64(changedBytes) / float64(len(current))
+		}
+		trace.EndSpan(span, map[string]any{
+			"frame_size":    len(current),
+			"runs":          len(e.runsBuf),
+			"changed_bytes": changedBytes,
+			"change_ratio":  changeRatio,
+			"early_exit":    earlyExit,
+		})
+	}()
+
 	// Reuse runs buffer, reset length but keep capacity
 	e.runsBuf = e.runsBuf[:0]
 
@@ -162,6 +201,17 @@ func (e *Encoder) compareFrames(current []byte) []changeRun {
 	if len(prev) != frameLen {
 		return e.runsBuf
 	}
+
+	// Optimization: Fast hash-based early exit for unchanged frames
+	// This eliminates expensive pixel-by-pixel comparison when frames are identical
+	currentHash := xxhash.Sum64(current)
+	if e.hasPrev && currentHash == e.prevFrameHash {
+		// Frames are identical - return empty runs without full comparison
+		earlyExit = true
+		return e.runsBuf
+	}
+	// Update hash for next comparison
+	e.prevFrameHash = currentHash
 
 	// Compare 8 bytes at a time using unsafe pointer casting
 	numQwords := frameLen / 8
@@ -255,6 +305,9 @@ func (e *Encoder) calculateDeltaSize(runs []changeRun) int {
 // writeFullFrame writes a zstd-compressed full frame with header.
 // Returns the total number of bytes written.
 func (e *Encoder) writeFullFrame(data []byte, w io.Writer) (int, error) {
+	span := trace.BeginSpan("zstd_compress")
+	inputSize := len(data)
+
 	// Compress data with zstd using pooled encoder
 	enc := zstdEncoderPool.Get().(*zstd.Encoder)
 	defer func() {
@@ -265,6 +318,17 @@ func (e *Encoder) writeFullFrame(data []byte, w io.Writer) (int, error) {
 	// Reuse compressed buffer (reset length, keep capacity)
 	e.compressedBuf = e.compressedBuf[:0]
 	e.compressedBuf = enc.EncodeAll(data, e.compressedBuf)
+
+	compressionRatio := 0.0
+	if inputSize > 0 {
+		compressionRatio = float64(len(e.compressedBuf)) / float64(inputSize)
+	}
+
+	trace.EndSpan(span, map[string]any{
+		"input_size":        inputSize,
+		"output_size":       len(e.compressedBuf),
+		"compression_ratio": compressionRatio,
+	})
 
 	// Write header with zstd compressed type
 	e.frameHeader[0] = FrameTypeFullZstd
