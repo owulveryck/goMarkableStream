@@ -3,6 +3,7 @@ package delta
 import (
 	"bytes"
 	"encoding/binary"
+	"runtime"
 	"testing"
 
 	"github.com/klauspost/compress/zstd"
@@ -444,5 +445,201 @@ func BenchmarkEncode_Delta(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
 		_ = enc.Encode(frame1, &buf)
+	}
+}
+
+// TestDeltaEncoderEmptyBuffers tests that the encoder handles empty buffers gracefully.
+// This tests Bug #5 fix: unsafe memory access without bounds checking.
+func TestDeltaEncoderEmptyBuffers(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+
+	tests := []struct {
+		name    string
+		frame   []byte
+		wantErr bool
+	}{
+		{
+			name:    "empty buffer",
+			frame:   []byte{},
+			wantErr: false,
+		},
+		{
+			name:    "nil buffer",
+			frame:   nil,
+			wantErr: false,
+		},
+		{
+			name:    "single byte",
+			frame:   []byte{0x01},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			err := enc.Encode(tt.frame, &buf)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Encode() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestCompareFramesEmptyBuffers tests that compareFrames handles empty buffers without panic.
+func TestCompareFramesEmptyBuffers(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+
+	// Set up encoder with empty previous frame
+	enc.prevFrame = []byte{}
+	enc.hasPrev = true
+
+	// Should not panic with empty current frame
+	runs := enc.compareFrames([]byte{})
+	if len(runs) != 0 {
+		t.Errorf("expected 0 runs for empty frames, got %d", len(runs))
+	}
+}
+
+// TestCompareFramesMismatchedLengths tests handling of mismatched buffer lengths.
+// After the fix, this should be handled by the EncodeWithSize check.
+func TestEncodeWithMismatchedLengths(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+
+	// First encode with 160 bytes
+	frame1 := make([]byte, 160)
+	var buf1 bytes.Buffer
+	if err := enc.Encode(frame1, &buf1); err != nil {
+		t.Fatalf("First encode failed: %v", err)
+	}
+
+	// Second encode with different length - should send full frame, not delta
+	frame2 := make([]byte, 320)
+	var buf2 bytes.Buffer
+	if err := enc.Encode(frame2, &buf2); err != nil {
+		t.Fatalf("Second encode failed: %v", err)
+	}
+
+	// Verify it sent a full frame, not a delta
+	result := buf2.Bytes()
+	if result[0] != FrameTypeFullZstd {
+		t.Errorf("expected full frame for size change, got frame type %d", result[0])
+	}
+}
+
+func TestZSTDEncoderReset(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 1872 * 1404 * 4 // RM2 size
+
+	// Create compressible test data - frame1
+	frame1 := make([]byte, frameSize)
+	for i := range frame1 {
+		frame1[i] = byte(i % 256)
+	}
+
+	// Create different test data - frame2 (different pattern to force full frame)
+	frame2 := make([]byte, frameSize)
+	for i := range frame2 {
+		frame2[i] = byte((i + 128) % 256)
+	}
+
+	var buf bytes.Buffer
+
+	// Encode first frame (always full frame)
+	enc.Encode(frame1, &buf)
+	size1 := buf.Len()
+
+	// Reset encoder to force second frame to be full frame too
+	enc.Reset()
+	buf.Reset()
+
+	// Encode second frame - should produce similar size
+	enc.Encode(frame2, &buf)
+	size2 := buf.Len()
+
+	// Sizes should be within 10% (encoder not accumulating state)
+	diff := abs(size1 - size2)
+	tolerance := size1 / 10
+
+	if diff > tolerance {
+		t.Errorf("Encoder state may be leaking: size1=%d, size2=%d, diff=%d (tolerance=%d)",
+			size1, size2, diff, tolerance)
+	}
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+func TestZSTDMemoryLeak(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping memory test in short mode")
+	}
+
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 1872 * 1404 * 4
+
+	frame1 := make([]byte, frameSize)
+	frame2 := make([]byte, frameSize)
+
+	// Different data in frame2 to trigger full frame encoding
+	for i := 0; i < frameSize/10; i++ {
+		frame2[i] = 0xFF
+	}
+
+	var buf bytes.Buffer
+
+	// Measure memory before
+	runtime.GC()
+	var m1 runtime.MemStats
+	runtime.ReadMemStats(&m1)
+
+	// Encode many frames (alternate to trigger full frame encoding)
+	for i := 0; i < 1000; i++ {
+		buf.Reset()
+		if i%2 == 0 {
+			enc.Encode(frame1, &buf)
+		} else {
+			enc.Encode(frame2, &buf)
+		}
+	}
+
+	// Measure memory after
+	runtime.GC()
+	var m2 runtime.MemStats
+	runtime.ReadMemStats(&m2)
+
+	memGrowth := int64(m2.HeapAlloc - m1.HeapAlloc)
+
+	// Should not grow more than 2 MB
+	maxGrowthMB := int64(2 * 1024 * 1024)
+	if memGrowth > maxGrowthMB {
+		t.Errorf("Memory grew by %d MB after 1000 frames, expected < %d MB",
+			memGrowth/1024/1024, maxGrowthMB/1024/1024)
+	}
+
+	t.Logf("Memory growth: %.2f MB", float64(memGrowth)/1024/1024)
+}
+
+func BenchmarkZSTDEncoding(b *testing.B) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 1872 * 1404 * 4
+
+	frame := make([]byte, frameSize)
+	for i := range frame {
+		frame[i] = byte(i % 256)
+	}
+
+	var buf bytes.Buffer
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		buf.Reset()
+		enc.Encode(frame, &buf)
 	}
 }

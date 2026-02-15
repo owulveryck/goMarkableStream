@@ -151,6 +151,17 @@ func (e *Encoder) compareFrames(current []byte) []changeRun {
 	prev := e.prevFrame
 	frameLen := len(current)
 
+	// Handle empty buffers - no comparison needed
+	if frameLen == 0 || len(prev) == 0 {
+		return e.runsBuf
+	}
+
+	// Safety check: buffers should have same length (caller's responsibility)
+	// but prevent panic if they don't
+	if len(prev) != frameLen {
+		return e.runsBuf
+	}
+
 	// Compare 8 bytes at a time using unsafe pointer casting
 	numQwords := frameLen / 8
 
@@ -158,6 +169,7 @@ func (e *Encoder) compareFrames(current []byte) []changeRun {
 	var lastDiffEnd int
 
 	// Get pointers for fast comparison
+	// Safe now because we've verified frameLen > 0
 	currPtr := unsafe.Pointer(&current[0])
 	prevPtr := unsafe.Pointer(&prev[0])
 
@@ -244,8 +256,11 @@ func (e *Encoder) calculateDeltaSize(runs []changeRun) int {
 func (e *Encoder) writeFullFrame(data []byte, w io.Writer) (int, error) {
 	// Compress data with zstd using pooled encoder
 	enc := zstdEncoderPool.Get().(*zstd.Encoder)
+	defer func() {
+		enc.Reset(nil) // Clear internal buffers before returning to pool
+		zstdEncoderPool.Put(enc)
+	}()
 	compressed := enc.EncodeAll(data, nil)
-	zstdEncoderPool.Put(enc)
 
 	// Write header with zstd compressed type
 	e.frameHeader[0] = FrameTypeFullZstd
