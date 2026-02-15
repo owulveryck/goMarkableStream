@@ -1,7 +1,10 @@
 // WebGL initialization
 // Use -10,-10 as the default laser coordinate (off-screen) to hide the pointer initially
-let laserX = -10; 
+let laserX = -10;
 let laserY = -10;
+const MAX_TRAIL_POINTS = 8;
+let trailPositions = [];  // Array of {x, y, timestamp}
+let trailEnabled = true;  // Toggle for trail feature
 const gl = canvas.getContext('webgl', {
     antialias: true,
     preserveDrawingBuffer: true,  // Important for proper rendering
@@ -56,25 +59,62 @@ uniform sampler2D uSampler;
 uniform float uLaserX;
 uniform float uLaserY;
 
+const int MAX_TRAIL_POINTS = 8;
+uniform float uTrailX[MAX_TRAIL_POINTS];
+uniform float uTrailY[MAX_TRAIL_POINTS];
+uniform int uTrailCount;
+
 const float LASER_RADIUS = 6.0;
 const float LASER_EDGE_SOFTNESS = 2.0;
 const vec3 LASER_COLOR = vec3(1.0, 0.0, 0.0);
 
 void main(void) {
     vec4 texColor = texture2D(uSampler, vTextureCoord);
+    vec4 finalColor = texColor;
 
-    // Calculate laser pointer effect
-    float dx = gl_FragCoord.x - uLaserX;
-    float dy = gl_FragCoord.y - uLaserY;
-    float distance = sqrt(dx * dx + dy * dy);
+    // Render trail points (oldest to newest, back to front)
+    for (int i = 0; i < MAX_TRAIL_POINTS; i++) {
+        if (i >= uTrailCount) break;
 
-    // Simple laser pointer
-    if (distance < 8.0 && uLaserX > 0.0 && uLaserY > 0.0) {
-        float fade = 1.0 - smoothstep(6.0, 8.0, distance);
-        gl_FragColor = vec4(1.0, 0.0, 0.0, fade);
-    } else {
-        gl_FragColor = texColor;
+        float x = uTrailX[i];
+        float y = uTrailY[i];
+
+        if (x > 0.0 && y > 0.0) {
+            float dx = gl_FragCoord.x - x;
+            float dy = gl_FragCoord.y - y;
+            float distance = sqrt(dx * dx + dy * dy);
+
+            // Exponential fade for more laser-like appearance
+            // i=0 is oldest (should be faint), higher i is newer (should be bright)
+            float normalizedPosition = float(i) / max(1.0, float(uTrailCount - 1));
+            float baseOpacity = pow(normalizedPosition, 3.0);  // Exponential increase
+
+            // Smaller trail radius (3px vs 8px for main pointer)
+            const float TRAIL_RADIUS = 3.0;
+            const float TRAIL_EDGE = 1.0;
+
+            if (distance < TRAIL_RADIUS + TRAIL_EDGE) {
+                // Smooth anti-aliased edge
+                float fade = smoothstep(TRAIL_RADIUS - TRAIL_EDGE, TRAIL_RADIUS + TRAIL_EDGE, distance);
+                float alpha = (1.0 - fade) * baseOpacity;
+                finalColor = mix(finalColor, vec4(LASER_COLOR, 1.0), alpha);
+            }
+        }
     }
+
+    // Current laser pointer (main pointer, rendered last for highest priority)
+    if (uLaserX > 0.0 && uLaserY > 0.0) {
+        float dx = gl_FragCoord.x - uLaserX;
+        float dy = gl_FragCoord.y - uLaserY;
+        float distance = sqrt(dx * dx + dy * dy);
+
+        if (distance < 8.0) {
+            float fade = 1.0 - smoothstep(6.0, 8.0, distance);
+            finalColor = vec4(LASER_COLOR, fade);
+        }
+    }
+
+    gl_FragColor = finalColor;
 }
 `;
 
@@ -140,6 +180,9 @@ const programInfo = {
 		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
         uLaserX: gl.getUniformLocation(shaderProgram, 'uLaserX'),
         uLaserY: gl.getUniformLocation(shaderProgram, 'uLaserY'),
+        uTrailX: gl.getUniformLocation(shaderProgram, 'uTrailX'),
+        uTrailY: gl.getUniformLocation(shaderProgram, 'uTrailY'),
+        uTrailCount: gl.getUniformLocation(shaderProgram, 'uTrailCount'),
 	},
 };
 
@@ -260,6 +303,19 @@ function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture)
     gl.uniform1f(programInfo.uniformLocations.uLaserX, laserX);
     gl.uniform1f(programInfo.uniformLocations.uLaserY, laserY);
 
+	// Set trail positions
+	const trailX = new Float32Array(MAX_TRAIL_POINTS);
+	const trailY = new Float32Array(MAX_TRAIL_POINTS);
+
+	for (let i = 0; i < trailPositions.length; i++) {
+		trailX[i] = trailPositions[i].x;
+		trailY[i] = trailPositions[i].y;
+	}
+
+	gl.uniform1fv(programInfo.uniformLocations.uTrailX, trailX);
+	gl.uniform1fv(programInfo.uniformLocations.uTrailY, trailY);
+	gl.uniform1i(programInfo.uniformLocations.uTrailCount, trailPositions.length);
+
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
@@ -336,18 +392,45 @@ function updateLaserPosition(x, y) {
     if (!laserEnabled) {
         laserX = -10;
         laserY = -10;
+        trailPositions = [];
         return;
     }
 
     // If x and y are valid positive values
     if (x > 0 && y > 0) {
         // Position is now directly proportional to canvas size
-        laserX = x * (gl.canvas.width / screenWidth);
-        laserY = gl.canvas.height - (y * (gl.canvas.height / screenHeight));
+        const scaledX = x * (gl.canvas.width / screenWidth);
+        const scaledY = gl.canvas.height - (y * (gl.canvas.height / screenHeight));
+
+        laserX = scaledX;
+        laserY = scaledY;
+
+        // Add to trail if enabled and position changed significantly
+        if (trailEnabled) {
+            const lastPos = trailPositions[trailPositions.length - 1];
+            const moved = !lastPos ||
+                Math.abs(scaledX - lastPos.x) > 2 ||
+                Math.abs(scaledY - lastPos.y) > 2;
+
+            if (moved) {
+                trailPositions.push({
+                    x: scaledX,
+                    y: scaledY,
+                    timestamp: Date.now()
+                });
+
+                // Keep only last N positions
+                if (trailPositions.length > MAX_TRAIL_POINTS) {
+                    trailPositions.shift();
+                }
+            }
+        }
     } else {
         // Hide the pointer by moving it off-screen
         laserX = -10;
         laserY = -10;
+        // Clear trail when pointer hidden
+        trailPositions = [];
     }
 
     // Redraw immediately
@@ -358,6 +441,7 @@ function updateLaserPosition(x, y) {
 function clearLaser() {
     laserX = -10;
     laserY = -10;
+    trailPositions = [];
     drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
 }
 

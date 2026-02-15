@@ -7,6 +7,7 @@
 const STORAGE_KEYS = {
     PORTRAIT_MODE: 'goMarkableStream_portraitMode',
     LASER_ENABLED: 'goMarkableStream_laserEnabled',
+    TRAIL_ENABLED: 'goMarkableStream_trailEnabled',
     LAYER_ORDER: 'goMarkableStream_layerOrder'
 };
 
@@ -38,6 +39,23 @@ function loadSavedPreferences() {
             laserBtn.setAttribute('aria-pressed', laserEnabled.toString());
             if (!laserEnabled) {
                 clearLaser();
+            }
+        }
+    }
+
+    // Trail enabled
+    const savedTrail = localStorage.getItem(STORAGE_KEYS.TRAIL_ENABLED);
+    if (savedTrail !== null) {
+        const isTrailEnabled = savedTrail === 'true';
+        if (isTrailEnabled !== trailEnabled) {
+            trailEnabled = isTrailEnabled;
+            const trailBtn = document.getElementById('trailToggle');
+            if (trailBtn) {
+                trailBtn.classList.toggle('toggled', trailEnabled);
+                trailBtn.setAttribute('aria-pressed', trailEnabled.toString());
+            }
+            if (!trailEnabled) {
+                trailPositions = [];
             }
         }
     }
@@ -221,6 +239,13 @@ document.addEventListener('keydown', function(e) {
             // Laser toggle
             document.getElementById('laserToggle').click();
             break;
+        case 't':
+            // Trail toggle
+            const trailBtn = document.getElementById('trailToggle');
+            if (trailBtn) {
+                trailBtn.click();
+            }
+            break;
         case 'h':
         case 's':
             // Sidebar toggle (mobile and desktop)
@@ -379,6 +404,27 @@ document.getElementById('laserToggle').addEventListener('click', function () {
 
     showMessage(`Laser pointer ${laserEnabled ? 'enabled' : 'disabled'}`, MessageDuration.QUICK);
 });
+
+// Trail toggle button functionality
+const trailToggle = document.getElementById('trailToggle');
+if (trailToggle) {
+    trailToggle.addEventListener('click', function () {
+        trailEnabled = !trailEnabled;
+        this.classList.toggle('toggled');
+        this.setAttribute('aria-pressed', trailEnabled.toString());
+
+        if (!trailEnabled) {
+            trailPositions = [];
+            // Redraw to clear trail from display
+            drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture);
+        }
+
+        // Save preference
+        savePreference(STORAGE_KEYS.TRAIL_ENABLED, trailEnabled);
+
+        showMessage(`Laser trail ${trailEnabled ? 'enabled' : 'disabled'}`, MessageDuration.QUICK);
+    });
+}
 
 // Funnel toggle and URL copy
 document.getElementById('funnelButton').addEventListener('click', async function() {
