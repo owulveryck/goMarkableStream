@@ -1,12 +1,15 @@
 package remarkable
 
 import (
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
 )
 
-func findXochitlPID() string {
+var ErrXochitlNotFound = errors.New("xochitl process not found - is the reMarkable software running?")
+
+func findXochitlPID() (string, error) {
 	base := "/proc"
 	entries, err := os.ReadDir(base)
 	if err != nil {
@@ -33,10 +36,10 @@ func findXochitlPID() string {
 					continue
 				}
 				if orig == "/usr/bin/xochitl" {
-					return pid
+					return pid, nil
 				}
 			}
 		}
 	}
-	return ""
+	return "", ErrXochitlNotFound
 }

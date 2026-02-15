@@ -61,9 +61,10 @@ type Encoder struct {
 	threshold float64
 	hasPrev   bool
 	// Reusable buffers to avoid allocations
-	headerBuf   [5]byte     // Max header size (long run: 5 bytes)
-	frameHeader [4]byte     // Frame header buffer
-	runsBuf     []changeRun // Reusable runs slice
+	headerBuf     [5]byte     // Max header size (long run: 5 bytes)
+	frameHeader   [4]byte     // Frame header buffer
+	runsBuf       []changeRun // Reusable runs slice
+	compressedBuf []byte      // Reusable buffer for ZSTD compression output
 }
 
 // NewEncoder creates a new delta encoder with the given threshold.
@@ -260,12 +261,15 @@ func (e *Encoder) writeFullFrame(data []byte, w io.Writer) (int, error) {
 		enc.Reset(nil) // Clear internal buffers before returning to pool
 		zstdEncoderPool.Put(enc)
 	}()
-	compressed := enc.EncodeAll(data, nil)
+
+	// Reuse compressed buffer (reset length, keep capacity)
+	e.compressedBuf = e.compressedBuf[:0]
+	e.compressedBuf = enc.EncodeAll(data, e.compressedBuf)
 
 	// Write header with zstd compressed type
 	e.frameHeader[0] = FrameTypeFullZstd
 	// Payload length in 24-bit little-endian
-	payloadLen := len(compressed)
+	payloadLen := len(e.compressedBuf)
 	e.frameHeader[1] = byte(payloadLen & 0xFF)
 	e.frameHeader[2] = byte((payloadLen >> 8) & 0xFF)
 	e.frameHeader[3] = byte((payloadLen >> 16) & 0xFF)
@@ -273,7 +277,7 @@ func (e *Encoder) writeFullFrame(data []byte, w io.Writer) (int, error) {
 	if _, err := w.Write(e.frameHeader[:]); err != nil {
 		return 0, err
 	}
-	n, err := w.Write(compressed)
+	n, err := w.Write(e.compressedBuf)
 	if err != nil {
 		return 4, err
 	}
@@ -353,4 +357,5 @@ func (e *Encoder) ReleaseMemory() {
 	e.hasPrev = false
 	e.prevFrame = nil
 	e.runsBuf = nil
+	e.compressedBuf = nil
 }

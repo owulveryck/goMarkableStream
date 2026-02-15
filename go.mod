@@ -1,6 +1,6 @@
 module github.com/owulveryck/goMarkableStream
 
-go 1.25.5
+go 1.26
 
 require (
 	github.com/kelseyhightower/envconfig v1.4.0

@@ -2,6 +2,7 @@ package jwtutil
 
 import (
 	"log"
+	"sync"
 	"time"
 )
 
@@ -17,9 +18,10 @@ type ManagerConfig struct {
 
 // Manager handles JWT token creation and validation.
 type Manager struct {
-	config ManagerConfig
-	store  *SecretStore
-	secret []byte
+	config   ManagerConfig
+	store    *SecretStore
+	secret   []byte
+	secretMu sync.RWMutex // Protects secret field
 }
 
 // NewManager creates a new JWT manager.
@@ -42,7 +44,9 @@ func (m *Manager) Initialize() error {
 		if err != nil {
 			return err
 		}
+		m.secretMu.Lock()
 		m.secret = secret
+		m.secretMu.Unlock()
 		if generated {
 			log.Printf("JWT: Generated new secret key in %s", m.store.SecretPath())
 		} else {
@@ -56,18 +60,24 @@ func (m *Manager) Initialize() error {
 	if err != nil {
 		return err
 	}
+	m.secretMu.Lock()
 	m.secret = secret
+	m.secretMu.Unlock()
 	log.Printf("JWT: Loaded secret key from %s", m.store.SecretPath())
 	return nil
 }
 
 // CreateToken creates a new JWT token for the given subject (username).
 func (m *Manager) CreateToken(subject string) (string, error) {
+	m.secretMu.RLock()
+	defer m.secretMu.RUnlock()
 	return CreateToken(subject, m.config.TokenLifetime, m.secret)
 }
 
 // ValidateToken validates a JWT token and returns the parsed token.
 func (m *Manager) ValidateToken(tokenString string) (*Token, error) {
+	m.secretMu.RLock()
+	defer m.secretMu.RUnlock()
 	return ValidateToken(tokenString, m.secret)
 }
 
@@ -83,6 +93,8 @@ func (m *Manager) GetStore() *SecretStore {
 
 // IsInitialized returns true if the manager has been initialized with a secret.
 func (m *Manager) IsInitialized() bool {
+	m.secretMu.RLock()
+	defer m.secretMu.RUnlock()
 	return len(m.secret) > 0
 }
 
@@ -103,7 +115,9 @@ func (m *Manager) ForceRegenerate() error {
 		return err
 	}
 
+	m.secretMu.Lock()
 	m.secret = secret
+	m.secretMu.Unlock()
 	log.Printf("JWT: Regenerated secret key in %s", m.store.SecretPath())
 	return nil
 }

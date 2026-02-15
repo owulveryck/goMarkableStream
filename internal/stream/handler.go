@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	rate time.Duration = 200
+	defaultRate time.Duration = 200
 )
 
 var rawFrameBuffer = sync.Pool{
@@ -67,7 +67,8 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Reset delta encoder to force a full frame for the new client
 	h.deltaEncoder.Reset()
 
-	// Parse query parameters
+	// Parse query parameters - each client gets its own rate
+	rate := defaultRate
 	query := r.URL.Query()
 	rateStr := query.Get("rate")
 	// If 'rate' parameter exists and is valid, use its value
@@ -106,7 +107,11 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ticker.Reset(rate * time.Millisecond)
 	defer ticker.Stop()
 
-	rawDataPtr := rawFrameBuffer.Get().(*[]uint8)
+	rawDataPtr, ok := rawFrameBuffer.Get().(*[]uint8)
+	if !ok || rawDataPtr == nil {
+		http.Error(w, "Internal error: buffer pool returned invalid value", http.StatusInternalServerError)
+		return
+	}
 	rawData := *rawDataPtr
 	defer rawFrameBuffer.Put(rawDataPtr)
 	writing := true
@@ -145,9 +150,13 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *StreamHandler) fetchAndSendDelta(w io.Writer, rawData []uint8) {
-	_, err := h.file.ReadAt(rawData, h.pointerAddr)
+	n, err := h.file.ReadAt(rawData, h.pointerAddr)
 	if err != nil {
-		log.Println(err)
+		log.Println("Error reading framebuffer:", err)
+		// Clear buffer to avoid sending stale data
+		for i := range rawData[:n] {
+			rawData[i] = 0
+		}
 		return
 	}
 	frameSize, err := h.deltaEncoder.EncodeWithSize(rawData, w)

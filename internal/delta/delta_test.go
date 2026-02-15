@@ -643,3 +643,75 @@ func BenchmarkZSTDEncoding(b *testing.B) {
 		enc.Encode(frame, &buf)
 	}
 }
+
+func TestCompressedBufferReuse(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 1872 * 1404 * 4 // RM2 size
+
+	frame1 := make([]byte, frameSize)
+	for i := range frame1 {
+		frame1[i] = byte(i % 256)
+	}
+
+	frame2 := make([]byte, frameSize)
+	for i := range frame2 {
+		frame2[i] = byte((i + 128) % 256)
+	}
+
+	var buf bytes.Buffer
+
+	// Encode first frame (allocates compressedBuf)
+	enc.Encode(frame1, &buf)
+	firstCap := cap(enc.compressedBuf)
+
+	// Reset encoder to force full frame
+	enc.Reset()
+	buf.Reset()
+
+	// Encode second frame (should reuse compressedBuf)
+	enc.Encode(frame2, &buf)
+	secondCap := cap(enc.compressedBuf)
+
+	// Capacity should remain stable (buffer reused)
+	if firstCap == 0 {
+		t.Fatal("compressedBuf not allocated on first frame")
+	}
+
+	if secondCap < firstCap {
+		t.Errorf("compressedBuf capacity decreased: %d -> %d", firstCap, secondCap)
+	}
+
+	// Allow for small growth but not reallocation
+	maxGrowth := firstCap / 10 // 10% tolerance
+	if secondCap > firstCap+maxGrowth {
+		t.Errorf("compressedBuf capacity grew too much: %d -> %d (max allowed: %d)",
+			firstCap, secondCap, firstCap+maxGrowth)
+	}
+}
+
+func TestReleaseMemoryCompressedBuf(t *testing.T) {
+	enc := NewEncoder(DefaultThreshold)
+	frameSize := 1872 * 1404 * 4
+
+	frame := make([]byte, frameSize)
+	var buf bytes.Buffer
+
+	// Encode to allocate buffers
+	enc.Encode(frame, &buf)
+
+	// Verify buffer is allocated
+	if cap(enc.compressedBuf) == 0 {
+		t.Fatal("compressedBuf not allocated")
+	}
+
+	// Release memory
+	enc.ReleaseMemory()
+
+	// Verify buffer is released
+	if enc.compressedBuf != nil {
+		t.Error("compressedBuf not released by ReleaseMemory()")
+	}
+	if enc.prevFrame != nil {
+		t.Error("prevFrame not released by ReleaseMemory()")
+	}
+}

@@ -23,9 +23,6 @@ func NewPubSub() *PubSub {
 
 // Publish an event to all subscribers
 func (ps *PubSub) Publish(event events.InputEventFromSource) {
-	// Create a ticker for the timeout
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 
@@ -33,7 +30,9 @@ func (ps *PubSub) Publish(event events.InputEventFromSource) {
 	for ch := range ps.subscribers {
 		select {
 		case ch <- event:
-		case <-ticker.C:
+		case <-time.After(100 * time.Millisecond):
+			// Timeout - subscriber is too slow, drop event
+			debug.Log("PubSub: dropped event for slow subscriber (code=%d)", event.Code)
 		}
 	}
 }

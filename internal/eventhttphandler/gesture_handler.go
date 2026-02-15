@@ -33,7 +33,7 @@ type GestureHandler struct {
 }
 
 type gesture struct {
-	leftDistance, rightDistance, upDistance, downDistance int
+	leftDistance, rightDistance, upDistance, downDistance int64
 }
 
 func (g *gesture) MarshalJSON() ([]byte, error) {
@@ -44,7 +44,7 @@ func (g *gesture) String() string {
 	return fmt.Sprintf("Left: %v, Right: %v, Up: %v, Down: %v", g.leftDistance, g.rightDistance, g.upDistance, g.downDistance)
 }
 
-func (g *gesture) sum() int {
+func (g *gesture) sum() int64 {
 	return g.leftDistance + g.rightDistance + g.upDistance + g.downDistance
 }
 
@@ -113,9 +113,9 @@ func (h *GestureHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				distance := event.Value - lastEventX.Value
 				if distance < 0 {
-					currentGesture.rightDistance += -int(distance)
+					currentGesture.rightDistance += -int64(distance)
 				} else {
-					currentGesture.leftDistance += int(distance)
+					currentGesture.leftDistance += int64(distance)
 				}
 				lastEventX = event
 			case codeYAxis:
@@ -126,9 +126,9 @@ func (h *GestureHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				distance := event.Value - lastEventY.Value
 				if distance < 0 {
-					currentGesture.upDistance += -int(distance)
+					currentGesture.upDistance += -int64(distance)
 				} else {
-					currentGesture.downDistance += int(distance)
+					currentGesture.downDistance += int64(distance)
 				}
 				lastEventY = event
 			}

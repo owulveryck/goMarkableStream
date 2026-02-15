@@ -77,6 +77,118 @@ func TestStreamHandlerRaceCondition(t *testing.T) {
 	}
 }
 
+// TestConcurrentRateModification tests for race conditions when multiple
+// clients set different rate values simultaneously.
+// Run with: go test -race -run TestConcurrentRateModification
+func TestConcurrentRateModification(t *testing.T) {
+	file, pointerAddr, err := getFileAndPointer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	eventPublisher := pubsub.NewPubSub()
+	handler := NewStreamHandler(file, pointerAddr, eventPublisher, 0.30)
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	// Simulate concurrent requests with different rate parameters
+	concurrentRequests := 50
+	doneChan := make(chan struct{}, concurrentRequests)
+
+	client := &http.Client{
+		Timeout: 50 * time.Millisecond,
+	}
+
+	// Each goroutine sets a different rate value
+	for i := 0; i < concurrentRequests; i++ {
+		go func(rateValue int) {
+			// Each client uses a different rate parameter
+			url := server.URL + "?rate=" + string(rune(100+rateValue*10))
+			resp, err := client.Get(url)
+			if err == nil {
+				defer resp.Body.Close()
+				_, _ = io.ReadAll(resp.Body)
+			}
+			doneChan <- struct{}{}
+		}(i)
+	}
+
+	// Wait for all goroutines to finish
+	for i := 0; i < concurrentRequests; i++ {
+		<-doneChan
+	}
+}
+
+// TestPoolGetHandling tests that the handler safely handles pool.Get() results.
+// This tests Bug #8 fix: sync.Pool type assertion without nil check.
+func TestPoolGetHandling(t *testing.T) {
+	// This test verifies that the code handles pool.Get() safely
+	// The pool has a New function so it shouldn't return nil,
+	// but we test the safety mechanism anyway
+
+	// Reset the pool to ensure clean state
+	ResetFrameBufferPool()
+
+	file, pointerAddr, err := getFileAndPointer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	eventPublisher := pubsub.NewPubSub()
+	handler := NewStreamHandler(file, pointerAddr, eventPublisher, 0.30)
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	client := &http.Client{
+		Timeout: 50 * time.Millisecond,
+	}
+
+	// Make request - should not panic
+	resp, err := client.Get(server.URL + "?rate=200")
+	if err == nil {
+		defer resp.Body.Close()
+		_, _ = io.ReadAll(resp.Body)
+	}
+}
+
+// mockFailingReaderAt is a ReaderAt that always returns an error
+type mockFailingReaderAt struct{}
+
+func (m *mockFailingReaderAt) ReadAt(p []byte, off int64) (n int, err error) {
+	// Fill with non-zero data to simulate stale buffer
+	for i := range p {
+		p[i] = 0xFF
+	}
+	return len(p), io.ErrUnexpectedEOF
+}
+
+// TestFrameReadErrorHandling tests that read errors are handled properly.
+// This tests Bug #14 fix: unchecked frame read error.
+func TestFrameReadErrorHandling(t *testing.T) {
+	failingReader := &mockFailingReaderAt{}
+	eventPublisher := pubsub.NewPubSub()
+	handler := NewStreamHandler(failingReader, 0, eventPublisher, 0.30)
+
+	var buf bytes.Buffer
+	rawData := make([]uint8, 100)
+
+	// Fill buffer with non-zero data to simulate stale buffer
+	for i := range rawData {
+		rawData[i] = 0xFF
+	}
+
+	// Call fetchAndSendDelta - should handle error gracefully
+	handler.fetchAndSendDelta(&buf, rawData)
+
+	// Buffer should be cleared (all zeros for the read portion)
+	for i, b := range rawData {
+		if b != 0 {
+			t.Errorf("Buffer not cleared at index %d: got %d, want 0", i, b)
+			break
+		}
+	}
+}
+
 func TestStreamHandler_fetchAndSendDelta(t *testing.T) {
 	type fields struct {
 		file           io.ReaderAt

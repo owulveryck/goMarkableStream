@@ -318,3 +318,78 @@ func TestIsValidationError(t *testing.T) {
 		t.Error("IsValidationError(nil) = true, want false")
 	}
 }
+
+// TestConcurrentSecretAccess tests for race conditions when multiple goroutines
+// access the secret while it's being regenerated.
+// Run with: go test -race -run TestConcurrentSecretAccess
+func TestConcurrentSecretAccess(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	mgr := NewManager(ManagerConfig{
+		SecretDir:     tmpDir,
+		TokenLifetime: time.Hour,
+		AutoGenerate:  true,
+	})
+
+	if err := mgr.Initialize(); err != nil {
+		t.Fatalf("Initialize() error = %v", err)
+	}
+
+	const numGoroutines = 50
+	const duration = 500 * time.Millisecond
+
+	done := make(chan struct{})
+	time.AfterFunc(duration, func() { close(done) })
+
+	// Launch goroutines that continuously create and validate tokens
+	for i := 0; i < numGoroutines; i++ {
+		go func(id int) {
+			for {
+				select {
+				case <-done:
+					return
+				default:
+					// Create token
+					token, err := mgr.CreateToken("user")
+					if err != nil {
+						t.Errorf("Goroutine %d: CreateToken() error = %v", id, err)
+						return
+					}
+					// Validate token
+					_, err = mgr.ValidateToken(token)
+					if err != nil && err != ErrInvalidSignature {
+						// ErrInvalidSignature is expected if secret was regenerated
+						t.Errorf("Goroutine %d: ValidateToken() error = %v", id, err)
+						return
+					}
+					// Check initialization status
+					_ = mgr.IsInitialized()
+				}
+			}
+		}(i)
+	}
+
+	// Concurrently regenerate secret multiple times
+	for i := 0; i < 5; i++ {
+		go func() {
+			for {
+				select {
+				case <-done:
+					return
+				default:
+					if err := mgr.ForceRegenerate(); err != nil {
+						t.Errorf("ForceRegenerate() error = %v", err)
+						return
+					}
+					time.Sleep(50 * time.Millisecond)
+				}
+			}
+		}()
+	}
+
+	// Wait for test duration
+	<-done
+
+	// Give goroutines a moment to finish
+	time.Sleep(100 * time.Millisecond)
+}

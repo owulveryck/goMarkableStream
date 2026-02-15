@@ -51,7 +51,9 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			// Send the event
 			fmt.Fprintf(w, "data: %s\n\n", jsonMessage)
-			w.(http.Flusher).Flush() // Ensure client receives the message immediately
+			if f, ok := w.(http.Flusher); ok {
+				f.Flush() // Ensure client receives the message immediately
+			}
 
 		}
 	}
