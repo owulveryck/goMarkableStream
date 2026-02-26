@@ -10,6 +10,15 @@ import (
 	"strings"
 )
 
+const (
+	// Maximum iterations to prevent infinite loops
+	// Should never reach this in normal operation
+	maxHeaderIterations = 100
+
+	// Minimum valid header length
+	minValidHeaderLength = 1024
+)
+
 // getFramePointer locates the framebuffer in memory for RMPP.
 //
 // RMPP uses a modern GPU/DRM display stack (/dev/dri/card0) rather than
@@ -98,29 +107,42 @@ func calculateFramePointer(pid string, startAddress int64) (int64, error) {
 
 	var offset int64
 	length := 2
+	iterationCount := 0
 
-	// Iterate to calculate the correct offset within the frame buffer memory
-	// The memory header contains a length field (4 bytes) which we use to determine
-	// how much memory to skip. We dynamically calculate the offset until the
-	// buffer size (width x height x 4 bytes per pixel) is reached.
-	for length < ScreenSizeBytes {
+	// FIXED: Use GPU tile size instead of ScreenSizeBytes
+	// The DRI driver allocates framebuffer memory in fixed-size tiles of 1,757,184 bytes.
+	// Previous code used ScreenSizeBytes (calculated from screen dimensions), which broke
+	// when firmware updates changed memory layout. Using the observable tile size makes
+	// this robust across firmware versions.
+	for length < GPUTileSize {
+		iterationCount++
+		if iterationCount > maxHeaderIterations {
+			return 0, fmt.Errorf("exceeded maximum iterations (%d) searching for framebuffer - memory layout may have changed", maxHeaderIterations)
+		}
+
 		offset += int64(length - 2)
 
-		// Seek to the start address plus offset and read the header
-		// The header helps identify the size of the subsequent memory block.
 		if _, err := file.Seek(startAddress+offset+8, 0); err != nil {
-			return 0, fmt.Errorf("failed to seek in memory file: %w", err)
+			return 0, fmt.Errorf("failed to seek in memory file at offset %d: %w", offset, err)
 		}
+
 		header := make([]byte, 8)
 		_, err := file.Read(header)
 		if err != nil {
-			return 0, fmt.Errorf("error reading memory header: %w", err)
+			return 0, fmt.Errorf("error reading memory header at offset %d: %w", offset, err)
 		}
 
-		// Extract the length from the header (4 bytes at the beginning of the header)
+		// Extract the length from the header (4 bytes, little-endian)
 		length = int(int64(header[0]) | int64(header[1])<<8 | int64(header[2])<<16 | int64(header[3])<<24)
+
+		// Validation: detect corrupt/invalid header values
+		if length < 0 {
+			return 0, fmt.Errorf("invalid negative header length %d at offset %d", length, offset)
+		}
+		if length > 0 && length < minValidHeaderLength {
+			return 0, fmt.Errorf("suspicious header length %d at offset %d - too small", length, offset)
+		}
 	}
 
-	// Return the calculated frame pointer address
 	return startAddress + offset, nil
 }
