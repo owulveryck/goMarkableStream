@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"context"
 	"io"
 	"log"
 	"net/http"
@@ -119,14 +120,16 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ticker := time.NewTicker(rate * time.Millisecond)
 	defer ticker.Stop()
 
-	rawDataPtr, ok := rawFrameBuffer.Get().(*[]uint8)
-	if !ok || rawDataPtr == nil {
-		http.Error(w, "Internal error: buffer pool returned invalid value", http.StatusInternalServerError)
-		return
-	}
-	rawData := *rawDataPtr
-	defer rawFrameBuffer.Put(rawDataPtr)
+	// Start async frame reader: a background goroutine continuously reads
+	// the framebuffer using triple buffering, so the ReadAt I/O overlaps
+	// with delta encoding on the Cortex-A9's second core.
+	asyncCtx, asyncCancel := context.WithCancel(r.Context())
+	defer asyncCancel()
+	asyncReader := NewAsyncFrameReader(h.file, h.pointerAddr, remarkable.Config.SizeBytes)
+	go asyncReader.Run(asyncCtx)
+
 	writing := true
+	asyncReader.Resume() // start reading since writing defaults to true
 	stopWriting := time.NewTicker(2 * time.Second)
 	defer stopWriting.Stop()
 
@@ -162,6 +165,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if shouldWrite {
 				if !writing {
 					debug.Log("Stream: writing resumed (source=%v, pressure=%d)", event.Source, currentPressure)
+					asyncReader.Resume()
 				}
 				writing = true
 				stopWriting.Reset(2000 * time.Millisecond)
@@ -169,20 +173,24 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				// Pen lifted or hovering - stop writing immediately
 				debug.Log("Stream: writing paused (pen hover/lifted, pressure=%d)", currentPressure)
 				writing = false
+				asyncReader.Pause()
 			}
 		case <-stopWriting.C:
 			if writing {
 				debug.Log("Stream: writing paused (no input for 2s)")
+				asyncReader.Pause()
 			}
 			writing = false
 		case <-ticker.C:
 			if writing {
-				h.fetchAndSendDelta(w, rawData)
+				h.fetchAndSendDeltaAsync(w, asyncReader)
 			}
 		}
 	}
 }
 
+// fetchAndSendDelta reads the framebuffer synchronously and sends a delta-encoded frame.
+// Used by tests and benchmarks that don't need the async reader.
 func (h *StreamHandler) fetchAndSendDelta(w io.Writer, rawData []uint8) {
 	span := trace.BeginSpan("fetch_and_send")
 	defer trace.EndSpan(span, nil)
@@ -202,7 +210,26 @@ func (h *StreamHandler) fetchAndSendDelta(w io.Writer, rawData []uint8) {
 		return
 	}
 	debug.Log("Stream: sent frame (%d bytes)", frameSize)
-	// Use cached flusher (avoid type assertion on every frame)
+	if h.flusher != nil {
+		h.flusher.Flush()
+	}
+}
+
+func (h *StreamHandler) fetchAndSendDeltaAsync(w io.Writer, reader *AsyncFrameReader) {
+	frame := reader.Latest()
+	if frame == nil {
+		return // no new frame available yet
+	}
+
+	span := trace.BeginSpan("fetch_and_send")
+	defer trace.EndSpan(span, nil)
+
+	frameSize, err := h.deltaEncoder.EncodeWithSize(frame, w)
+	if err != nil {
+		log.Println("Error in delta encoding", err)
+		return
+	}
+	debug.Log("Stream: sent frame (%d bytes)", frameSize)
 	if h.flusher != nil {
 		h.flusher.Flush()
 	}
