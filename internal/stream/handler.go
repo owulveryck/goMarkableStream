@@ -91,7 +91,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		rate = time.Duration(rateInt)
 	}
-	if rate < 100 {
+	if rate < 1 {
 		http.Error(w, "rate value is too low", http.StatusBadRequest)
 		return
 	}

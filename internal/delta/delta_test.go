@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"runtime"
 	"testing"
+	"unsafe"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/klauspost/compress/zstd"
@@ -969,5 +970,242 @@ func BenchmarkHashComputation(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		_ = xxhash.Sum64(frame)
+	}
+}
+
+// --- compareAndCopyBlocks concordance tests ---
+
+// TestCompareAndCopyBlocks_Identical verifies that identical blocks produce mask=0
+// and that src is correctly copied to dst.
+func TestCompareAndCopyBlocks_Identical(t *testing.T) {
+	const nblocks = 100
+	const size = nblocks * blockSize
+
+	dst := make([]byte, size)
+	src := make([]byte, size)
+	mask := make([]byte, nblocks)
+
+	for i := range dst {
+		dst[i] = byte(i)
+		src[i] = byte(i)
+	}
+
+	compareAndCopyBlocks(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), mask, nblocks)
+
+	for i, m := range mask {
+		if m != 0 {
+			t.Errorf("mask[%d] = %d, want 0 (identical blocks)", i, m)
+		}
+	}
+	if !bytes.Equal(dst, src) {
+		t.Error("dst should equal src after copy")
+	}
+}
+
+// TestCompareAndCopyBlocks_AllDifferent verifies that fully different blocks produce mask!=0.
+func TestCompareAndCopyBlocks_AllDifferent(t *testing.T) {
+	const nblocks = 100
+	const size = nblocks * blockSize
+
+	dst := make([]byte, size)
+	src := make([]byte, size)
+	mask := make([]byte, nblocks)
+
+	for i := range src {
+		src[i] = byte(i + 1)
+	}
+
+	compareAndCopyBlocks(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), mask, nblocks)
+
+	for i, m := range mask {
+		if m == 0 {
+			t.Errorf("mask[%d] = 0, want non-zero (different blocks)", i)
+		}
+	}
+	if !bytes.Equal(dst, src) {
+		t.Error("dst should equal src after copy")
+	}
+}
+
+// TestCompareAndCopyBlocks_SingleByteDiff tests detection of a single byte difference
+// in a specific block while other blocks remain identical.
+func TestCompareAndCopyBlocks_SingleByteDiff(t *testing.T) {
+	const nblocks = 10
+	const size = nblocks * blockSize
+
+	dst := make([]byte, size)
+	src := make([]byte, size)
+	mask := make([]byte, nblocks)
+
+	for i := range dst {
+		dst[i] = 0xAA
+		src[i] = 0xAA
+	}
+
+	// Change one byte in block 5
+	src[5*blockSize+32] = 0xBB
+
+	compareAndCopyBlocks(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), mask, nblocks)
+
+	for i, m := range mask {
+		if i == 5 {
+			if m == 0 {
+				t.Errorf("mask[5] = 0, want non-zero (block with single byte diff)")
+			}
+		} else {
+			if m != 0 {
+				t.Errorf("mask[%d] = %d, want 0 (unchanged block)", i, m)
+			}
+		}
+	}
+	if !bytes.Equal(dst, src) {
+		t.Error("dst should equal src after copy")
+	}
+}
+
+// TestCompareAndCopyBlocks_EveryPosition tests that a difference at every byte position
+// within a 64-byte block is correctly detected. This catches SIMD lane issues.
+func TestCompareAndCopyBlocks_EveryPosition(t *testing.T) {
+	for pos := 0; pos < blockSize; pos++ {
+		dst := make([]byte, blockSize)
+		src := make([]byte, blockSize)
+		mask := make([]byte, 1)
+
+		src[pos] = 0xFF
+
+		compareAndCopyBlocks(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), mask, 1)
+
+		if mask[0] == 0 {
+			t.Errorf("position %d: mask = 0, want non-zero", pos)
+		}
+		if dst[pos] != 0xFF {
+			t.Errorf("position %d: dst[%d] = %d, want 0xFF (copy failed)", pos, pos, dst[pos])
+		}
+	}
+}
+
+// TestCompareAndCopyBlocks_CopyCorrectness verifies that all bytes are correctly
+// copied from src to dst, not just the changed ones.
+func TestCompareAndCopyBlocks_CopyCorrectness(t *testing.T) {
+	const nblocks = 50
+	const size = nblocks * blockSize
+
+	dst := make([]byte, size)
+	src := make([]byte, size)
+	mask := make([]byte, nblocks)
+
+	// Fill src with a complex pattern
+	for i := range src {
+		src[i] = byte((i * 7 + 13) & 0xFF)
+	}
+	// Fill dst with a different pattern
+	for i := range dst {
+		dst[i] = byte((i * 3 + 5) & 0xFF)
+	}
+
+	compareAndCopyBlocks(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), mask, nblocks)
+
+	for i := range size {
+		if dst[i] != src[i] {
+			t.Errorf("byte %d: dst=%d, src=%d (copy mismatch)", i, dst[i], src[i])
+			break
+		}
+	}
+}
+
+// TestCompareAndCopyBlocks_ZeroBlocks verifies that nblocks=0 is handled safely.
+func TestCompareAndCopyBlocks_ZeroBlocks(t *testing.T) {
+	dst := make([]byte, blockSize)
+	src := make([]byte, blockSize)
+	var mask []byte
+
+	// Should not panic
+	compareAndCopyBlocks(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), mask, 0)
+}
+
+// TestCompareAndCopyBlocks_LargeFrame tests with a full reMarkable 2 frame size.
+func TestCompareAndCopyBlocks_LargeFrame(t *testing.T) {
+	const frameSize = 1872 * 1404 * 4
+	const nblocks = frameSize / blockSize
+
+	dst := make([]byte, frameSize)
+	src := make([]byte, frameSize)
+	mask := make([]byte, nblocks)
+
+	// Simulate scattered changes (every 1000th block)
+	changedBlocks := make(map[int]bool)
+	for b := 0; b < nblocks; b += 1000 {
+		src[b*blockSize] = 0xFF
+		changedBlocks[b] = true
+	}
+
+	compareAndCopyBlocks(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), mask, nblocks)
+
+	for i, m := range mask {
+		if changedBlocks[i] {
+			if m == 0 {
+				t.Errorf("block %d: mask = 0, want non-zero (changed block)", i)
+			}
+		} else {
+			if m != 0 {
+				t.Errorf("block %d: mask = %d, want 0 (unchanged block)", i, m)
+			}
+		}
+	}
+	if !bytes.Equal(dst, src) {
+		t.Error("dst should equal src after copy on large frame")
+	}
+}
+
+// BenchmarkCompareAndCopyBlocks benchmarks the raw SIMD compare+copy function
+// in isolation, without the run-building or hash overhead.
+func BenchmarkCompareAndCopyBlocks(b *testing.B) {
+	const frameSize = 1872 * 1404 * 4
+	const nblocks = frameSize / blockSize
+
+	dst := make([]byte, frameSize)
+	src := make([]byte, frameSize)
+	mask := make([]byte, nblocks)
+
+	// Simulate 2% change
+	changeBytes := frameSize * 2 / 100
+	for i := 0; i < changeBytes; i++ {
+		src[i] = byte(i)
+	}
+
+	b.SetBytes(int64(frameSize))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		compareAndCopyBlocks(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), mask, nblocks)
+	}
+}
+
+// BenchmarkCompareAndCopyBlocks_Unchanged benchmarks the best case: no changes.
+func BenchmarkCompareAndCopyBlocks_Unchanged(b *testing.B) {
+	const frameSize = 1872 * 1404 * 4
+	const nblocks = frameSize / blockSize
+
+	dst := make([]byte, frameSize)
+	src := make([]byte, frameSize)
+	mask := make([]byte, nblocks)
+
+	b.SetBytes(int64(frameSize))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		compareAndCopyBlocks(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), mask, nblocks)
+	}
+}
+
+// BenchmarkMemoryCopy benchmarks raw memory copy to establish the bandwidth ceiling.
+func BenchmarkMemoryCopy(b *testing.B) {
+	const frameSize = 1872 * 1404 * 4
+
+	dst := make([]byte, frameSize)
+	src := make([]byte, frameSize)
+
+	b.SetBytes(int64(frameSize))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		copy(dst, src)
 	}
 }

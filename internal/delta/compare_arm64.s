@@ -2,8 +2,12 @@
 
 // func compareAndCopyBlocks(dst, src unsafe.Pointer, mask []byte, nblocks int)
 //
-// Compares src and dst in 64-byte blocks using NEON SIMD, copies src → dst,
-// and writes 1 to mask[i] if block i differs, 0 otherwise.
+// Compares src and dst in 64-byte blocks using NEON SIMD, copies src → dst
+// only for changed blocks, and writes 1 to mask[i] if block i differs, 0 otherwise.
+//
+// Conditional copy optimization: unchanged blocks are NOT written back,
+// saving ~33% memory bandwidth on the write side. This is safe because
+// unchanged blocks already have identical data in dst.
 //
 // Uses 4 × 128-bit NEON registers per iteration = 64 bytes.
 // XOR detects differences, ORR combines, VMOV extracts to scalar.
@@ -28,11 +32,9 @@ loop:
 	// Load 64 bytes from src (current frame) with post-increment
 	VLD1.P  64(R1), [V0.B16, V1.B16, V2.B16, V3.B16]
 
-	// Load 64 bytes from dst (previous frame) — no post-increment yet
-	VLD1    (R0), [V4.B16, V5.B16, V6.B16, V7.B16]
-
-	// Copy: store src data to dst with post-increment
-	VST1.P  [V0.B16, V1.B16, V2.B16, V3.B16], 64(R0)
+	// Load 64 bytes from dst (previous frame) with post-increment.
+	// After this, R0 points to the NEXT block.
+	VLD1.P  64(R0), [V4.B16, V5.B16, V6.B16, V7.B16]
 
 	// XOR to find byte-level differences
 	VEOR  V0.B16, V4.B16, V16.B16
@@ -56,6 +58,16 @@ loop:
 	MOVB  R9, (R2)
 	ADD   $1, R2, R2
 
+	// Conditional copy: only write back changed blocks.
+	// For unchanged blocks (~98% during handwriting), skip the store.
+	// R0 already points to the next block from VLD1.P post-increment.
+	CBZ   R8, skip_copy
+
+	// Changed block: rewind dst by 64, store src data, advance dst.
+	SUB   $64, R0, R0
+	VST1.P  [V0.B16, V1.B16, V2.B16, V3.B16], 64(R0)
+
+skip_copy:
 	SUB   $1, R5, R5
 	CBNZ  R5, loop
 
