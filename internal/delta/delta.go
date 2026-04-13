@@ -243,7 +243,7 @@ func (e *Encoder) compareAndCopyFrames(current []byte) []changeRun {
 	compareAndCopyBlocks(unsafe.Pointer(&prev[0]), unsafe.Pointer(&current[0]), mask, nblocks)
 
 	// Build change runs from block mask.
-	// blockSize (64) is a multiple of bytesPerPixel (4), so block boundaries
+	// blockSize (128) is a multiple of bytesPerPixel (4), so block boundaries
 	// are always pixel-aligned — no alignment fixup needed.
 	runStart := -1 // block index of current run start, or -1
 

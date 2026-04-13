@@ -1064,7 +1064,7 @@ func TestCompareAndCopyBlocks_SingleByteDiff(t *testing.T) {
 }
 
 // TestCompareAndCopyBlocks_EveryPosition tests that a difference at every byte position
-// within a 64-byte block is correctly detected. This catches SIMD lane issues.
+// within a block is correctly detected. This catches SIMD lane issues.
 func TestCompareAndCopyBlocks_EveryPosition(t *testing.T) {
 	for pos := 0; pos < blockSize; pos++ {
 		dst := make([]byte, blockSize)

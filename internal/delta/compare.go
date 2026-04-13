@@ -1,3 +1,3 @@
 package delta
 
-const blockSize = 64 // bytes per comparison block
+const blockSize = 128 // bytes per comparison block

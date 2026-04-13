@@ -4,7 +4,7 @@ package delta
 
 import "unsafe"
 
-// compareAndCopyBlocks compares src to dst in 64-byte blocks, copies src→dst,
+// compareAndCopyBlocks compares src to dst in 128-byte blocks, copies src→dst,
 // and sets mask[i] to non-zero for each block where any byte differs.
 // Implemented in compare_arm.s using ARM NEON SIMD instructions.
 //
