@@ -761,7 +761,7 @@ func TestHashBasedEarlyExit_UnchangedFrame(t *testing.T) {
 // TestHashBasedEarlyExit_ChangedFrame tests that changed frames skip hash early exit
 func TestHashBasedEarlyExit_ChangedFrame(t *testing.T) {
 	enc := NewEncoder(DefaultThreshold)
-	frameSize := 160
+	frameSize := 640 // Must be large enough so 1 changed block (64B) < threshold (30%)
 
 	// First frame - all zeros
 	frame1 := make([]byte, frameSize)
