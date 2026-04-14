@@ -302,13 +302,19 @@ func TestShortRunEncoding(t *testing.T) {
 		run.data[i] = byte(i)
 	}
 
+	runs := []changeRun{run}
+	payloadSize := enc.calculateDeltaSize(runs)
+
 	var buf bytes.Buffer
-	err := enc.writeShortRun(run, &buf)
+	_, err := enc.writeDeltaFrame(runs, payloadSize, &buf)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	result := buf.Bytes()
+
+	// Skip 4-byte frame header, check run encoding
+	result = result[4:]
 
 	// Check length byte
 	if result[0] != 10 {
@@ -336,13 +342,19 @@ func TestLongRunEncoding(t *testing.T) {
 		data:   make([]byte, 800),
 	}
 
+	runs := []changeRun{run}
+	payloadSize := enc.calculateDeltaSize(runs)
+
 	var buf bytes.Buffer
-	err := enc.writeLongRun(run, &buf)
+	_, err := enc.writeDeltaFrame(runs, payloadSize, &buf)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	result := buf.Bytes()
+
+	// Skip 4-byte frame header, check run encoding
+	result = result[4:]
 
 	// Check high bit is set on first byte
 	if result[0]&0x80 == 0 {
@@ -1207,5 +1219,184 @@ func BenchmarkMemoryCopy(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		copy(dst, src)
+	}
+}
+
+// --- hasAnyChange tests ---
+
+// TestHasAnyChange_Identical verifies that identical buffers return false.
+func TestHasAnyChange_Identical(t *testing.T) {
+	const nblocks = 100
+	const size = nblocks * blockSize
+
+	dst := make([]byte, size)
+	src := make([]byte, size)
+
+	for i := range dst {
+		dst[i] = byte(i)
+		src[i] = byte(i)
+	}
+
+	if hasAnyChange(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), nblocks) {
+		t.Error("hasAnyChange returned true for identical buffers")
+	}
+}
+
+// TestHasAnyChange_AllDifferent verifies that fully different buffers return true.
+func TestHasAnyChange_AllDifferent(t *testing.T) {
+	const nblocks = 100
+	const size = nblocks * blockSize
+
+	dst := make([]byte, size)
+	src := make([]byte, size)
+
+	for i := range src {
+		src[i] = byte(i + 1)
+	}
+
+	if !hasAnyChange(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), nblocks) {
+		t.Error("hasAnyChange returned false for different buffers")
+	}
+}
+
+// TestHasAnyChange_SingleByteDiff verifies detection of a single byte difference
+// at every position within a block.
+func TestHasAnyChange_SingleByteDiff(t *testing.T) {
+	for pos := 0; pos < blockSize; pos++ {
+		dst := make([]byte, blockSize)
+		src := make([]byte, blockSize)
+		src[pos] = 0xFF
+
+		if !hasAnyChange(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), 1) {
+			t.Errorf("hasAnyChange missed single byte diff at position %d", pos)
+		}
+	}
+}
+
+// TestHasAnyChange_LastBlockDiff verifies detection when only the last block differs.
+func TestHasAnyChange_LastBlockDiff(t *testing.T) {
+	const nblocks = 100
+	const size = nblocks * blockSize
+
+	dst := make([]byte, size)
+	src := make([]byte, size)
+	// Only last block differs
+	src[size-1] = 0xFF
+
+	if !hasAnyChange(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), nblocks) {
+		t.Error("hasAnyChange missed diff in last block")
+	}
+}
+
+// TestHasAnyChange_ZeroBlocks verifies that zero blocks returns false.
+func TestHasAnyChange_ZeroBlocks(t *testing.T) {
+	dst := make([]byte, blockSize)
+	src := make([]byte, blockSize)
+
+	if hasAnyChange(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), 0) {
+		t.Error("hasAnyChange returned true for zero blocks")
+	}
+}
+
+// TestHasAnyChange_ConcordanceWithCompare verifies that hasAnyChange agrees
+// with compareAndCopyBlocks on whether any change exists.
+func TestHasAnyChange_ConcordanceWithCompare(t *testing.T) {
+	const nblocks = 1000
+	const size = nblocks * blockSize
+
+	dst1 := make([]byte, size)
+	dst2 := make([]byte, size)
+	src := make([]byte, size)
+	mask := make([]byte, nblocks)
+
+	// Initialize with same data
+	for i := range dst1 {
+		v := byte(i * 7)
+		dst1[i] = v
+		dst2[i] = v
+		src[i] = v
+	}
+
+	// Test with various change patterns
+	patterns := []struct {
+		name    string
+		changes int
+	}{
+		{"no_change", 0},
+		{"1_byte", 1},
+		{"first_block", 128},
+		{"last_block_only", -1}, // special case
+		{"2pct", size * 2 / 100},
+		{"all_changed", size},
+	}
+
+	for _, pat := range patterns {
+		t.Run(pat.name, func(t *testing.T) {
+			// Reset
+			for i := range dst1 {
+				v := byte(i * 7)
+				dst1[i] = v
+				dst2[i] = v
+				src[i] = v
+			}
+
+			// Apply changes
+			if pat.changes == -1 {
+				src[size-1] = 0xAA
+			} else {
+				for i := 0; i < pat.changes && i < size; i++ {
+					src[i] = byte(i + 0xAA)
+				}
+			}
+
+			// Compare results
+			scanResult := hasAnyChange(unsafe.Pointer(&dst1[0]), unsafe.Pointer(&src[0]), nblocks)
+			compareAndCopyBlocks(unsafe.Pointer(&dst2[0]), unsafe.Pointer(&src[0]), mask, nblocks)
+
+			maskHasChange := false
+			for _, m := range mask {
+				if m != 0 {
+					maskHasChange = true
+					break
+				}
+			}
+
+			if scanResult != maskHasChange {
+				t.Errorf("hasAnyChange=%v but compareAndCopyBlocks mask has change=%v",
+					scanResult, maskHasChange)
+			}
+		})
+	}
+}
+
+// BenchmarkHasAnyChange_Unchanged benchmarks the best case: identical frames (full scan).
+func BenchmarkHasAnyChange_Unchanged(b *testing.B) {
+	const frameSize = 1872 * 1404 * 4
+	const nblocks = frameSize / blockSize
+
+	dst := make([]byte, frameSize)
+	src := make([]byte, frameSize)
+
+	b.SetBytes(int64(frameSize))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		hasAnyChange(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), nblocks)
+	}
+}
+
+// BenchmarkHasAnyChange_FirstBlockChanged benchmarks the best case for early exit:
+// change is in the very first block.
+func BenchmarkHasAnyChange_FirstBlockChanged(b *testing.B) {
+	const frameSize = 1872 * 1404 * 4
+	const nblocks = frameSize / blockSize
+
+	dst := make([]byte, frameSize)
+	src := make([]byte, frameSize)
+	src[0] = 0xFF
+
+	b.SetBytes(int64(frameSize))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		hasAnyChange(unsafe.Pointer(&dst[0]), unsafe.Pointer(&src[0]), nblocks)
 	}
 }

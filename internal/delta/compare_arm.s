@@ -46,9 +46,13 @@ TEXT ·compareAndCopyBlocks(SB), NOSPLIT|NOFRAME, $0-24
 	BEQ	done
 
 loop:
-	// Prefetch data 512 bytes ahead into L1 cache.
-	WORD	$0xF5D1F200	// PLD [R1, #512]  — prefetch src
-	WORD	$0xF5D0F200	// PLD [R0, #512]  — prefetch dst
+	// Prefetch data ahead into cache hierarchy.
+	// Far prefetch (512B): covers main memory → L2 latency.
+	// Near prefetch (256B): covers L2 → L1 latency on Cortex-A9.
+	WORD	$0xF5D1F200	// PLD [R1, #512]  — prefetch src far
+	WORD	$0xF5D0F200	// PLD [R0, #512]  — prefetch dst far
+	WORD	$0xF5D1F100	// PLD [R1, #256]  — prefetch src near (L2→L1)
+	WORD	$0xF5D0F100	// PLD [R0, #256]  — prefetch dst near (L2→L1)
 
 	// === First half (bytes 0-63) ===
 

@@ -278,10 +278,8 @@ function handleDeltaFrame(payload, imageData, pixelDataSize) {
 			break;
 		}
 
-		// Copy changed pixels to previousFrame
-		for (let i = 0; i < dataLen; i++) {
-			previousFrame[frameOffset + i] = payload[dataStart + i];
-		}
+		// Copy changed pixels to previousFrame (bulk native memcpy)
+		previousFrame.set(payload.subarray(dataStart, dataStart + dataLen), frameOffset);
 
 		frameOffset += dataLen;
 	}

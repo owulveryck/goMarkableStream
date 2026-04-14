@@ -70,6 +70,7 @@ type Encoder struct {
 	runsBuf       []changeRun // Reusable runs slice
 	compressedBuf []byte      // Reusable buffer for ZSTD compression output
 	maskBuf       []byte      // Reusable buffer for block comparison mask
+	writeBuf      []byte      // Reusable buffer for coalesced delta frame writes
 }
 
 // NewEncoder creates a new delta encoder with the given threshold.
@@ -119,7 +120,9 @@ func (e *Encoder) EncodeWithSize(current []byte, w io.Writer) (n int, err error)
 	if !e.hasPrev || len(e.prevFrame) != frameSize {
 		e.prevFrame = make([]byte, frameSize)
 		copy(e.prevFrame, current)
-		e.prevFrameHash = xxhash.Sum64(current)
+		if useHashEarlyExit {
+			e.prevFrameHash = xxhash.Sum64(current)
+		}
 		e.hasPrev = true
 		debug.Log("Delta: first frame, sending full")
 		return e.writeFullFrame(current, w)
@@ -212,26 +215,45 @@ func (e *Encoder) compareAndCopyFrames(current []byte) []changeRun {
 		return e.runsBuf
 	}
 
-	// Hybrid hash strategy: only compute hash when likely idle.
-	// During active drawing (lastChanged=true), skip the expensive hash
-	// and go straight to compare+copy. When frames stop changing,
-	// compute hash once to re-enable fast early exit for idle frames.
+	// Early exit strategy for idle frames.
+	// During active drawing (lastChanged=true), skip early-exit checks and
+	// go straight to compare+copy. When idle (lastChanged=false), use a
+	// fast read-only scan to detect unchanged frames cheaply.
+	//
+	// On platforms with fast xxhash assembly (arm64, amd64), use hash-based
+	// early exit. On ARM32, use NEON hasAnyChange scan instead — xxhash has
+	// no ARM32 assembly, making pure-Go 64-bit multiplications ~6x slower
+	// than the NEON compare+copy pass.
+	nblocks := frameLen / blockSize
+	remainder := frameLen - nblocks*blockSize
+
 	if !e.lastChanged {
-		currentHash := xxhash.Sum64(current)
-		if currentHash == e.prevFrameHash {
-			earlyExit = true
-			return e.runsBuf
+		if useHashEarlyExit {
+			// Hash-based early exit (arm64, amd64)
+			currentHash := xxhash.Sum64(current)
+			if currentHash == e.prevFrameHash {
+				earlyExit = true
+				return e.runsBuf
+			}
+			e.prevFrameHash = currentHash
+		} else if nblocks > 0 {
+			// NEON read-only scan early exit (ARM32).
+			// hasAnyChange reads src+dst without writing, using ~50% less
+			// memory bandwidth than compareAndCopyBlocks. Returns false
+			// immediately if frames are identical, or true at the first
+			// differing block.
+			if !hasAnyChange(unsafe.Pointer(&prev[0]), unsafe.Pointer(&current[0]), nblocks) {
+				earlyExit = true
+				return e.runsBuf
+			}
 		}
-		e.prevFrameHash = currentHash
 	} else {
 		hashSkipped = true
 	}
 
-	// SIMD-accelerated compare+copy in 64-byte blocks.
-	// On arm64 this uses NEON vector instructions; on other platforms a scalar fallback.
+	// SIMD-accelerated compare+copy in 128-byte blocks.
+	// On arm/arm64 this uses NEON vector instructions; on other platforms a scalar fallback.
 	// The mask records which blocks contain any changed bytes.
-	nblocks := frameLen / blockSize
-	remainder := frameLen - nblocks*blockSize
 
 	// Ensure mask buffer is large enough (reuse across calls)
 	if cap(e.maskBuf) < nblocks {
@@ -242,13 +264,63 @@ func (e *Encoder) compareAndCopyFrames(current []byte) []changeRun {
 	// Compare and copy all full blocks
 	compareAndCopyBlocks(unsafe.Pointer(&prev[0]), unsafe.Pointer(&current[0]), mask, nblocks)
 
-	// Build change runs from block mask.
+	// Build change runs from block mask, computing relative offsets inline.
 	// blockSize (128) is a multiple of bytesPerPixel (4), so block boundaries
 	// are always pixel-aligned — no alignment fixup needed.
+	//
+	// Process the mask 8 bytes at a time via uint64 to reduce iterations
+	// from nblocks to nblocks/8. The common case (all-zero word = 8 unchanged
+	// blocks) is handled with a single comparison. On Cortex-A9's in-order
+	// pipeline, this reduces branch misprediction overhead significantly.
 	runStart := -1 // block index of current run start, or -1
+	lastEnd := 0   // end of previous run in bytes (for relative offset computation)
 
-	for i, changed := range mask {
-		if changed != 0 {
+	nwords := nblocks / 8
+	maskPtr := unsafe.Pointer(&mask[0])
+
+	for w := range nwords {
+		word := *(*uint64)(unsafe.Add(maskPtr, w*8))
+		if word == 0 {
+			// 8 consecutive unchanged blocks — close any open run
+			if runStart != -1 {
+				endBlock := w * 8
+				startByte := runStart * blockSize
+				endByte := endBlock * blockSize
+				e.runsBuf = append(e.runsBuf, changeRun{
+					offset: startByte - lastEnd,
+					length: (endByte - startByte) / bytesPerPixel,
+					data:   current[startByte:endByte],
+				})
+				lastEnd = endByte
+				runStart = -1
+			}
+		} else {
+			// At least one changed block in this word — scan individual bytes
+			base := w * 8
+			for j := range 8 {
+				i := base + j
+				if mask[i] != 0 {
+					if runStart == -1 {
+						runStart = i
+					}
+				} else if runStart != -1 {
+					startByte := runStart * blockSize
+					endByte := i * blockSize
+					e.runsBuf = append(e.runsBuf, changeRun{
+						offset: startByte - lastEnd,
+						length: (endByte - startByte) / bytesPerPixel,
+						data:   current[startByte:endByte],
+					})
+					lastEnd = endByte
+					runStart = -1
+				}
+			}
+		}
+	}
+
+	// Handle remaining mask bytes (nblocks % 8)
+	for i := nwords * 8; i < nblocks; i++ {
+		if mask[i] != 0 {
 			if runStart == -1 {
 				runStart = i
 			}
@@ -256,10 +328,11 @@ func (e *Encoder) compareAndCopyFrames(current []byte) []changeRun {
 			startByte := runStart * blockSize
 			endByte := i * blockSize
 			e.runsBuf = append(e.runsBuf, changeRun{
-				offset: startByte,
+				offset: startByte - lastEnd,
 				length: (endByte - startByte) / bytesPerPixel,
 				data:   current[startByte:endByte],
 			})
+			lastEnd = endByte
 			runStart = -1
 		}
 	}
@@ -286,7 +359,7 @@ func (e *Encoder) compareAndCopyFrames(current []byte) []changeRun {
 		alignedEnd := ((endByte + bytesPerPixel - 1) / bytesPerPixel) * bytesPerPixel
 		alignedEnd = min(alignedEnd, frameLen)
 		e.runsBuf = append(e.runsBuf, changeRun{
-			offset: startByte,
+			offset: startByte - lastEnd,
 			length: (alignedEnd - startByte) / bytesPerPixel,
 			data:   current[startByte:alignedEnd],
 		})
@@ -295,7 +368,7 @@ func (e *Encoder) compareAndCopyFrames(current []byte) []changeRun {
 		alignedEnd := ((frameLen + bytesPerPixel - 1) / bytesPerPixel) * bytesPerPixel
 		alignedEnd = min(alignedEnd, frameLen)
 		e.runsBuf = append(e.runsBuf, changeRun{
-			offset: alignedStart,
+			offset: alignedStart - lastEnd,
 			length: (alignedEnd - alignedStart) / bytesPerPixel,
 			data:   current[alignedStart:alignedEnd],
 		})
@@ -305,20 +378,13 @@ func (e *Encoder) compareAndCopyFrames(current []byte) []changeRun {
 	if len(e.runsBuf) == 0 {
 		// No changes — transition to idle mode.
 		// Compute hash so the next identical frame can early-exit.
-		if e.lastChanged {
+		// On ARM32, hash is disabled (too expensive), so we skip this.
+		if useHashEarlyExit && e.lastChanged {
 			e.prevFrameHash = xxhash.Sum64(current)
 		}
 		e.lastChanged = false
 	} else {
 		e.lastChanged = true
-	}
-
-	// Convert absolute offsets to relative offsets
-	lastEnd := 0
-	for i := range e.runsBuf {
-		absOffset := e.runsBuf[i].offset
-		e.runsBuf[i].offset = absOffset - lastEnd
-		lastEnd = absOffset + len(e.runsBuf[i].data)
 	}
 
 	return e.runsBuf
@@ -463,66 +529,46 @@ func (e *Encoder) writeFullFrame(data []byte, w io.Writer) (int, error) {
 	return 4 + n, nil
 }
 
-// writeDeltaFrame writes a delta frame with header and change runs.
-// Returns the total number of bytes written.
+// writeDeltaFrame assembles the entire delta frame (header + all runs) into
+// a single buffer and writes it with one w.Write() call. This eliminates
+// per-run write overhead (2N+1 calls → 1 call) which reduces syscall and
+// interface dispatch costs, especially on ARM32.
 func (e *Encoder) writeDeltaFrame(runs []changeRun, payloadSize int, w io.Writer) (int, error) {
-	e.frameHeader[0] = FrameTypeDelta
-	// Payload length in 24-bit little-endian
-	e.frameHeader[1] = byte(payloadSize & 0xFF)
-	e.frameHeader[2] = byte((payloadSize >> 8) & 0xFF)
-	e.frameHeader[3] = byte((payloadSize >> 16) & 0xFF)
+	totalSize := 4 + payloadSize
 
-	if _, err := w.Write(e.frameHeader[:]); err != nil {
-		return 0, err
+	// Reuse write buffer, grow if needed
+	if cap(e.writeBuf) < totalSize {
+		e.writeBuf = make([]byte, totalSize)
 	}
+	buf := e.writeBuf[:totalSize]
 
-	// Write each change run
+	// Frame header
+	buf[0] = FrameTypeDelta
+	buf[1] = byte(payloadSize & 0xFF)
+	buf[2] = byte((payloadSize >> 8) & 0xFF)
+	buf[3] = byte((payloadSize >> 16) & 0xFF)
+
+	pos := 4
 	for _, run := range runs {
 		if run.offset <= maxShortOffset && run.length <= maxShortLength {
-			// Short run format
-			if err := e.writeShortRun(run, w); err != nil {
-				return 0, err
-			}
+			// Short run: 1 byte length + 2 bytes offset LE + pixel data
+			buf[pos] = byte(run.length)
+			binary.LittleEndian.PutUint16(buf[pos+1:pos+3], uint16(run.offset))
+			pos += 3
 		} else {
-			// Long run format
-			if err := e.writeLongRun(run, w); err != nil {
-				return 0, err
-			}
+			// Long run: 2 bytes length (0x80|high, low) + 3 bytes offset LE + pixel data
+			buf[pos] = 0x80 | byte((run.length>>8)&0x7F)
+			buf[pos+1] = byte(run.length & 0xFF)
+			buf[pos+2] = byte(run.offset & 0xFF)
+			buf[pos+3] = byte((run.offset >> 8) & 0xFF)
+			buf[pos+4] = byte((run.offset >> 16) & 0xFF)
+			pos += 5
 		}
+		copy(buf[pos:], run.data)
+		pos += len(run.data)
 	}
 
-	return 4 + payloadSize, nil
-}
-
-// writeShortRun writes a short run (offset < 64KB, length <= 127 pixels).
-// Format: [1 byte: length] [2 bytes: relative offset LE] [N bytes: pixel data]
-func (e *Encoder) writeShortRun(run changeRun, w io.Writer) error {
-	e.headerBuf[0] = byte(run.length)
-	binary.LittleEndian.PutUint16(e.headerBuf[1:3], uint16(run.offset))
-
-	if _, err := w.Write(e.headerBuf[:3]); err != nil {
-		return err
-	}
-	_, err := w.Write(run.data)
-	return err
-}
-
-// writeLongRun writes a long run (larger offsets/lengths).
-// Format: [1 byte: 0x80 | length_high] [1 byte: length_low] [3 bytes: offset LE] [N bytes: pixel data]
-func (e *Encoder) writeLongRun(run changeRun, w io.Writer) error {
-	// Length as 15-bit value with high bit set on first byte
-	e.headerBuf[0] = 0x80 | byte((run.length>>8)&0x7F)
-	e.headerBuf[1] = byte(run.length & 0xFF)
-	// Offset as 24-bit little-endian
-	e.headerBuf[2] = byte(run.offset & 0xFF)
-	e.headerBuf[3] = byte((run.offset >> 8) & 0xFF)
-	e.headerBuf[4] = byte((run.offset >> 16) & 0xFF)
-
-	if _, err := w.Write(e.headerBuf[:5]); err != nil {
-		return err
-	}
-	_, err := w.Write(run.data)
-	return err
+	return w.Write(buf[:pos])
 }
 
 // Reset clears the encoder state, forcing the next frame to be a full frame.
@@ -540,4 +586,5 @@ func (e *Encoder) ReleaseMemory() {
 	e.runsBuf = nil
 	e.compressedBuf = nil
 	e.maskBuf = nil
+	e.writeBuf = nil
 }

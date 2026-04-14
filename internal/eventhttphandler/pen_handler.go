@@ -3,7 +3,6 @@ package eventhttphandler
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/owulveryck/goMarkableStream/internal/events"
@@ -79,8 +78,10 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				// Remove trailing newline added by Encode
 				jsonBytes := bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
 
-				// Send the event
-				fmt.Fprintf(w, "data: %s\n\n", jsonBytes)
+				// Send the event using direct writes (avoids fmt.Fprintf allocation)
+				w.Write([]byte("data: "))
+				w.Write(jsonBytes)
+				w.Write([]byte("\n\n"))
 				if flusher != nil {
 					flusher.Flush() // Ensure client receives the message immediately
 				}
