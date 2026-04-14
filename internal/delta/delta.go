@@ -71,6 +71,7 @@ type Encoder struct {
 	compressedBuf []byte      // Reusable buffer for ZSTD compression output
 	maskBuf       []byte      // Reusable buffer for block comparison mask
 	writeBuf      []byte      // Reusable buffer for coalesced delta frame writes
+	prevChecksum  [16]byte    // XOR-fold checksum of previous frame (ARM32 idle detection)
 }
 
 // NewEncoder creates a new delta encoder with the given threshold.
@@ -237,12 +238,11 @@ func (e *Encoder) compareAndCopyFrames(current []byte) []changeRun {
 			}
 			e.prevFrameHash = currentHash
 		} else if nblocks > 0 {
-			// NEON read-only scan early exit (ARM32).
-			// hasAnyChange reads src+dst without writing, using ~50% less
-			// memory bandwidth than compareAndCopyBlocks. Returns false
-			// immediately if frames are identical, or true at the first
-			// differing block.
-			if !hasAnyChange(unsafe.Pointer(&prev[0]), unsafe.Pointer(&current[0]), nblocks) {
+			// Single-buffer NEON checksum early exit (ARM32).
+			// checksumChanged reads only current (10.5MB) instead of both
+			// src+dst (21MB), halving memory bandwidth for unchanged frames.
+			// Uses XOR-fold with position-dependent rotation.
+			if !checksumChanged(unsafe.Pointer(&current[0]), nblocks, unsafe.Pointer(&e.prevChecksum[0])) {
 				earlyExit = true
 				return e.runsBuf
 			}
@@ -377,10 +377,15 @@ func (e *Encoder) compareAndCopyFrames(current []byte) []changeRun {
 	// Update hybrid hash state
 	if len(e.runsBuf) == 0 {
 		// No changes — transition to idle mode.
-		// Compute hash so the next identical frame can early-exit.
-		// On ARM32, hash is disabled (too expensive), so we skip this.
-		if useHashEarlyExit && e.lastChanged {
-			e.prevFrameHash = xxhash.Sum64(current)
+		// Compute hash/checksum so the next identical frame can early-exit.
+		if e.lastChanged {
+			if useHashEarlyExit {
+				e.prevFrameHash = xxhash.Sum64(current)
+			} else if nblocks > 0 {
+				// ARM32: compute and store XOR-fold checksum for idle detection.
+				// The return value is ignored — we just need prevChecksum populated.
+				checksumChanged(unsafe.Pointer(&current[0]), nblocks, unsafe.Pointer(&e.prevChecksum[0]))
+			}
 		}
 		e.lastChanged = false
 	} else {

@@ -8,11 +8,11 @@
 // Returns true (1) at the first block that differs, false (0) if all
 // blocks are identical. No writes to dst, src, or any mask — pure reads.
 //
-// This is significantly faster than compareAndCopyBlocks for unchanged
-// frames because:
-//   - No conditional stores (saves ~50% memory bandwidth)
-//   - Early exit on first difference
-//   - No mask writes
+// Optimized for Cortex-A7:
+//   - PLD at 256B/512B (critical: removing PLD causes ~40% slowdown on
+//     dual-stream reads because hardware prefetcher can't keep up)
+//   - Early exit on first difference (checks each 64-byte half independently)
+//   - No conditional stores, no mask writes
 //
 // NEON register allocation (per 128B block, two 64B halves):
 //   Q0-Q3   (d0-d7):     src data (64 bytes)
@@ -24,13 +24,6 @@
 //   R1  = src pointer (advances by 128 per block)
 //   R2  = nblocks counter (decrements to 0)
 //   R4-R7 = temporaries for VMOV scalar extraction
-//
-// ABI0 stack layout (32-bit, all args on stack):
-//   dst:     0(FP)   4 bytes
-//   src:     4(FP)   4 bytes
-//   nblocks: 8(FP)   4 bytes
-//   ret:    12(FP)   1 byte
-//   Total args: 16 bytes
 TEXT ·hasAnyChange(SB), NOSPLIT|NOFRAME, $0-13
 	MOVW	dst+0(FP), R0
 	MOVW	src+4(FP), R1
@@ -40,11 +33,12 @@ TEXT ·hasAnyChange(SB), NOSPLIT|NOFRAME, $0-13
 	BEQ	no_change
 
 loop:
-	// Prefetch ahead for latency hiding
-	WORD	$0xF5D1F200	// PLD [R1, #512]  — prefetch src far
-	WORD	$0xF5D0F200	// PLD [R0, #512]  — prefetch dst far
-	WORD	$0xF5D1F100	// PLD [R1, #256]  — prefetch src near
-	WORD	$0xF5D0F100	// PLD [R0, #256]  — prefetch dst near
+	// Prefetch data ahead into cache hierarchy.
+	// Critical for Cortex-A7: dual-stream reads need software prefetch.
+	WORD	$0xF5D1F200	// PLD [R1, #512]  — prefetch src far (mem→L2)
+	WORD	$0xF5D0F200	// PLD [R0, #512]  — prefetch dst far (mem→L2)
+	WORD	$0xF5D1F100	// PLD [R1, #256]  — prefetch src near (L2→L1)
+	WORD	$0xF5D0F100	// PLD [R0, #256]  — prefetch dst near (L2→L1)
 
 	// === First half (bytes 0-63) ===
 

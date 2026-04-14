@@ -11,6 +11,11 @@
 // own conditional copy (unchanged halves skip the store). The mask combines
 // both halves: if either half changed, mask[i] = 1.
 //
+// Uses PLD instructions for software prefetching at 256B and 512B distances.
+// Benchmarks show PLD is critical on Cortex-A7 for dual-stream reads: removing
+// PLD causes ~40% slowdown (56ms vs 40ms per frame) because the hardware
+// prefetcher cannot keep up with two interleaved sequential streams.
+//
 // Uses NEON vector instructions encoded as WORD directives because Go's ARM32
 // assembler does not support NEON mnemonics.
 //
@@ -47,10 +52,10 @@ TEXT ·compareAndCopyBlocks(SB), NOSPLIT|NOFRAME, $0-24
 
 loop:
 	// Prefetch data ahead into cache hierarchy.
-	// Far prefetch (512B): covers main memory → L2 latency.
-	// Near prefetch (256B): covers L2 → L1 latency on Cortex-A9.
-	WORD	$0xF5D1F200	// PLD [R1, #512]  — prefetch src far
-	WORD	$0xF5D0F200	// PLD [R0, #512]  — prefetch dst far
+	// Critical for Cortex-A7: dual-stream reads need software prefetch;
+	// hardware prefetcher alone causes ~40% slowdown.
+	WORD	$0xF5D1F200	// PLD [R1, #512]  — prefetch src far (mem→L2)
+	WORD	$0xF5D0F200	// PLD [R0, #512]  — prefetch dst far (mem→L2)
 	WORD	$0xF5D1F100	// PLD [R1, #256]  — prefetch src near (L2→L1)
 	WORD	$0xF5D0F100	// PLD [R0, #256]  — prefetch dst near (L2→L1)
 
