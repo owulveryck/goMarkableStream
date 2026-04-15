@@ -183,7 +183,9 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writing = false
 		case <-ticker.C:
 			if writing {
-				h.fetchAndSendDeltaAsync(w, asyncReader)
+				if frameSize := h.fetchAndSendDeltaAsync(w, asyncReader); frameSize > 0 {
+					ticker.Reset(adaptRate(frameSize, rate*time.Millisecond))
+				}
 			}
 		}
 	}
@@ -191,7 +193,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // fetchAndSendDelta reads the framebuffer synchronously and sends a delta-encoded frame.
 // Used by tests and benchmarks that don't need the async reader.
-func (h *StreamHandler) fetchAndSendDelta(w io.Writer, rawData []uint8) {
+func (h *StreamHandler) fetchAndSendDelta(w io.Writer, rawData []uint8) int {
 	span := trace.BeginSpan("fetch_and_send")
 	defer trace.EndSpan(span, nil)
 
@@ -202,23 +204,52 @@ func (h *StreamHandler) fetchAndSendDelta(w io.Writer, rawData []uint8) {
 		for i := range rawData[:n] {
 			rawData[i] = 0
 		}
-		return
+		return 0
 	}
 	frameSize, err := h.deltaEncoder.EncodeWithSize(rawData, w)
 	if err != nil {
 		log.Println("Error in delta encoding", err)
-		return
+		return 0
 	}
 	debug.Log("Stream: sent frame (%d bytes)", frameSize)
 	if h.flusher != nil {
 		h.flusher.Flush()
 	}
+	return frameSize
 }
 
-func (h *StreamHandler) fetchAndSendDeltaAsync(w io.Writer, reader *AsyncFrameReader) {
+// adaptRate adjusts the frame ticker interval based on the last encoded frame size.
+// Small deltas get faster updates for responsiveness, large deltas get slower
+// updates to avoid saturating the network.
+func adaptRate(frameSize int, baseRate time.Duration) time.Duration {
+	const (
+		minRate        = 50 * time.Millisecond
+		maxRate        = 1000 * time.Millisecond
+		smallThreshold = 50_000  // 50KB
+		largeThreshold = 200_000 // 200KB
+	)
+	switch {
+	case frameSize <= smallThreshold:
+		r := baseRate / 2
+		if r < minRate {
+			r = minRate
+		}
+		return r
+	case frameSize <= largeThreshold:
+		return baseRate
+	default:
+		r := baseRate * 2
+		if r > maxRate {
+			r = maxRate
+		}
+		return r
+	}
+}
+
+func (h *StreamHandler) fetchAndSendDeltaAsync(w io.Writer, reader *AsyncFrameReader) int {
 	frame := reader.Latest()
 	if frame == nil {
-		return // no new frame available yet
+		return 0 // no new frame available yet
 	}
 
 	span := trace.BeginSpan("fetch_and_send")
@@ -227,10 +258,11 @@ func (h *StreamHandler) fetchAndSendDeltaAsync(w io.Writer, reader *AsyncFrameRe
 	frameSize, err := h.deltaEncoder.EncodeWithSize(frame, w)
 	if err != nil {
 		log.Println("Error in delta encoding", err)
-		return
+		return 0
 	}
 	debug.Log("Stream: sent frame (%d bytes)", frameSize)
 	if h.flusher != nil {
 		h.flusher.Flush()
 	}
+	return frameSize
 }
