@@ -9,8 +9,10 @@
 // blocks are identical. No writes to dst, src, or any mask — pure reads.
 //
 // Optimized for Cortex-A7:
-//   - PLD at 256B/512B (critical: removing PLD causes ~40% slowdown on
-//     dual-stream reads because hardware prefetcher can't keep up)
+//   - PLD at multiple distances covering all 4 cache lines per 128B block
+//     (critical: removing PLD causes ~40% slowdown on dual-stream reads
+//     because hardware prefetcher can't keep up; mid-block PLDs at +64
+//     eliminate stalls on the second half of each block)
 //   - Early exit on first difference (checks each 64-byte half independently)
 //   - No conditional stores, no mask writes
 //
@@ -35,10 +37,15 @@ TEXT ·hasAnyChange(SB), NOSPLIT|NOFRAME, $0-13
 loop:
 	// Prefetch data ahead into cache hierarchy.
 	// Critical for Cortex-A7: dual-stream reads need software prefetch.
-	WORD	$0xF5D1F200	// PLD [R1, #512]  — prefetch src far (mem→L2)
-	WORD	$0xF5D0F200	// PLD [R0, #512]  — prefetch dst far (mem→L2)
-	WORD	$0xF5D1F100	// PLD [R1, #256]  — prefetch src near (L2→L1)
-	WORD	$0xF5D0F100	// PLD [R0, #256]  — prefetch dst near (L2→L1)
+	// Cover all 4 cache lines (32B each) of each 128B block at two distances.
+	WORD	$0xF5D1F200	// PLD [R1, #512]  — src block+4 byte 0
+	WORD	$0xF5D0F200	// PLD [R0, #512]  — dst block+4 byte 0
+	WORD	$0xF5D1F240	// PLD [R1, #576]  — src block+4 byte 64
+	WORD	$0xF5D0F240	// PLD [R0, #576]  — dst block+4 byte 64
+	WORD	$0xF5D1F100	// PLD [R1, #256]  — src block+2 byte 0
+	WORD	$0xF5D0F100	// PLD [R0, #256]  — dst block+2 byte 0
+	WORD	$0xF5D1F140	// PLD [R1, #320]  — src block+2 byte 64
+	WORD	$0xF5D0F140	// PLD [R0, #320]  — dst block+2 byte 64
 
 	// === First half (bytes 0-63) ===
 
