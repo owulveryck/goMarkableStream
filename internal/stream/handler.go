@@ -22,6 +22,9 @@ var (
 	// pressureThreshold defines the minimum pressure value to consider the pen as "touching"
 	// Values below this are considered "hovering" and should not trigger frame streaming
 	pressureThreshold int32 = 100
+	// penLiftCooldown is the grace period after pen lift during which we continue
+	// streaming to flush buffered frames and catch late xochitl renders.
+	penLiftCooldown = 300 * time.Millisecond
 )
 
 var rawFrameBuffer = sync.Pool{
@@ -133,6 +136,15 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	stopWriting := time.NewTicker(2 * time.Second)
 	defer stopWriting.Stop()
 
+	// Cooldown timer: after pen lift, keep streaming for a grace period
+	// to flush buffered frames and catch late xochitl renders.
+	cooldownTimer := time.NewTimer(0)
+	if !cooldownTimer.Stop() {
+		<-cooldownTimer.C
+	}
+	defer cooldownTimer.Stop()
+	cooldownActive := false
+
 	// Track current pressure value to distinguish hover from touch
 	var currentPressure int32
 
@@ -169,11 +181,19 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				writing = true
 				stopWriting.Reset(2000 * time.Millisecond)
+				// Cancel any pending pen-lift cooldown
+				if cooldownActive {
+					cooldownTimer.Stop()
+					cooldownActive = false
+				}
 			} else if writing && event.Source == events.Pen && currentPressure <= pressureThreshold {
-				// Pen lifted or hovering - stop writing immediately
-				debug.Log("Stream: writing paused (pen hover/lifted, pressure=%d)", currentPressure)
-				writing = false
-				asyncReader.Pause()
+				// Pen lifted or hovering - start cooldown instead of stopping immediately.
+				// This grace period flushes buffered frames and catches late xochitl renders.
+				if !cooldownActive {
+					debug.Log("Stream: pen lifted, starting cooldown (pressure=%d)", currentPressure)
+					cooldownTimer.Reset(penLiftCooldown)
+					cooldownActive = true
+				}
 			}
 		case <-stopWriting.C:
 			if writing {
@@ -181,10 +201,20 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				asyncReader.Pause()
 			}
 			writing = false
+			cooldownActive = false
+		case <-cooldownTimer.C:
+			if writing && cooldownActive {
+				debug.Log("Stream: writing paused (pen lift cooldown expired)")
+				writing = false
+				asyncReader.Pause()
+			}
+			cooldownActive = false
 		case <-ticker.C:
 			if writing {
 				if frameSize := h.fetchAndSendDeltaAsync(w, asyncReader); frameSize > 0 {
 					ticker.Reset(adaptRate(frameSize, rate*time.Millisecond))
+				} else {
+					ticker.Reset(rate * time.Millisecond)
 				}
 			}
 		}
