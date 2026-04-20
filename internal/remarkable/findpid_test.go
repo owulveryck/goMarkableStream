@@ -7,8 +7,10 @@ import (
 // TestFindXochitlPIDReturnsError tests that findXochitlPID returns an error
 // when the xochitl process is not found, rather than an empty string.
 func TestFindXochitlPIDReturnsError(t *testing.T) {
-	// This test is mainly for documentation and will likely skip on non-reMarkable hardware
-	// The important thing is that the function signature returns (string, error)
+	// Skip if not on reMarkable device
+	if !fileExists("/usr/bin/xochitl") {
+		t.Skip("Not on reMarkable device (xochitl binary not found), skipping test")
+	}
 
 	pid, err := findXochitlPID()
 
@@ -37,6 +39,11 @@ func TestFindXochitlPIDReturnsError(t *testing.T) {
 
 // TestFindXochitlPIDErrorMessage tests that the error message is descriptive.
 func TestFindXochitlPIDErrorMessage(t *testing.T) {
+	// Skip if not on reMarkable device
+	if !fileExists("/usr/bin/xochitl") {
+		t.Skip("Not on reMarkable device (xochitl binary not found), skipping test")
+	}
+
 	// Try to find xochitl
 	pid, err := findXochitlPID()
 

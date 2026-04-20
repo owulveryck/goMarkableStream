@@ -2,7 +2,6 @@ package remarkable
 
 import (
 	"errors"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -13,7 +12,7 @@ func findXochitlPID() (string, error) {
 	base := "/proc"
 	entries, err := os.ReadDir(base)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	for _, entry := range entries {
@@ -23,12 +22,12 @@ func findXochitlPID() (string, error) {
 		}
 		entries, err := os.ReadDir(filepath.Join(base, entry.Name()))
 		if err != nil {
-			log.Fatal(err)
+			continue
 		}
 		for _, entry := range entries {
 			info, err := entry.Info()
 			if err != nil {
-				log.Fatal(err)
+				continue
 			}
 			if info.Mode()&os.ModeSymlink != 0 {
 				orig, err := os.Readlink(filepath.Join(base, pid, entry.Name()))
