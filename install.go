@@ -85,7 +85,10 @@ ProtectSystem=strict
 ProtectHome=read-only
 PrivateTmp=true
 ReadWritePaths=/home/root/.config/goMarkableStream
-ReadWritePaths=/home/root/.tailscale
+# The '-' prefix makes systemd ignore this path when it does not exist.
+# Without it, the unit fails to start (namespace setup error) on devices that
+# never set up Tailscale and therefore have no /home/root/.tailscale directory.
+ReadWritePaths=-/home/root/.tailscale
 
 [Install]
 WantedBy=multi-user.target
