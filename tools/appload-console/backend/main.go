@@ -1,12 +1,29 @@
 //go:build linux
 
-// AppLoad backend that runs goMarkableStream and forwards its stdout+stderr
-// to the QML console frontend over the AppLoad unix SOCK_SEQPACKET socket.
+// AppLoad backend for the GMS Console app.
 //
-// AppLoad starts this binary with argv[1] = path of the unix socket to connect to.
-// Wire format (little-endian, matches src/protocol.h and the rust backend client):
+// It does NOT run goMarkableStream itself. Instead it manages the systemd
+// service that was created when you installed goMarkableStream on the device
+// (unit "goMarkableStream.service"). The frontend has four buttons which map to
+// the commands documented in the goMarkableStream README:
+//
+//   Start          -> systemctl start   goMarkableStream.service
+//   Stop           -> systemctl stop    goMarkableStream.service
+//   Restart        -> systemctl restart goMarkableStream.service
+//   Status & Logs  -> systemctl status  goMarkableStream.service --no-pager
+//                     journalctl -u     goMarkableStream.service -n 200 --no-pager
+//
+// The combined stdout+stderr of each command is forwarded to the QML window so
+// you see exactly what you would see running it from a terminal.
+//
+// Opening or closing this app has NO effect on the service: nothing is started
+// or stopped on launch/teardown. Only the buttons act on the service, and a
+// running service keeps running when you close the window.
+//
+// AppLoad starts this binary with argv[1] = path of the unix socket to connect
+// to. Wire format (little-endian, matches src/protocol.h and the rust client):
 //   header = { uint32 type ; uint32 length } followed by `length` payload bytes,
-//   each sent as its own SEQPACKET datagram.
+//   each sent as its own SOCK_SEQPACKET datagram.
 package main
 
 import (
@@ -16,38 +33,50 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 )
 
-// ---- EDIT THESE for your device -------------------------------------------
-// Absolute path to the goMarkableStream binary you already installed.
-// (Overridable at runtime with the GMS_BINARY env var.)
-const defaultBinary = "/home/root/xovi/exthome/appload/GoMarkableStream/gomarkablestream-RM2"
+// ---- Configuration --------------------------------------------------------
+// systemd unit that goMarkableStream's `-install` step creates. Override at
+// runtime with the GMS_SERVICE env var if you used a different unit name.
+const defaultService = "goMarkableStream.service"
 
-// Extra args passed to the binary, space-separated. Overridable with GMS_ARGS.
-const defaultArgs = ""
+// Number of recent journal lines shown by "Status & Logs".
+const journalLines = "200"
 
 // ---------------------------------------------------------------------------
 
 const (
-	msgAppendLine  uint32 = 1   // backend -> frontend
-	msgFullBuffer  uint32 = 2   // backend -> frontend
-	msgRequestBuf  uint32 = 100 // frontend -> backend
-	msgStop        uint32 = 101 // frontend -> backend
+	// backend -> frontend
+	msgAppendLine uint32 = 1
+	msgFullBuffer uint32 = 2
+
+	// frontend -> backend
+	msgRequestBuf uint32 = 100
+	msgStart      uint32 = 101
+	msgStop       uint32 = 102
+	msgRestart    uint32 = 103
+	msgStatus     uint32 = 104
+	msgClear      uint32 = 105
+
 	msgSysTerminate uint32 = 0xFFFFFFFF
 )
 
 var (
-	sockFd  int
-	sendMu  sync.Mutex
+	sockFd int
+	sendMu sync.Mutex
 
 	bufMu sync.Mutex
 	buf   strings.Builder
 
-	child   *exec.Cmd
-	childMu sync.Mutex
+	// Guards against overlapping commands (one systemctl action at a time).
+	busy int32
+
+	service = getenv("GMS_SERVICE", defaultService)
 )
 
 func main() {
@@ -67,16 +96,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	startChild()
+	appendLine(fmt.Sprintf("GMS Console — managing %q\n", service))
+	appendLine("Use the buttons above to control the service.\n")
+	// Show the current state on launch. This is read-only (no side effects).
+	dispatch(showStatus)
 
 	// Receive loop: react to frontend + system messages.
 	for {
 		mtype, _, err := recvMessage()
 		if err != nil {
-			// coordinator/frontend went away -> keep running in the background.
-			// AppLoad keeps the backend alive; a new frontend reconnects on relaunch.
+			// Frontend/coordinator went away. Keep the backend alive so a
+			// reopened window can reconnect; exit only on a hard socket close.
 			if err == io.EOF {
-				// Socket closed permanently only when AppLoad tears us down.
 				return
 			}
 			return
@@ -87,67 +118,109 @@ func main() {
 			snapshot := buf.String()
 			bufMu.Unlock()
 			_ = sendMessage(msgFullBuffer, snapshot)
-		case msgStop, msgSysTerminate:
-			killChild()
+		case msgStart:
+			dispatch(func() { run("Starting "+service, "systemctl", "start", service); showStatus() })
+		case msgStop:
+			dispatch(func() { run("Stopping "+service, "systemctl", "stop", service); showStatus() })
+		case msgRestart:
+			dispatch(func() { run("Restarting "+service, "systemctl", "restart", service); showStatus() })
+		case msgStatus:
+			dispatch(showStatus)
+		case msgClear:
+			bufMu.Lock()
+			buf.Reset()
+			bufMu.Unlock()
+			_ = sendMessage(msgFullBuffer, "")
+		case msgSysTerminate:
+			// AppLoad is tearing us down. Do NOT touch the service.
 			return
 		}
 	}
 }
 
-func startChild() {
-	binary := getenv("GMS_BINARY", defaultBinary)
-	argStr := getenv("GMS_ARGS", defaultArgs)
-	var args []string
-	if strings.TrimSpace(argStr) != "" {
-		args = strings.Fields(argStr)
+// dispatch runs a command function in the background, rejecting overlapping
+// commands so two buttons can't race on the same unit.
+func dispatch(fn func()) {
+	if !atomic.CompareAndSwapInt32(&busy, 0, 1) {
+		appendLine("[busy: a command is already running — please wait]\n")
+		return
+	}
+	go func() {
+		defer atomic.StoreInt32(&busy, 0)
+		fn()
+	}()
+}
+
+func showStatus() {
+	run("Status of "+service, "systemctl", "status", service, "--no-pager")
+	run("Recent logs", "journalctl", "-u", service, "-n", journalLines, "--no-pager")
+}
+
+// run executes a command and streams its combined stdout+stderr to the window.
+// A non-zero exit is reported but not treated as fatal (e.g. `systemctl status`
+// returns 3 when the unit is inactive — we still want to show its output).
+func run(title, name string, args ...string) {
+	appendLine(fmt.Sprintf("\n===== %s =====\n", title))
+	path := resolveTool(name)
+	appendLine(fmt.Sprintf("$ %s %s\n", name, strings.Join(args, " ")))
+	if path == "" {
+		appendLine(fmt.Sprintf("[error: %q not found on PATH]\n", name))
+		return
 	}
 
-	cmd := exec.Command(binary, args...)
+	cmd := exec.Command(path, args...)
 	pr, pw, err := os.Pipe()
 	if err != nil {
-		appendAndSend(fmt.Sprintf("failed to create pipe: %v\n", err))
+		appendLine(fmt.Sprintf("[error: pipe: %v]\n", err))
 		return
 	}
 	cmd.Stdout = pw
 	cmd.Stderr = pw
 
-	appendAndSend(fmt.Sprintf("$ %s %s\n", binary, argStr))
 	if err := cmd.Start(); err != nil {
-		appendAndSend(fmt.Sprintf("failed to start: %v\n", err))
+		appendLine(fmt.Sprintf("[error: start: %v]\n", err))
 		pw.Close()
 		pr.Close()
 		return
 	}
 	pw.Close() // parent keeps only the read end
 
-	childMu.Lock()
-	child = cmd
-	childMu.Unlock()
+	sc := bufio.NewScanner(pr)
+	sc.Buffer(make([]byte, 64*1024), 1024*1024)
+	for sc.Scan() {
+		appendLine(sc.Text() + "\n")
+	}
+	pr.Close()
 
-	go func() {
-		sc := bufio.NewScanner(pr)
-		sc.Buffer(make([]byte, 64*1024), 1024*1024)
-		for sc.Scan() {
-			appendAndSend(sc.Text() + "\n")
-		}
-		err := cmd.Wait()
-		if err != nil {
-			appendAndSend(fmt.Sprintf("[process exited: %v]\n", err))
+	if err := cmd.Wait(); err != nil {
+		if ee, ok := err.(*exec.ExitError); ok {
+			appendLine(fmt.Sprintf("[exit status %d]\n", ee.ExitCode()))
 		} else {
-			appendAndSend("[process exited normally]\n")
+			appendLine(fmt.Sprintf("[error: %v]\n", err))
 		}
-	}()
-}
-
-func killChild() {
-	childMu.Lock()
-	defer childMu.Unlock()
-	if child != nil && child.Process != nil {
-		_ = child.Process.Signal(syscall.SIGTERM)
+	} else {
+		appendLine("[ok]\n")
 	}
 }
 
-func appendAndSend(line string) {
+// resolveTool finds an executable, falling back to common absolute locations in
+// case AppLoad launches us with a minimal PATH.
+func resolveTool(name string) string {
+	if p, err := exec.LookPath(name); err == nil {
+		return p
+	}
+	for _, dir := range []string{"/bin", "/usr/bin", "/sbin", "/usr/sbin"} {
+		p := filepath.Join(dir, name)
+		if st, err := os.Stat(p); err == nil && !st.IsDir() {
+			return p
+		}
+	}
+	return ""
+}
+
+// appendLine appends to the retained buffer (for replay on reconnect) and
+// pushes the text to the frontend.
+func appendLine(line string) {
 	bufMu.Lock()
 	buf.WriteString(line)
 	// Cap the retained buffer so re-attach payloads stay small.

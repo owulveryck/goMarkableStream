@@ -12,7 +12,7 @@ echo "Building backend (linux/arm/v7 for reMarkable 2)..."
 ( cd "$ROOT/backend" && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -o "$DEST/backend/entry" . )
 
 echo "Packing resources.rcc..."
-rcc --binary -o "$DEST/resources.rcc" "$ROOT/application.qrc"
+"${RCC:-rcc}" --binary -o "$DEST/resources.rcc" "$ROOT/application.qrc"
 
 cp "$ROOT/manifest.json" "$DEST/"
 [ -f "$ROOT/icon.png" ] && cp "$ROOT/icon.png" "$DEST/"

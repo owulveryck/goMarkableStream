@@ -2,11 +2,14 @@ import QtQuick 2.5
 import QtQuick.Controls 2.5
 import net.asivery.AppLoad 1.0
 
-// Console window for goMarkableStream.
-// The backend spawns the real binary and forwards its stdout+stderr here.
+// GMS Console — control the goMarkableStream systemd service.
+//
+// The backend runs systemctl / journalctl and forwards their output here.
 // Message protocol (must match backend/main.go):
-//   backend -> frontend:  type 1 = append one line,  type 2 = full log buffer (on attach)
-//   frontend -> backend:  type 100 = request buffer, type 101 = stop stream + kill backend
+//   backend -> frontend:  type 1 = append text, type 2 = full log buffer (on attach)
+//   frontend -> backend:  100 = request buffer,
+//                         101 = start, 102 = stop, 103 = restart,
+//                         104 = status + logs, 105 = clear
 Rectangle {
     id: root
     anchors.fill: parent
@@ -25,7 +28,6 @@ Rectangle {
                 root.logText = contents;
             } else if (type === 1) {
                 root.logText += contents;
-                // keep the on-device buffer from growing without bound
                 if (root.logText.length > 200000)
                     root.logText = root.logText.slice(root.logText.length - 150000);
             }
@@ -37,25 +39,43 @@ Rectangle {
     // On (re)attach, ask the backend to replay whatever it has captured so far.
     Component.onCompleted: endpoint.sendMessage(100, "")
 
-    Row {
+    // A reusable flat button.
+    component ActionButton: Rectangle {
+        property alias text: label.text
+        signal clicked
+        width: 150
+        height: 64
+        color: "white"
+        border.width: 2
+        border.color: "black"
+        radius: 6
+        Text {
+            id: label
+            anchors.centerIn: parent
+            font.pointSize: 18
+        }
+        MouseArea {
+            anchors.fill: parent
+            onPressed: parent.color = "#dddddd"
+            onReleased: parent.color = "white"
+            onCanceled: parent.color = "white"
+            onClicked: parent.clicked()
+        }
+    }
+
+    Flow {
         id: controls
-        height: 70
-        spacing: 12
+        spacing: 10
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.margins: 10
 
-        Rectangle {
-            width: 220; height: 60; border.width: 2; border.color: "black"
-            Text { anchors.centerIn: parent; text: "Stop stream"; font.pointSize: 20 }
-            MouseArea { anchors.fill: parent; onClicked: endpoint.sendMessage(101, "") }
-        }
-        Rectangle {
-            width: 220; height: 60; border.width: 2; border.color: "black"
-            Text { anchors.centerIn: parent; text: "Clear log"; font.pointSize: 20 }
-            MouseArea { anchors.fill: parent; onClicked: root.logText = "" }
-        }
+        ActionButton { text: "Start";         onClicked: endpoint.sendMessage(101, "") }
+        ActionButton { text: "Stop";          onClicked: endpoint.sendMessage(102, "") }
+        ActionButton { text: "Restart";       onClicked: endpoint.sendMessage(103, "") }
+        ActionButton { text: "Status & Logs"; width: 200; onClicked: endpoint.sendMessage(104, "") }
+        ActionButton { text: "Clear";         onClicked: { root.logText = ""; endpoint.sendMessage(105, ""); } }
     }
 
     Rectangle {
@@ -81,9 +101,10 @@ Rectangle {
                 width: flick.width
                 wrapMode: Text.WrapAnywhere
                 font.family: "monospace"
-                font.pointSize: 14
+                font.pointSize: 13
                 textFormat: Text.PlainText
-                text: root.logText.length ? root.logText : "Waiting for goMarkableStream output..."
+                text: root.logText.length ? root.logText
+                        : "Ready. Tap a button to control the goMarkableStream service."
             }
         }
     }

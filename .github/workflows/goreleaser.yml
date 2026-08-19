@@ -17,6 +17,20 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
+      - name: Install Qt6 rcc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt6-base-dev-tools
+          RCC=$(command -v rcc || true)
+          if [ -z "$RCC" ]; then RCC=$(find /usr/lib/qt6 -name rcc -type f | head -n1); fi
+          echo "Using rcc at: $RCC"
+          echo "RCC=$RCC" >> "$GITHUB_ENV"
+      - name: Build AppLoad console app
+        run: |
+          cd tools/appload-console
+          ./build.sh
+          cd build
+          zip -r gms-console-RM2.zip gms-console
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
