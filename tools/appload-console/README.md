@@ -46,6 +46,7 @@ and forwards their output over the AppLoad socket.
 - `backend/main.go` — runs systemctl/journalctl, forwards output over the AppLoad socket
 - `build.ps1`       — Windows build
 - `build.sh`        — Linux/WSL/macOS build
+- `BUILD-macos.md`  — step-by-step macOS (Homebrew) build guide
 
 ## Configuration
 The unit name defaults to `goMarkableStream.service`. If you installed under a
@@ -73,13 +74,16 @@ Windows:
     # if rcc isn't on Windows, produce the rcc via WSL:
     #   wsl bash -c "rcc --binary -o build/gms-console/resources.rcc application.qrc"
 
-Linux/WSL/macOS:
+Linux/WSL:
 
     sudo apt install golang qt6-base-dev-tools
     ./build.sh
 
-Both produce `build/gms-console/` containing `manifest.json`, `resources.rcc`
-and `backend/entry`.
+macOS (Homebrew): see **[BUILD-macos.md](./BUILD-macos.md)** — `brew install go qt`,
+then point `$RCC` at Homebrew's `rcc` (it isn't on your `PATH`) and run `./build.sh`.
+
+All of these produce `build/gms-console/` containing `manifest.json`,
+`resources.rcc` and `backend/entry`.
 
 ## Install
     scp -r build/gms-console root@10.11.99.1:/home/root/xovi/exthome/appload/
