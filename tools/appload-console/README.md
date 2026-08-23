@@ -3,8 +3,8 @@
 `gms-console` is a small [AppLoad](https://github.com/asivery/rm-appload) (XOVI)
 application for the reMarkable that lets you **start, stop, restart and inspect**
 the `goMarkableStream` systemd service directly from the tablet — no SSH, no
-laptop. It shows the exact terminal output of each command (including
-`journalctl` logs) in a large, scrollable, resizable window.
+laptop. It shows a live service-state badge plus the exact terminal output of
+each command (including `journalctl` logs) in a large, scrollable window.
 
 It assumes goMarkableStream is already installed as a systemd service on the
 device (i.e. you ran the binary's `-install` step, or created the unit manually
@@ -21,9 +21,12 @@ goMarkableStream; it only talks to the existing `goMarkableStream.service` unit.
 | **Status & Logs** | `systemctl status goMarkableStream.service --no-pager` + `journalctl -u goMarkableStream.service -n 200 --no-pager` |
 | **Clear**       | clears the on-screen output |
 
-Start/Stop/Restart automatically re-run *Status & Logs* afterwards so you
-immediately see the result. The combined stdout+stderr of every command is
-streamed into the window, exactly as you'd see it from a shell.
+A **status badge** under the buttons summarises the service state at a glance
+(*running* / *not running* / *errored out* / *starting…*), backed by
+`systemctl is-active`. Start/Stop/Restart automatically refresh the badge and
+re-run *Status & Logs* so you immediately see the result. The combined
+stdout+stderr of every command is streamed into the window, exactly as you'd see
+it from a shell.
 
 **Opening or closing this app never touches the service.** Nothing is started or
 stopped on launch or teardown — only the buttons act. A running stream keeps
@@ -41,11 +44,12 @@ and forwards their output over the AppLoad socket.
 
 ## Files
 - `manifest.json`   — AppLoad native-app manifest (`loadsBackend`, `supportsScaling`)
-- `application.qrc` — lists the QML packed into `resources.rcc`
-- `ui/main.qml`     — the console window (buttons + scrolling output)
+- `application.qrc` — lists the QML + bundled font packed into `resources.rcc`
+- `ui/main.qml`     — the console window (buttons, status badge, scrolling output)
 - `backend/main.go` — runs systemctl/journalctl, forwards output over the AppLoad socket
+- `fonts/`          — bundled [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) (SIL OFL 1.1) used for the log view
 - `build.ps1`       — Windows build
-- `build.sh`        — Linux/WSL/macOS build
+- `build.sh`        — Linux/WSL/macOS build (auto-detects Qt6 `rcc`)
 - `BUILD-macos.md`  — step-by-step macOS (Homebrew) build guide
 
 ## Configuration
@@ -63,9 +67,9 @@ can also trigger it manually from the Actions tab ("Run workflow"). Tagged
 releases attach the same `gms-console-RM2.zip` next to the main binaries.
 
 ### Option B — build locally
-The backend cross-compiles with plain Go (no CGO). The QML is packed into
-`resources.rcc` with Qt6 `rcc` (output is not architecture-specific, so any
-machine with Qt6 works — Windows Qt, or `apt install qt6-base-dev-tools`).
+The backend cross-compiles with plain Go (no CGO). The QML and bundled font are
+packed into `resources.rcc` with Qt6 `rcc` (output is not architecture-specific,
+so any machine with Qt6 works).
 
 Windows:
 
@@ -79,8 +83,8 @@ Linux/WSL:
     sudo apt install golang qt6-base-dev-tools
     ./build.sh
 
-macOS (Homebrew): see **[BUILD-macos.md](./BUILD-macos.md)** — `brew install go qt`,
-then point `$RCC` at Homebrew's `rcc` (it isn't on your `PATH`) and run `./build.sh`.
+macOS (Homebrew): `brew install go qt`, then `./build.sh` — it auto-detects
+`rcc` inside Homebrew. See **[BUILD-macos.md](./BUILD-macos.md)** for details.
 
 All of these produce `build/gms-console/` containing `manifest.json`,
 `resources.rcc` and `backend/entry`.
@@ -93,7 +97,8 @@ or reboot. A "GMS Console" icon appears in AppLoad.
 ## Use
 - **Windowed (not fullscreen):** long-press the GMS Console icon in AppLoad.
 - Tap **Start / Stop / Restart** to control the service, or **Status & Logs** to
-  see its state and recent journal output.
+  see its state and recent journal output. The badge under the buttons shows the
+  current state.
 - **Hide / background:** tap the `_` (minimize) button in the window title bar;
   the service is unaffected. Tap `_` again to restore.
 
