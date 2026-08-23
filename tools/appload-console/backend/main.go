@@ -4,8 +4,8 @@
 //
 // It does NOT run goMarkableStream itself. Instead it manages the systemd
 // service that was created when you installed goMarkableStream on the device
-// (unit "goMarkableStream.service"). The frontend has four buttons which map to
-// the commands documented in the goMarkableStream README:
+// (unit "goMarkableStream.service"). The frontend has buttons which map to the
+// commands documented in the goMarkableStream README:
 //
 //   Start          -> systemctl start   goMarkableStream.service
 //   Stop           -> systemctl stop    goMarkableStream.service
@@ -13,21 +13,23 @@
 //   Status & Logs  -> systemctl status  goMarkableStream.service --no-pager
 //                     journalctl -u     goMarkableStream.service -n 200 --no-pager
 //
-// The combined stdout+stderr of each command is forwarded to the QML window so
-// you see exactly what you would see running it from a terminal.
+// It also reports a one-word service state ("active"/"inactive"/"failed"/...)
+// via `systemctl is-active` so the frontend can show a status summary.
 //
 // Opening or closing this app has NO effect on the service: nothing is started
 // or stopped on launch/teardown. Only the buttons act on the service, and a
 // running service keeps running when you close the window.
 //
 // AppLoad starts this binary with argv[1] = path of the unix socket to connect
-// to. Wire format (little-endian, matches src/protocol.h and the rust client):
-//   header = { uint32 type ; uint32 length } followed by `length` payload bytes,
-//   each sent as its own SOCK_SEQPACKET datagram.
+// to. Wire format (little-endian, matches src/protocol.h and management.cpp):
+//   header = { int32 type ; int32 length }, sent as one SOCK_SEQPACKET datagram,
+//   followed by the payload as a SECOND datagram. NOTE: the AppLoad coordinator
+//   ALWAYS sends that second datagram even when length == 0, so we must always
+//   consume exactly one payload datagram per message. Only a zero-length read of
+//   the *header* means the peer actually closed.
 package main
 
 import (
-	"bufio"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -52,8 +54,9 @@ const journalLines = "200"
 
 const (
 	// backend -> frontend
-	msgAppendLine uint32 = 1
-	msgFullBuffer uint32 = 2
+	msgAppendLine    uint32 = 1
+	msgFullBuffer    uint32 = 2
+	msgStatusSummary uint32 = 3
 
 	// frontend -> backend
 	msgRequestBuf uint32 = 100
@@ -63,7 +66,7 @@ const (
 	msgStatus     uint32 = 104
 	msgClear      uint32 = 105
 
-	msgSysTerminate uint32 = 0xFFFFFFFF
+	msgSysTerminate uint32 = 0xFFFFFFFF // -1 as int32 (MESSAGE_SYSTEM_TERMINATE)
 )
 
 var (
@@ -96,17 +99,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	appendLine(fmt.Sprintf("GMS Console — managing %q\n", service))
-	appendLine("Use the buttons above to control the service.\n")
+	emit(fmt.Sprintf("GMS Console — managing %q\n", service))
+	emit("Use the buttons above to control the service.\n")
 	// Show the current state on launch. This is read-only (no side effects).
-	dispatch(showStatus)
+	dispatch(refresh)
 
 	// Receive loop: react to frontend + system messages.
 	for {
 		mtype, _, err := recvMessage()
 		if err != nil {
-			// Frontend/coordinator went away. Keep the backend alive so a
-			// reopened window can reconnect; exit only on a hard socket close.
+			// Peer actually closed. Do NOT touch the service; just exit.
 			if err == io.EOF {
 				return
 			}
@@ -118,19 +120,22 @@ func main() {
 			snapshot := buf.String()
 			bufMu.Unlock()
 			_ = sendMessage(msgFullBuffer, snapshot)
+			// Refresh the status badge for the (re)attached frontend.
+			go updateSummary()
 		case msgStart:
-			dispatch(func() { run("Starting "+service, "systemctl", "start", service); showStatus() })
+			dispatch(func() { run("Starting "+service, "systemctl", "start", service); refresh() })
 		case msgStop:
-			dispatch(func() { run("Stopping "+service, "systemctl", "stop", service); showStatus() })
+			dispatch(func() { run("Stopping "+service, "systemctl", "stop", service); refresh() })
 		case msgRestart:
-			dispatch(func() { run("Restarting "+service, "systemctl", "restart", service); showStatus() })
+			dispatch(func() { run("Restarting "+service, "systemctl", "restart", service); refresh() })
 		case msgStatus:
-			dispatch(showStatus)
+			dispatch(refresh)
 		case msgClear:
 			bufMu.Lock()
 			buf.Reset()
 			bufMu.Unlock()
 			_ = sendMessage(msgFullBuffer, "")
+			go updateSummary()
 		case msgSysTerminate:
 			// AppLoad is tearing us down. Do NOT touch the service.
 			return
@@ -142,7 +147,7 @@ func main() {
 // commands so two buttons can't race on the same unit.
 func dispatch(fn func()) {
 	if !atomic.CompareAndSwapInt32(&busy, 0, 1) {
-		appendLine("[busy: a command is already running — please wait]\n")
+		emit("[busy: a command is already running — please wait]\n")
 		return
 	}
 	go func() {
@@ -151,55 +156,52 @@ func dispatch(fn func()) {
 	}()
 }
 
-func showStatus() {
+// refresh updates the status badge and prints status + recent logs.
+func refresh() {
+	updateSummary()
 	run("Status of "+service, "systemctl", "status", service, "--no-pager")
 	run("Recent logs", "journalctl", "-u", service, "-n", journalLines, "--no-pager")
 }
 
-// run executes a command and streams its combined stdout+stderr to the window.
+// updateSummary reports a one-word service state to the frontend badge.
+func updateSummary() {
+	state := "unknown"
+	if path := resolveTool("systemctl"); path != "" {
+		// `is-active` prints the state word to stdout even on a non-zero exit.
+		out, _ := exec.Command(path, "is-active", service).Output()
+		if s := strings.TrimSpace(string(out)); s != "" {
+			state = s
+		}
+	}
+	_ = sendMessage(msgStatusSummary, state)
+}
+
+// run executes a command and sends its combined stdout+stderr to the window.
 // A non-zero exit is reported but not treated as fatal (e.g. `systemctl status`
 // returns 3 when the unit is inactive — we still want to show its output).
 func run(title, name string, args ...string) {
-	appendLine(fmt.Sprintf("\n===== %s =====\n", title))
+	emit(fmt.Sprintf("\n===== %s =====\n$ %s %s\n", title, name, strings.Join(args, " ")))
 	path := resolveTool(name)
-	appendLine(fmt.Sprintf("$ %s %s\n", name, strings.Join(args, " ")))
 	if path == "" {
-		appendLine(fmt.Sprintf("[error: %q not found on PATH]\n", name))
+		emit(fmt.Sprintf("[error: %q not found on PATH]\n", name))
 		return
 	}
 
-	cmd := exec.Command(path, args...)
-	pr, pw, err := os.Pipe()
+	out, err := exec.Command(path, args...).CombinedOutput()
+	if len(out) > 0 {
+		emit(string(out))
+		if out[len(out)-1] != '\n' {
+			emit("\n")
+		}
+	}
 	if err != nil {
-		appendLine(fmt.Sprintf("[error: pipe: %v]\n", err))
-		return
-	}
-	cmd.Stdout = pw
-	cmd.Stderr = pw
-
-	if err := cmd.Start(); err != nil {
-		appendLine(fmt.Sprintf("[error: start: %v]\n", err))
-		pw.Close()
-		pr.Close()
-		return
-	}
-	pw.Close() // parent keeps only the read end
-
-	sc := bufio.NewScanner(pr)
-	sc.Buffer(make([]byte, 64*1024), 1024*1024)
-	for sc.Scan() {
-		appendLine(sc.Text() + "\n")
-	}
-	pr.Close()
-
-	if err := cmd.Wait(); err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
-			appendLine(fmt.Sprintf("[exit status %d]\n", ee.ExitCode()))
+			emit(fmt.Sprintf("[exit status %d]\n", ee.ExitCode()))
 		} else {
-			appendLine(fmt.Sprintf("[error: %v]\n", err))
+			emit(fmt.Sprintf("[error: %v]\n", err))
 		}
 	} else {
-		appendLine("[ok]\n")
+		emit("[ok]\n")
 	}
 }
 
@@ -218,19 +220,31 @@ func resolveTool(name string) string {
 	return ""
 }
 
-// appendLine appends to the retained buffer (for replay on reconnect) and
-// pushes the text to the frontend.
-func appendLine(line string) {
+// emit appends to the retained buffer (for replay on reconnect) and pushes the
+// text to the frontend, split into datagrams small enough for the socket.
+func emit(text string) {
 	bufMu.Lock()
-	buf.WriteString(line)
-	// Cap the retained buffer so re-attach payloads stay small.
-	if buf.Len() > 200000 {
+	buf.WriteString(text)
+	if buf.Len() > 200000 { // cap retained buffer so re-attach payloads stay small
 		s := buf.String()
 		buf.Reset()
 		buf.WriteString(s[len(s)-150000:])
 	}
 	bufMu.Unlock()
-	_ = sendMessage(msgAppendLine, line)
+
+	const maxChunk = 8000
+	for len(text) > 0 {
+		n := len(text)
+		if n > maxChunk {
+			n = maxChunk
+			// Prefer to break at a newline so we never split a UTF-8 rune.
+			if i := strings.LastIndexByte(text[:n], '\n'); i > 0 {
+				n = i + 1
+			}
+		}
+		_ = sendMessage(msgAppendLine, text[:n])
+		text = text[n:]
+	}
 }
 
 func getenv(key, def string) string {
@@ -267,16 +281,27 @@ func recvMessage() (uint32, string, error) {
 		return 0, "", err
 	}
 	if n == 0 {
-		return 0, "", io.EOF
+		return 0, "", io.EOF // peer closed the connection
+	}
+	if n < 8 {
+		return 0, "", fmt.Errorf("short header read: %d bytes", n)
 	}
 	mtype := binary.LittleEndian.Uint32(header[0:4])
 	length := binary.LittleEndian.Uint32(header[4:8])
-	if length == 0 {
-		return mtype, "", nil
+
+	// The coordinator always sends a payload datagram after the header, even
+	// when length == 0. We must consume exactly one datagram to stay in sync;
+	// otherwise a stray zero-length datagram is later misread as EOF and the
+	// backend exits, closing the app. SEQPACKET needs a >=1-byte buffer to
+	// actually dequeue a zero-length datagram.
+	bufLen := int(length)
+	if bufLen == 0 {
+		bufLen = 1
 	}
-	payload := make([]byte, length)
-	if _, err := syscall.Read(sockFd, payload); err != nil {
-		return 0, "", err
+	payload := make([]byte, bufLen)
+	pn, perr := syscall.Read(sockFd, payload)
+	if perr != nil {
+		return 0, "", perr
 	}
-	return mtype, string(payload), nil
+	return mtype, string(payload[:pn]), nil
 }
