@@ -33,3 +33,12 @@ build-remarkable-paper-pro: build
 .PHONY: build-remarkable-paper-pro-trace
 build-remarkable-paper-pro-trace: GOARCH=arm64
 build-remarkable-paper-pro-trace: build-with-trace
+
+# reMarkable Paper Pro Move builds (without Tailscale).
+.PHONY: build-remarkable-paper-pro-move-step1
+build-remarkable-paper-pro-move-step1:
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -tags rmmove -o goMarkableStream-RMMOVE-step1 .
+
+.PHONY: build-remarkable-paper-pro-move
+build-remarkable-paper-pro-move:
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -tags rmmove -ldflags="-s -w" -o goMarkableStream-RMMOVE .

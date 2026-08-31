@@ -3,16 +3,20 @@
 package remarkable
 
 import (
+	"fmt"
 	"io"
 	"os"
+	"sync"
 
 	"github.com/owulveryck/goMarkableStream/internal/trace"
 )
 
 // FramebufferReader wraps an os.File to provide framebuffer reading with proper cleanup.
 type FramebufferReader struct {
-	file   *os.File
-	closed bool
+	file    *os.File
+	closed  bool
+	mu      sync.Mutex
+	scratch []byte
 }
 
 // ReadAt implements io.ReaderAt interface.
@@ -25,7 +29,35 @@ func (r *FramebufferReader) ReadAt(p []byte, off int64) (n int, err error) {
 		})
 	}()
 
-	return r.file.ReadAt(p, off)
+	if FramebufferStorageWidth == ScreenWidth {
+		return r.file.ReadAt(p, off)
+	}
+
+	if len(p) != ScreenSizeBytes {
+		return 0, fmt.Errorf("padded framebuffer read requires %d-byte destination, got %d", ScreenSizeBytes, len(p))
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	storageSize := FramebufferStorageWidth * ScreenHeight * BytesPerPixelBGRA
+	if len(r.scratch) != storageSize {
+		r.scratch = make([]byte, storageSize)
+	}
+	if _, err := r.file.ReadAt(r.scratch, off); err != nil {
+		return 0, err
+	}
+
+	if err := copyVisibleRows(
+		p,
+		r.scratch,
+		ScreenWidth*BytesPerPixelBGRA,
+		FramebufferStorageWidth*BytesPerPixelBGRA,
+		ScreenHeight,
+	); err != nil {
+		return 0, err
+	}
+	return len(p), nil
 }
 
 // Close closes the underlying file handle. Safe to call multiple times.

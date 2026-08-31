@@ -150,6 +150,12 @@ func main() {
 
 	dbg.Enabled = c.Debug
 
+	deviceModel, deviceName, err := remarkable.DetectDevice()
+	if err != nil {
+		log.Fatalf("Device detection failed: %v", err)
+	}
+	log.Printf("Device detected: %s (%s)", deviceModel, deviceName)
+
 	// Initialize JWT manager if enabled
 	if c.JWTEnabled {
 		tokenLifetime, err := time.ParseDuration(c.JWTTokenLifetime)
@@ -198,6 +204,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("Framebuffer located at %#x", pointerAddr)
+
+	firstFrame := make([]byte, remarkable.Config.SizeBytes)
+	if _, err := file.ReadAt(firstFrame, pointerAddr); err != nil {
+		log.Fatalf("First frame read failed: %v", err)
+	}
+	log.Printf("First frame read: %d bytes", len(firstFrame))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

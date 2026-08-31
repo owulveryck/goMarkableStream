@@ -10,6 +10,8 @@ const (
 	Remarkable2
 	// RemarkablePaperPro represents the reMarkable Paper Pro device
 	RemarkablePaperPro
+	// RemarkablePaperProMove represents the reMarkable Paper Pro Move device
+	RemarkablePaperProMove
 )
 
 func (d DeviceModel) String() string {
@@ -18,6 +20,8 @@ func (d DeviceModel) String() string {
 		return "Remarkable2"
 	case RemarkablePaperPro:
 		return "RemarkablePaperPro"
+	case RemarkablePaperProMove:
+		return "RemarkablePaperProMove"
 	default:
 		return "UnknownDevice"
 	}

@@ -1,4 +1,4 @@
-//go:build arm64
+//go:build arm64 && !rmmove
 
 package remarkable
 
@@ -11,6 +11,8 @@ const (
 	ScreenHeight = 2154
 
 	ScreenSizeBytes = ScreenWidth * ScreenHeight * 4
+
+	FramebufferStorageWidth = ScreenWidth
 
 	// These values are from Max values of /dev/input/event2 (ABS_X and ABS_Y)
 	MaxXValue = 11180

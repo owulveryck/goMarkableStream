@@ -34,7 +34,7 @@ func init() {
 		BytesPerPixel:  ScreenSizeBytes / (ScreenWidth * ScreenHeight),
 		SizeBytes:      ScreenSizeBytes,
 		PointerOffset:  0,
-		UseBGRA:        Model == RemarkablePaperPro,
-		TextureFlipped: Model == RemarkablePaperPro,
+		UseBGRA:        Model == RemarkablePaperPro || Model == RemarkablePaperProMove,
+		TextureFlipped: Model == RemarkablePaperPro || Model == RemarkablePaperProMove,
 	}
 }

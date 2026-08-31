@@ -31,6 +31,8 @@ internal/client/memprofileImageH6.out
 server/htdocs/assets/toEpub.wasm
 client/htdocs/assets/toEpub.wasm
 goMarkableStream
+goMarkableStream-RMMOVE
+goMarkableStream-RMMOVE-step1
 testServer.arm
 testdata/36.raw
 ./dist

@@ -5,7 +5,7 @@ portrait = portrait !== null ? portrait === 'true' : false;
 
 defaultFlip = false;
 // If this is the Paper Pro, we don't need to flip the image.
-if (DeviceModel === 'RemarkablePaperPro') {
+if (DeviceModel === 'RemarkablePaperPro' || DeviceModel === 'RemarkablePaperProMove') {
 	defaultFlip = false;
 }
 let flip = getBoolQueryParam('flip', defaultFlip);
