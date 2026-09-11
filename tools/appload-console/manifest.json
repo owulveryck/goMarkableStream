@@ -1,0 +1,8 @@
+{
+    "name": "GMS Console",
+    "id": "gms-console",
+    "loadsBackend": true,
+    "entry": "/ui/main.qml",
+    "supportsScaling": true,
+    "canHaveMultipleFrontends": false
+}

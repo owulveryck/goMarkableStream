@@ -1,0 +1,7 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <file>ui/main.qml</file>
+        <file>fonts/JetBrainsMono-Regular.ttf</file>
+    </qresource>
+</RCC>

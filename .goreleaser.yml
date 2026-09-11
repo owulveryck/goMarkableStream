@@ -74,3 +74,7 @@ release:
   github:
     owner: owulveryck
     name: gomarkablestream
+  # Attach the GMS Console AppLoad app (built in the workflow before goreleaser
+  # runs) alongside the main binaries.
+  extra_files:
+    - glob: ./tools/appload-console/build/gms-console-RM2.zip

@@ -1,0 +1,51 @@
+name: appload-console
+
+# Builds the GMS Console AppLoad app (tools/appload-console) and uploads it as a
+# downloadable artifact so you can grab it from the Actions run, install it on
+# the reMarkable and test — no local Go/Qt toolchain required.
+on:
+  push:
+    paths:
+      - "tools/appload-console/**"
+      - ".github/workflows/appload-console.yml"
+  pull_request:
+    paths:
+      - "tools/appload-console/**"
+      - ".github/workflows/appload-console.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+
+      - name: Install Qt6 rcc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt6-base-dev-tools
+          RCC=$(command -v rcc || true)
+          if [ -z "$RCC" ]; then RCC=$(find /usr/lib/qt6 -name rcc -type f | head -n1); fi
+          echo "Using rcc at: $RCC"
+          echo "RCC=$RCC" >> "$GITHUB_ENV"
+
+      - name: Build app bundle
+        working-directory: tools/appload-console
+        run: ./build.sh
+
+      - name: Package bundle
+        working-directory: tools/appload-console/build
+        run: zip -r gms-console-RM2.zip gms-console
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gms-console
+          path: tools/appload-console/build/gms-console-RM2.zip
+          if-no-files-found: error
