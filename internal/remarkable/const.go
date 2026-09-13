@@ -14,6 +14,8 @@ const (
 	// ScreenSizeBytes is the total memory size of the screen buffer in bytes
 	ScreenSizeBytes = ScreenWidth * ScreenHeight * 2
 
+	FramebufferStorageWidth = ScreenWidth
+
 	// MaxXValue represents the maximum X coordinate value from /dev/input/event1 (ABS_X)
 	MaxXValue = 15725
 	// MaxYValue represents the maximum Y coordinate value from /dev/input/event1 (ABS_Y)

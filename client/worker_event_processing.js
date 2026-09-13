@@ -68,7 +68,7 @@ async function initiateEventsListener() {
 			// Device-specific coordinate transformations
 			// RM2 (landscape native): Code 0=Y-axis, Code 1=X-axis
 			// RMPP (portrait native): Code 0=X-axis, Code 1=Y-axis
-			if (deviceModel === "RemarkablePaperPro") {
+			if (deviceModel === "RemarkablePaperPro" || deviceModel === "RemarkablePaperProMove") {
 				// RMPP transformations
 				if (portrait) {
 					// this is landscape
