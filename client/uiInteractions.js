@@ -21,8 +21,11 @@ function loadSavedPreferences() {
             portrait = isPortrait;
             const rotateBtn = document.getElementById('rotate');
             rotateBtn.classList.toggle('toggled', portrait);
-            rotateBtn.setAttribute('aria-pressed', portrait.toString());
-            eventWorker.postMessage({ type: 'portrait', portrait: portrait });
+            let effectivePortrait = portrait;
+            if (DeviceModel === 'Remarkable1') {
+                effectivePortrait = !portrait;
+            }
+            eventWorker.postMessage({ type: 'portrait', portrait: effectivePortrait });
             resizeVisibleCanvas();
             redrawScene(portrait, 1);
         }
@@ -298,8 +301,13 @@ document.addEventListener('keydown', function(e) {
 document.getElementById('rotate').addEventListener('click', function () {
     portrait = !portrait;
     this.classList.toggle('toggled');
+    // For rM1 (natively portrait), invert portrait flag for rmview event handling
+    let effectivePortrait = portrait;
+    if (DeviceModel === 'Remarkable1') {
+        effectivePortrait = !portrait;
+    }
     this.setAttribute('aria-pressed', portrait.toString());
-    eventWorker.postMessage({ type: 'portrait', portrait: portrait });
+    eventWorker.postMessage({ type: 'portrait', portrait: effectivePortrait });
     resizeVisibleCanvas();
     redrawScene(portrait, 1);
 
@@ -309,6 +317,28 @@ document.getElementById('rotate').addEventListener('click', function () {
     // Show confirmation message
     showMessage(`Display ${portrait ? 'portrait' : 'landscape'} mode activated`, MessageDuration.QUICK);
 });
+
+// Show colors button if Remarkable 1
+if (DeviceModel === 'Remarkable1') {
+    const colorsMenuItem = document.getElementById('colorsMenuItem');
+    if (colorsMenuItem) {
+        colorsMenuItem.style.display = 'block';
+    }
+}
+
+// Colors button functionality
+const colorsBtn = document.getElementById('colors');
+if (colorsBtn) {
+    colorsBtn.addEventListener('click', function () {
+        withColor = !withColor;
+        this.classList.toggle('toggled');
+        this.setAttribute('aria-pressed', withColor.toString());
+        streamWorker.postMessage({ type: 'withColorChanged', withColor: withColor });
+        
+        // Show confirmation message
+        showMessage(`${withColor ? 'Color' : 'Grayscale'} mode enabled`, MessageDuration.QUICK);
+    });
+}
 
 // Sidebar hover effect (desktop)
 const sidebar = document.querySelector('.sidebar');

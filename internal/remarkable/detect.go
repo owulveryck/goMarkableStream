@@ -30,6 +30,18 @@ const (
 	newFormatPointerOffset = int64(2629632)
 )
 
+func isRemarkable1() bool {
+	data, err := os.ReadFile("/proc/device-tree/model")
+	if err != nil {
+		data, err = os.ReadFile("/sys/devices/soc0/machine")
+		if err != nil {
+			return false
+		}
+	}
+	model := strings.TrimRight(string(data), "\x00")
+	return strings.Contains(model, "Prototype 1") || strings.Contains(model, "reMarkable 1")
+}
+
 // DetectFirmwareFormat detects which framebuffer format is in use based on firmware version.
 // Returns FormatNew for firmware >= 3.24, FormatLegacy otherwise.
 func DetectFirmwareFormat() FramebufferFormat {
@@ -86,9 +98,31 @@ func parseFirmwareVersion(path string) (major, minor int, err error) {
 	return 0, 0, os.ErrNotExist
 }
 
-// initConfigForFirmware updates the runtime Config based on detected firmware format.
-// This should be called during initialization on RM2 devices.
+// initConfigForFirmware updates the runtime Config based on detected device model and firmware format.
+// This is called during initialization on !arm64 devices.
 func initConfigForFirmware() {
+	if isRemarkable1() {
+		log.Println("Detected reMarkable 1")
+		Model = Remarkable1
+		ScreenWidth = 1408 // 1404 visible + 4 pixels stride padding
+		ScreenHeight = 1872
+		ScreenSizeBytes = ScreenWidth * ScreenHeight * 2
+		MaxXValue = 15725
+		MaxYValue = 20966
+		PenInputDevice = "/dev/input/event0"
+		TouchInputDevice = "/dev/input/event2"
+		Config = FramebufferConfig{
+			Width:          ScreenWidth,
+			Height:         ScreenHeight,
+			BytesPerPixel:  2,
+			SizeBytes:      ScreenSizeBytes,
+			PointerOffset:  0,
+			UseBGRA:        false,
+			TextureFlipped: false,
+		}
+		return
+	}
+
 	format := DetectFirmwareFormat()
 
 	switch format {

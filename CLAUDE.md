@@ -9,6 +9,12 @@ goMarkableStream is a Go application that streams reMarkable tablet screens to w
 ## Build Commands
 
 ```bash
+# Build for reMarkable 1 (ARM, GOARM=7) - standard
+make build-remarkable-1
+
+# Build for reMarkable 1 with tracing support
+make build-remarkable-1-trace
+
 # Build for reMarkable 2 (ARM, GOARM=7) - standard
 make build-remarkable-2
 
@@ -58,6 +64,7 @@ go test ./...
 - Platform detection via `arm`/`arm64`/`!linux` tags
 
 ### Device Differences
+- **RM1**: 1872x1404, 16-bit RGB565 via `/dev/fb0`, ARM (GOARM=7)
 - **RM2**: 1872x1404, 16-bit grayscale, ARM (GOARM=7)
 - **Paper Pro**: 2160x1620, 32-bit BGRA, ARM64
 

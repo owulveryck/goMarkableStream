@@ -2,7 +2,7 @@
 
 package remarkable
 
-const (
+var (
 	Model = RemarkablePaperPro
 
 	// ScreenWidth of the remarkable paper pro
