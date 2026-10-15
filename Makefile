@@ -14,7 +14,13 @@ build-with-trace:
 	@echo "Building with trace support for GOOS=${GOOS}, GOARCH=${GOARCH}"
 	go build -v -trimpath -tags "tailscale,trace" -ldflags="-s -w" .
 
-# reMarkable 2 builds
+# reMarkable 1 and 2 builds
+.PHONY: build-remarkable-1
+build-remarkable-1: build-remarkable-2
+
+.PHONY: build-remarkable-1-trace
+build-remarkable-1-trace: build-remarkable-2-trace
+
 .PHONY: build-remarkable-2
 build-remarkable-2: GOARCH=arm
 build-remarkable-2: GOARM=7

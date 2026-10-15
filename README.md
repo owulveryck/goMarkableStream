@@ -31,6 +31,7 @@ Its primary goal is to enable users to stream their reMarkable tablet screen to 
 - reMarkable 2 with firmware 3.24+
 
 **Experimental (not actively tested):**
+- reMarkable 1 - initial support
 - reMarkable Paper Pro - initial support, some features may not work as expected
 
 ## Version Support
@@ -83,13 +84,13 @@ Each release provides four binary variants:
 | Binary | Device | Tailscale Support |
 |--------|--------|-------------------|
 | `gomarkablestream-RMPRO` | reMarkable Paper Pro (arm64) | Yes |
-| `gomarkablestream-RM2` | reMarkable 2 (arm) | Yes |
+| `gomarkablestream-RM2` | reMarkable 1 and reMarkable 2 (arm) | Yes |
 | `gomarkablestream-RMPRO-lite` | reMarkable Paper Pro (arm64) | No |
-| `gomarkablestream-RM2-lite` | reMarkable 2 (arm) | No |
+| `gomarkablestream-RM2-lite` | reMarkable 1 and reMarkable 2 (arm) | No |
 
 **Which binary should I use?**
 - Use `RMPRO` variants for reMarkable Paper Pro
-- Use `RM2` variants for reMarkable 2
+- Use `RM2` variants for reMarkable 1 and reMarkable 2
 - Use `-lite` variants if you don't need Tailscale remote access (smaller binary size)
 
 ## Quick Start
@@ -101,7 +102,7 @@ ssh root@10.11.99.1
 
 2. Download and run (choose your device):
 ```bash
-# Set your device: RM2 for reMarkable 2, RMPRO for Paper Pro
+# Set your device: RM2 for reMarkable 1 and 2, RMPRO for Paper Pro
 DEVICE=RM2
 
 # Download latest version
@@ -125,7 +126,7 @@ To update to a new version, use the built-in download command: `./goMarkableStre
 If you get errors such as `wget: note: TLS certificate validation not implemented`, download goMarkableStream on your local computer and copy it over:
 
 ```bash
-# On your local computer (set DEVICE to RM2 or RMPRO)
+# On your local computer (set DEVICE to RM2 for reMarkable 1 and 2, or RMPRO)
 DEVICE=RM2
 VERSION=$(wget -q -O - https://api.github.com/repos/owulveryck/goMarkableStream/releases/latest | grep tag_name | awk -F\" '{print $4}')
 wget -O goMarkableStream https://github.com/owulveryck/goMarkableStream/releases/download/$VERSION/gomarkablestream-$DEVICE
@@ -221,6 +222,7 @@ Configure the application via environment variables:
 - `RK_SERVER_PASSWORD`: (String, default: `password`) Password for server access.
 - `RK_HTTPS`: (True/False, default: `true`) Enable or disable HTTPS.
 - `RK_DEV_MODE`: (True/False, default: `false`) Enable or disable developer mode.
+- `RK_RLE_COMPRESSION`: (True/False, default: `true`) Enable or disable RLE compression (enabled by default, required for reMarkable 1).
 - `RK_DELTA_THRESHOLD`: (Float, default: `0.30`) Change ratio threshold (0.0-1.0) above which a full frame is sent instead of delta.
 
 ### Tailscale Configuration
@@ -334,7 +336,9 @@ This application exposes an HTTP server with several endpoints.
 
 ### Implementation
 
-The image data is read directly from the main process's memory as a BGRA byte array.
+The image data is read directly from:
+- **reMarkable 1**: Direct `/dev/fb0` framebuffer reading (RGB565 format).
+- **reMarkable 2 & Paper Pro**: The main process's memory (`xochitl`) as a BGRA byte array.
 
 **Delta Compression**: The streaming uses delta encoding to minimize bandwidth:
 - Only changed pixels are sent between frames (typically 1-5% for e-ink usage)

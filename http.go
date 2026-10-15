@@ -43,6 +43,7 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 	mux.HandleFunc("/login", handleLogin(jwtMgr))
 
 	streamHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher, c.DeltaThreshold)
+	streamHandler.UseRLE = remarkable.Model == remarkable.Remarkable1 && c.RLECompression
 	mux.Handle("/stream", stream.ThrottlingMiddleware(streamHandler))
 
 	// Register idle callback to release memory when streaming ends
@@ -271,7 +272,9 @@ func newIndexHandler(fs http.FileSystem, jwtEnabled bool) http.HandlerFunc {
 		ScreenHeight   int
 		MaxXValue      int
 		MaxYValue      int
+		UseRLE         bool
 		DeviceModel    string
+		BytesPerPixel  int
 		UseBGRA        bool
 		TextureFlipped bool
 		JWTEnabled     bool
@@ -280,7 +283,9 @@ func newIndexHandler(fs http.FileSystem, jwtEnabled bool) http.HandlerFunc {
 		ScreenHeight:   remarkable.Config.Height,
 		MaxXValue:      remarkable.MaxXValue,
 		MaxYValue:      remarkable.MaxYValue,
+		UseRLE:         remarkable.Model == remarkable.Remarkable1 && c.RLECompression,
 		DeviceModel:    remarkable.Model.String(),
+		BytesPerPixel:  remarkable.Config.BytesPerPixel,
 		UseBGRA:        remarkable.Config.UseBGRA,
 		TextureFlipped: remarkable.Config.TextureFlipped,
 		JWTEnabled:     jwtEnabled,

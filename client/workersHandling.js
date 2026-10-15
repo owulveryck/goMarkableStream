@@ -121,6 +121,9 @@ function initStreamWorker() {
 		width: screenWidth,
 		height: screenHeight,
 		rate: rate,
+		withColor: withColor,
+		useRLE: UseRLE,
+		bytesPerPixel: BytesPerPixel,
 		authToken: typeof getAuthToken === 'function' ? getAuthToken() : null,
 	});
 }
@@ -131,12 +134,17 @@ initStreamWorker();
 
 // Determine the WebSocket protocol based on the current window protocol
 const eventURL = `/events`;
+// For rM1, invert portrait flag for rmview event handling
+let effectivePortrait = portrait;
+if (DeviceModel === 'Remarkable1') {
+	effectivePortrait = !portrait;
+}
 // Send the OffscreenCanvas to the worker for initialization
 eventWorker.postMessage({
 	type: 'init',
 	width: screenWidth,
 	height: screenHeight,
-	portrait: portrait,
+	portrait: effectivePortrait,
 	eventURL: eventURL,
     maxXValue: MaxXValue,
     maxYValue: MaxYValue,

@@ -10,6 +10,8 @@ if (DeviceModel === 'RemarkablePaperPro') {
 }
 let flip = getBoolQueryParam('flip', defaultFlip);
 
+let withColor = getQueryParam('color');
+withColor = withColor !== null ? withColor === 'true' : true;
 let rate = parseInt(getQueryParamOrDefault('rate', '200'), 10);
 
 // Use BGRA format flag from server (Paper Pro or RM2 firmware 3.24+)
