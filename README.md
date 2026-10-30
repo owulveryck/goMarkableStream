@@ -222,7 +222,8 @@ Configure the application via environment variables:
 - `RK_SERVER_PASSWORD`: (String, default: `password`) Password for server access.
 - `RK_HTTPS`: (True/False, default: `true`) Enable or disable HTTPS.
 - `RK_DEV_MODE`: (True/False, default: `false`) Enable or disable developer mode.
-- `RK_RLE_COMPRESSION`: (True/False, default: `true`) Enable or disable RLE compression (enabled by default, required for reMarkable 1).
+- `RK_RLE_COMPRESSION`: (True/False, default: `false`) Legacy RLE full-frame compression fallback for reMarkable 1 (by default, reMarkable 1 uses 1-byte Color8 Delta + Zstd compression).
+- `RK_RM1_RGB565`: (True/False, default: `false`) Stream lossless 16-bit RGB565 Delta + Zstd on reMarkable 1 instead of 1-byte Color8 Delta + Zstd.
 - `RK_DELTA_THRESHOLD`: (Float, default: `0.30`) Change ratio threshold (0.0-1.0) above which a full frame is sent instead of delta.
 
 ### Tailscale Configuration

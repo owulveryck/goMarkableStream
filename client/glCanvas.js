@@ -8,7 +8,8 @@ let trailEnabled = true;  // Toggle for trail feature
 const gl = canvas.getContext('webgl', {
     antialias: true,
     preserveDrawingBuffer: true,  // Important for proper rendering
-    alpha: true                   // Enable transparency
+    alpha: true,                  // Enable transparency
+    premultipliedAlpha: false     // Prevent super-luminous white blowout on transparent/anti-aliased pixels
 });
 
 // Check for anisotropic filtering extension
@@ -117,7 +118,7 @@ void main(void) {
 
         if (distance < 8.0) {
             float fade = 1.0 - smoothstep(6.0, 8.0, distance);
-            finalColor = vec4(LASER_COLOR, fade);
+            finalColor = mix(finalColor, vec4(LASER_COLOR, 1.0), fade);
         }
     }
 
@@ -279,12 +280,12 @@ function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture)
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 	}
 	
-	// Set background color
-	gl.clearColor(0.98, 0.98, 0.98, 0.25);
+	// Set background color matching Ark theme --bg-base (#fcfbf8 = 0.988, 0.984, 0.973)
+	gl.clearColor(0.988, 0.984, 0.973, 1.0);
 	
-	// Enable alpha blending for transparency
+	// Enable alpha blending for overlay and laser
 	gl.enable(gl.BLEND);
-	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 	
 	// Setup depth buffer
 	gl.clearDepth(1.0);

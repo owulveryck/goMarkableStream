@@ -619,7 +619,8 @@ document.getElementById('funnelButton').addEventListener('click', async function
             updateConnectionStatus(ConnectionState.CONNECTING);
 
             // Recreate and reinitialize stream worker
-            streamWorker = new Worker('worker_stream_processing.js');
+            const wVer = (typeof workerVersion !== 'undefined' ? workerVersion : ((typeof AssetVersion !== 'undefined' && AssetVersion) ? '?v=' + AssetVersion : ''));
+            streamWorker = new Worker('worker_stream_processing.js' + wVer);
             initStreamWorker();
             showMessage('Public sharing disabled - Resuming local stream', MessageDuration.NORMAL);
         }

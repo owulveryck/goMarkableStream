@@ -16,7 +16,9 @@ var encodedPool = sync.Pool{
 
 var bufferPool = sync.Pool{
 	New: func() any {
-		return make([]byte, 0, remarkable.ScreenSizeBytes)
+		// Typical RLE-compressed RM1 frame is ~200-500 KB; start with 256 KB
+		// capacity rather than pre-allocating a full 5.27 MB / 10.54 MB slice.
+		return make([]byte, 0, 256*1024)
 	},
 }
 
@@ -45,9 +47,7 @@ func (rlewriter *RLE) Flush() {
 
 // Write encodes the data using run-length encoding (RLE) and writes the results to the subwriter.
 //
-// The data parameter is expected to be in the format []uint4, but is passed as []byte.
-// The result is packed before being written to the subwriter. The packing scheme
-// combines the count and value into a single uint8, with the count ranging from 0 to 15.
+// Reads every even byte (stride 2) and emits [count, value] pairs with count in 1..255.
 //
 // Implements: io.Writer
 func (rlewriter *RLE) Write(data []byte) (int, error) {
@@ -56,28 +56,30 @@ func (rlewriter *RLE) Write(data []byte) (int, error) {
 		return 0, nil
 	}
 	buf := bufferPool.Get().([]uint8)
-	// Truncate but keep capacity
 	buf = buf[:0]
-	defer bufferPool.Put(buf)
+	defer func() {
+		bufferPool.Put(buf)
+	}()
+
+	limit := length
+	if remarkable.Config.SizeBytes > 0 && remarkable.Config.SizeBytes < limit {
+		limit = remarkable.Config.SizeBytes
+	}
 
 	current := data[0]
 	count := uint8(0)
 
-	// Use Config.SizeBytes instead of hardcoded/uninitialized ScreenSizeBytes
-	sizeBytes := remarkable.Config.SizeBytes
-	for i := 0; i < sizeBytes; i += 2 {
+	for i := 0; i < limit; i += 2 {
 		datum := data[i]
 		if count < 254 && datum == current {
 			count++
 		} else {
-			buf = append(buf, count)
-			buf = append(buf, current)
+			buf = append(buf, count, current)
 			current = datum
 			count = 1
 		}
 	}
-	buf = append(buf, count)
-	buf = append(buf, current)
+	buf = append(buf, count, current)
 
 	return rlewriter.sub.Write(buf)
 }

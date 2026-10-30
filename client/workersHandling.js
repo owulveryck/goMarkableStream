@@ -37,7 +37,8 @@ function attemptStreamReconnect() {
 	reconnectTimeout = setTimeout(() => {
 		// Just replace the worker - don't send terminate
 		// The old worker will be garbage collected
-		streamWorker = new Worker('worker_stream_processing.js');
+		const wVer = (typeof workerVersion !== 'undefined' ? workerVersion : ((typeof AssetVersion !== 'undefined' && AssetVersion) ? '?v=' + AssetVersion : ''));
+		streamWorker = new Worker('worker_stream_processing.js' + wVer);
 		// Reset isReconnecting so next error can trigger another attempt
 		isReconnecting = false;
 		initStreamWorker();
@@ -116,6 +117,7 @@ function initStreamWorker() {
 			attemptStreamReconnect();
 		}
 	};
+	const isOverlay = typeof getQueryParam === 'function' ? !!getQueryParam('present') : false;
 	streamWorker.postMessage({
 		type: 'init',
 		width: screenWidth,
@@ -125,6 +127,7 @@ function initStreamWorker() {
 		useRLE: UseRLE,
 		bytesPerPixel: BytesPerPixel,
 		authToken: typeof getAuthToken === 'function' ? getAuthToken() : null,
+		isOverlay: isOverlay,
 	});
 }
 

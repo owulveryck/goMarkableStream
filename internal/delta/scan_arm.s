@@ -8,24 +8,25 @@
 // Returns true (1) at the first block that differs, false (0) if all
 // blocks are identical. No writes to dst, src, or any mask — pure reads.
 //
-// Optimized for Cortex-A7:
-//   - PLD at multiple distances covering all 4 cache lines per 128B block
-//     (critical: removing PLD causes ~40% slowdown on dual-stream reads
-//     because hardware prefetcher can't keep up; mid-block PLDs at +64
-//     eliminate stalls on the second half of each block)
-//   - Early exit on first difference (checks each 64-byte half independently)
-//   - No conditional stores, no mask writes
+// Optimized for both Cortex-A9 (reMarkable 1) and Cortex-A7 (reMarkable 2):
+//   - Folds the entire 128-byte block down to 64 bits inside NEON (VORR Q8,Q8,Q12
+//     + VORR d16,d16,d17) so only ONE NEON→ARM VMOV + branch is executed per
+//     128B block instead of four VMOVs and two branches (4x fewer cross-domain
+//     stalls on Cortex-A9).
+//   - Dual-stream PLD at near (+2 blocks) and far (+4 blocks) distances covering
+//     all 4 cache lines (32B each) per 128B block.
+//   - Preserves callee-saved VFP registers d8-d15 (Q4-Q7) untouched.
 //
-// NEON register allocation (per 128B block, two 64B halves):
-//   Q0-Q3   (d0-d7):     src data (64 bytes)
-//   Q8-Q11  (d16-d23):   dst data (64 bytes)
-//   Q12-Q15 (d24-d31):   XOR differences and OR reduction
+// NEON register allocation:
+//   Q0-Q3   (d0-d7):   src data (64 bytes per half)
+//   Q8-Q11  (d16-d23): first-half dst data & XOR/OR reduction
+//   Q12-Q15 (d24-d31): second-half dst data & XOR/OR reduction
 //
 // ARM register allocation:
-//   R0  = dst pointer (advances by 128 per block)
-//   R1  = src pointer (advances by 128 per block)
-//   R2  = nblocks counter (decrements to 0)
-//   R4-R7 = temporaries for VMOV scalar extraction
+//   R0 = dst pointer (advances by 128 per block)
+//   R1 = src pointer (advances by 128 per block)
+//   R2 = nblocks counter (decrements to 0)
+//   R4,R5 = 64-bit diff extracted from d16
 TEXT ·hasAnyChange(SB), NOSPLIT|NOFRAME, $0-13
 	MOVW	dst+0(FP), R0
 	MOVW	src+4(FP), R1
@@ -35,80 +36,54 @@ TEXT ·hasAnyChange(SB), NOSPLIT|NOFRAME, $0-13
 	BEQ	no_change
 
 loop:
-	// Prefetch data ahead into cache hierarchy.
-	// Critical for Cortex-A7: dual-stream reads need software prefetch.
-	// Cover all 4 cache lines (32B each) of each 128B block at two distances.
-	WORD	$0xF5D1F200	// PLD [R1, #512]  — src block+4 byte 0
-	WORD	$0xF5D0F200	// PLD [R0, #512]  — dst block+4 byte 0
-	WORD	$0xF5D1F240	// PLD [R1, #576]  — src block+4 byte 64
-	WORD	$0xF5D0F240	// PLD [R0, #576]  — dst block+4 byte 64
-	WORD	$0xF5D1F100	// PLD [R1, #256]  — src block+2 byte 0
-	WORD	$0xF5D0F100	// PLD [R0, #256]  — dst block+2 byte 0
-	WORD	$0xF5D1F140	// PLD [R1, #320]  — src block+2 byte 64
-	WORD	$0xF5D0F140	// PLD [R0, #320]  — dst block+2 byte 64
-
 	// === First half (bytes 0-63) ===
-
-	// Load 64 bytes from src with post-increment
-	WORD	$0xF421020D	// VLD1.8 {d0,d1,d2,d3}, [R1]!
-	WORD	$0xF421420D	// VLD1.8 {d4,d5,d6,d7}, [R1]!
-
-	// Load 64 bytes from dst with post-increment
+	WORD	$0xF421020D	// VLD1.8 {d0,d1,d2,d3},     [R1]!
+	WORD	$0xF421420D	// VLD1.8 {d4,d5,d6,d7},     [R1]!
 	WORD	$0xF460020D	// VLD1.8 {d16,d17,d18,d19}, [R0]!
 	WORD	$0xF460420D	// VLD1.8 {d20,d21,d22,d23}, [R0]!
 
-	// XOR to find differences
-	WORD	$0xF3408170	// VEOR Q12, Q0, Q8
-	WORD	$0xF342A172	// VEOR Q13, Q1, Q9
-	WORD	$0xF344C174	// VEOR Q14, Q2, Q10
-	WORD	$0xF346E176	// VEOR Q15, Q3, Q11
+	WORD	$0xF3400170	// VEOR Q8,  Q0, Q8
+	WORD	$0xF3422172	// VEOR Q9,  Q1, Q9
+	WORD	$0xF3444174	// VEOR Q10, Q2, Q10
+	WORD	$0xF3466176	// VEOR Q11, Q3, Q11
 
-	// OR-reduce first half
-	WORD	$0xF26881FA	// VORR Q12, Q12, Q13
-	WORD	$0xF26CC1FE	// VORR Q14, Q14, Q15
-	WORD	$0xF26881FC	// VORR Q12, Q12, Q14
+	WORD	$0xF26001F2	// VORR Q8,  Q8,  Q9
+	WORD	$0xF26441F6	// VORR Q10, Q10, Q11
+	WORD	$0xF26001F4	// VORR Q8,  Q8,  Q10
 
-	// Check first half: extract to scalar and early-exit if any diff
-	WORD	$0xEC554B38	// VMOV R4, R5, d24
-	WORD	$0xEC576B39	// VMOV R6, R7, d25
-	ORR	R5, R4
-	ORR	R7, R6
-	ORR	R6, R4
-	CMP	$0, R4
-	BNE	found_change
+	// Prefetch all 4 cache lines of upcoming blocks (R0, R1 at block + 64)
+	WORD	$0xF5D1F1C0	// PLD [R1, #448]  — src block+4 byte 0
+	WORD	$0xF5D0F1C0	// PLD [R0, #448]  — dst block+4 byte 0
+	WORD	$0xF5D1F200	// PLD [R1, #512]  — src block+4 byte 64
+	WORD	$0xF5D0F200	// PLD [R0, #512]  — dst block+4 byte 64
+	WORD	$0xF5D1F0C0	// PLD [R1, #192]  — src block+2 byte 0
+	WORD	$0xF5D0F0C0	// PLD [R0, #192]  — dst block+2 byte 0
+	WORD	$0xF5D1F100	// PLD [R1, #256]  — src block+2 byte 64
+	WORD	$0xF5D0F100	// PLD [R0, #256]  — dst block+2 byte 64
 
 	// === Second half (bytes 64-127) ===
+	WORD	$0xF421020D	// VLD1.8 {d0,d1,d2,d3},     [R1]!
+	WORD	$0xF421420D	// VLD1.8 {d4,d5,d6,d7},     [R1]!
+	WORD	$0xF460820D	// VLD1.8 {d24,d25,d26,d27}, [R0]!
+	WORD	$0xF460C20D	// VLD1.8 {d28,d29,d30,d31}, [R0]!
 
-	// Load 64 bytes from src with post-increment
-	WORD	$0xF421020D	// VLD1.8 {d0,d1,d2,d3}, [R1]!
-	WORD	$0xF421420D	// VLD1.8 {d4,d5,d6,d7}, [R1]!
+	WORD	$0xF3408178	// VEOR Q12, Q0, Q12
+	WORD	$0xF342A17A	// VEOR Q13, Q1, Q13
+	WORD	$0xF344C17C	// VEOR Q14, Q2, Q14
+	WORD	$0xF346E17E	// VEOR Q15, Q3, Q15
 
-	// Load 64 bytes from dst with post-increment
-	WORD	$0xF460020D	// VLD1.8 {d16,d17,d18,d19}, [R0]!
-	WORD	$0xF460420D	// VLD1.8 {d20,d21,d22,d23}, [R0]!
-
-	// XOR to find differences
-	WORD	$0xF3408170	// VEOR Q12, Q0, Q8
-	WORD	$0xF342A172	// VEOR Q13, Q1, Q9
-	WORD	$0xF344C174	// VEOR Q14, Q2, Q10
-	WORD	$0xF346E176	// VEOR Q15, Q3, Q11
-
-	// OR-reduce second half
 	WORD	$0xF26881FA	// VORR Q12, Q12, Q13
 	WORD	$0xF26CC1FE	// VORR Q14, Q14, Q15
 	WORD	$0xF26881FC	// VORR Q12, Q12, Q14
 
-	// Check second half
-	WORD	$0xEC554B38	// VMOV R4, R5, d24
-	WORD	$0xEC576B39	// VMOV R6, R7, d25
-	ORR	R5, R4
-	ORR	R7, R6
-	ORR	R6, R4
+	// Combine both halves inside NEON → single 64-bit extraction per 128B block
+	WORD	$0xF26001F8	// VORR Q8,  Q8,  Q12
+	WORD	$0xF26001B1	// VORR d16, d16, d17
+	WORD	$0xEC554B30	// VMOV R4, R5, d16
 
-	CMP	$0, R4
+	ORR.S	R5, R4, R4
 	BNE	found_change
 
-	// Next block
 	SUB.S	$1, R2
 	BNE	loop
 

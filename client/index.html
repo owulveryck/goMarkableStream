@@ -4,7 +4,7 @@
 		<title>goMarkableStream</title>
 		<link rel="icon" type="image/x-icon" href="favicon.ico">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<link rel="stylesheet" href="style.css">
+		<link rel="stylesheet" href="style.css?v={{ .AssetVersion }}">
         <script>
             const screenWidth = {{ .ScreenWidth }};
             const screenHeight = {{ .ScreenHeight }};
@@ -16,6 +16,7 @@
 			const UseBGRA = {{ .UseBGRA }};
 			const TextureFlipped = {{ .TextureFlipped }};
 			const JWTEnabled = {{ .JWTEnabled }};
+			const AssetVersion = "{{ .AssetVersion }}";
         </script>
 	</head>
 	<body>
@@ -276,13 +277,13 @@ Currently: <span id="layerOrderStatus">Drawing on Top</span></div>
 			</div>
 		</div>
 
-		<script src="qrcode.js"></script>
-		<script src="auth.js"></script>
-		<script src="main.js"></script>
-		<script src="utilities.js"></script>
-		<script src="glCanvas.js"></script>
-		<script src="canvasHandling.js"></script>
-		<script src="uiInteractions.js"></script>
-		<script src="workersHandling.js"></script>
+		<script src="qrcode.js?v={{ .AssetVersion }}"></script>
+		<script src="auth.js?v={{ .AssetVersion }}"></script>
+		<script src="main.js?v={{ .AssetVersion }}"></script>
+		<script src="utilities.js?v={{ .AssetVersion }}"></script>
+		<script src="glCanvas.js?v={{ .AssetVersion }}"></script>
+		<script src="canvasHandling.js?v={{ .AssetVersion }}"></script>
+		<script src="uiInteractions.js?v={{ .AssetVersion }}"></script>
+		<script src="workersHandling.js?v={{ .AssetVersion }}"></script>
 	</body>
 </html>

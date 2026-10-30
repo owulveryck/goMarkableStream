@@ -26,10 +26,11 @@ const iFrame = document.getElementById("content");
 const messageDiv = document.getElementById('message');
 
 
-// Initialize the worker
-let streamWorker = new Worker('worker_stream_processing.js');
-const eventWorker = new Worker('worker_event_processing.js');
-const gestureWorker = new Worker('worker_gesture_processing.js');
+// Initialize the worker with cache-busting version token
+const workerVersion = (typeof AssetVersion !== 'undefined' && AssetVersion) ? '?v=' + AssetVersion : '';
+let streamWorker = new Worker('worker_stream_processing.js' + workerVersion);
+const eventWorker = new Worker('worker_event_processing.js' + workerVersion);
+const gestureWorker = new Worker('worker_gesture_processing.js' + workerVersion);
 function getQueryParamOrDefault(param, defaultValue) {
     const urlParams = new URLSearchParams(window.location.search);
     const value = urlParams.get(param);

@@ -13,6 +13,7 @@ import (
 	"runtime"
 	godebug "runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/owulveryck/goMarkableStream/internal/delta"
 	internalDebug "github.com/owulveryck/goMarkableStream/internal/debug"
@@ -44,6 +45,7 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 
 	streamHandler := stream.NewStreamHandler(file, pointerAddr, eventPublisher, c.DeltaThreshold)
 	streamHandler.UseRLE = remarkable.Model == remarkable.Remarkable1 && c.RLECompression
+	streamHandler.RM1RGB565 = remarkable.Model == remarkable.Remarkable1 && c.RM1RGB565
 	mux.Handle("/stream", stream.ThrottlingMiddleware(streamHandler))
 
 	// Register idle callback to release memory when streaming ends
@@ -258,6 +260,8 @@ func handleLogin(jwtMgr *jwtutil.Manager) http.HandlerFunc {
 	}
 }
 
+var assetVersion = fmt.Sprintf("%d", time.Now().UnixNano())
+
 func newIndexHandler(fs http.FileSystem, jwtEnabled bool) http.HandlerFunc {
 	tmpl, err := parseIndexTemplate("client/index.html")
 	if err != nil {
@@ -266,6 +270,12 @@ func newIndexHandler(fs http.FileSystem, jwtEnabled bool) http.HandlerFunc {
 	}
 
 	staticFileServer := http.FileServer(fs)
+
+	useRLE := remarkable.Model == remarkable.Remarkable1 && c.RLECompression
+	streamBPP := remarkable.Config.BytesPerPixel
+	if remarkable.Model == remarkable.Remarkable1 && !useRLE && !c.RM1RGB565 {
+		streamBPP = 1 // 1-byte Color8 Delta+Zstd stream format
+	}
 
 	data := struct {
 		ScreenWidth    int
@@ -278,22 +288,28 @@ func newIndexHandler(fs http.FileSystem, jwtEnabled bool) http.HandlerFunc {
 		UseBGRA        bool
 		TextureFlipped bool
 		JWTEnabled     bool
+		AssetVersion   string
 	}{
 		ScreenWidth:    remarkable.Config.Width,
 		ScreenHeight:   remarkable.Config.Height,
 		MaxXValue:      remarkable.MaxXValue,
 		MaxYValue:      remarkable.MaxYValue,
-		UseRLE:         remarkable.Model == remarkable.Remarkable1 && c.RLECompression,
+		UseRLE:         useRLE,
 		DeviceModel:    remarkable.Model.String(),
-		BytesPerPixel:  remarkable.Config.BytesPerPixel,
+		BytesPerPixel:  streamBPP,
 		UseBGRA:        remarkable.Config.UseBGRA,
 		TextureFlipped: remarkable.Config.TextureFlipped,
 		JWTEnabled:     jwtEnabled,
+		AssetVersion:   assetVersion,
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
+
 		if r.URL.Path == "/" {
-			w.Header().Set("Content-Type", "text/html")
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			if err := tmpl.Execute(w, data); err != nil {
 				http.Error(w, "Error rendering template", http.StatusInternalServerError)
 				log.Printf("Error rendering template: %v", err)
