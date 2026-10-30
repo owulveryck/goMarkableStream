@@ -5,47 +5,42 @@
 // func compareAndCopyBlocks(dst, src unsafe.Pointer, mask []byte, nblocks int)
 //
 // Compares src and dst in 128-byte blocks using ARM NEON SIMD, copies src → dst
-// only for changed portions, and writes 1 to mask[i] if block i differs, 0 otherwise.
+// only for changed 64-byte halves, and writes 1 to mask[i] if block i differs,
+// 0 otherwise.
 //
-// Each 128-byte block is processed as two 64-byte halves. Each half does its
-// own conditional copy (unchanged halves skip the store). The mask combines
-// both halves: if either half changed, mask[i] = 1.
+// Microarchitectural optimizations for BOTH reMarkable 1 (Cortex-A9) and
+// reMarkable 2 (Cortex-A7):
+//   1. Cortex-A9 VMOV cross-domain latency hiding:
+//      On Cortex-A9, moving NEON registers to ARM registers (VMOV Rd, Rn, Dm)
+//      and immediately branching on Rd incurs a ~20-cycle pipeline stall.
+//      We fold 128b → 64b inside NEON (VORR d16, d16, d17) to halve the number
+//      of VMOVs (2 per 128B block instead of 4), and issue the first half's
+//      VMOV BEFORE the 20 independent PLD + second-half VLD1/VEOR/VORR
+//      instructions so R4/R5 arrive stall-free on Cortex-A9's OoO core.
+//   2. Cortex-A7 + Cortex-A9 dual-stream software prefetching (PLD):
+//      Prefetches all 4 cache lines (32B each) of upcoming 128B blocks at near
+//      (+2 blocks) and far (+4 blocks) distances. Issued after first-half
+//      post-increments (+64), so offsets #448/#512/#192/#256 correspond to
+//      #512/#576/#256/#320 from block start.
+//   3. Write-Combine burst friendly:
+//      Reads src strictly once via 32-byte VLD1.8 bursts (holding first half in
+//      Q0-Q3 and second half in Q12-Q15), ensuring tear-free snapshots and full
+//      AXI bursts when src is mmap'd /dev/fb0 on reMarkable 1.
+//   4. Callee-saved VFP registers d8-d15 (Q4-Q7) are left completely untouched.
 //
-// Uses PLD instructions for software prefetching at multiple distances.
-// Benchmarks show PLD is critical on Cortex-A7 for dual-stream reads: removing
-// PLD causes ~40% slowdown because the hardware prefetcher cannot keep up with
-// two interleaved sequential streams.
-//
-// PLD strategy covers all 4 cache lines (32B each) of each 128B block at two
-// distances (near=2 blocks, far=4 blocks). Without mid-block PLDs, profiling
-// shows the second 64B half of each block stalls on cache misses (80% of CPU
-// time in VLD1 loads for the second half).
-//
-// Uses NEON vector instructions encoded as WORD directives because Go's ARM32
-// assembler does not support NEON mnemonics.
-//
-// NEON register allocation (per half):
-//   Q0-Q3   (d0-d7):     src data (64 bytes)
-//   Q8-Q11  (d16-d23):   dst data (64 bytes)
-//   Q12-Q15 (d24-d31):   XOR differences and OR reduction
+// NEON register allocation:
+//   Q0-Q3   (d0-d7):   first-half src data (64 bytes, preserved for store)
+//   Q12-Q15 (d24-d31): second-half src data (64 bytes, preserved for store)
+//   Q8-Q11  (d16-d23): dst data (64 bytes per half) & XOR/OR reduction
 //
 // ARM register allocation:
 //   R0  = dst pointer (advances by 128 per block)
 //   R1  = src pointer (advances by 128 per block)
 //   R2  = mask pointer (advances by 1 per block)
 //   R3  = nblocks counter (decrements to 0)
-//   R4-R7 = temporaries for VMOV scalar extraction
-//   R8  = temporary for mask byte value
-//   R11 = saved first-half changed flag
-//
-// ABI0 stack layout (32-bit, all args on stack):
-//   dst:        0(FP)   4 bytes
-//   src:        4(FP)   4 bytes
-//   mask base:  8(FP)   4 bytes
-//   mask len:  12(FP)   4 bytes
-//   mask cap:  16(FP)   4 bytes
-//   nblocks:   20(FP)   4 bytes
-//   Total args: 24 bytes
+//   R4,R5 = first-half 64-bit diff extracted from d16
+//   R6,R7 = second-half 64-bit diff extracted from d16
+//   R8  = store address / mask byte temporary
 TEXT ·compareAndCopyBlocks(SB), NOSPLIT|NOFRAME, $0-24
 	MOVW	dst+0(FP), R0
 	MOVW	src+4(FP), R1
@@ -56,111 +51,79 @@ TEXT ·compareAndCopyBlocks(SB), NOSPLIT|NOFRAME, $0-24
 	BEQ	done
 
 loop:
-	// Prefetch data ahead into cache hierarchy.
-	// Critical for Cortex-A7: dual-stream reads need software prefetch;
-	// hardware prefetcher alone causes ~40% slowdown.
-	//
-	// Each 128B block spans 4 cache lines (32B each). We prefetch at two
-	// distances: far (4 blocks, mem→L2) and near (2 blocks, L2→L1).
-	// The +64 offsets cover the second half of each block, which profiling
-	// showed was the primary bottleneck (80% of time in VLD1 stalls).
-	WORD	$0xF5D1F200	// PLD [R1, #512]  — src block+4 byte 0
-	WORD	$0xF5D0F200	// PLD [R0, #512]  — dst block+4 byte 0
-	WORD	$0xF5D1F240	// PLD [R1, #576]  — src block+4 byte 64
-	WORD	$0xF5D0F240	// PLD [R0, #576]  — dst block+4 byte 64
-	WORD	$0xF5D1F100	// PLD [R1, #256]  — src block+2 byte 0
-	WORD	$0xF5D0F100	// PLD [R0, #256]  — dst block+2 byte 0
-	WORD	$0xF5D1F140	// PLD [R1, #320]  — src block+2 byte 64
-	WORD	$0xF5D0F140	// PLD [R0, #320]  — dst block+2 byte 64
-
 	// === First half (bytes 0-63) ===
-
-	// Load 64 bytes from src with post-increment.
-	WORD	$0xF421020D	// VLD1.8 {d0,d1,d2,d3}, [R1]!
-	WORD	$0xF421420D	// VLD1.8 {d4,d5,d6,d7}, [R1]!
-
-	// Load 64 bytes from dst with post-increment.
+	WORD	$0xF421020D	// VLD1.8 {d0,d1,d2,d3},     [R1]!
+	WORD	$0xF421420D	// VLD1.8 {d4,d5,d6,d7},     [R1]!
 	WORD	$0xF460020D	// VLD1.8 {d16,d17,d18,d19}, [R0]!
 	WORD	$0xF460420D	// VLD1.8 {d20,d21,d22,d23}, [R0]!
 
-	// XOR to find differences
-	WORD	$0xF3408170	// VEOR Q12, Q0, Q8
-	WORD	$0xF342A172	// VEOR Q13, Q1, Q9
-	WORD	$0xF344C174	// VEOR Q14, Q2, Q10
-	WORD	$0xF346E176	// VEOR Q15, Q3, Q11
+	WORD	$0xF3400170	// VEOR Q8,  Q0, Q8
+	WORD	$0xF3422172	// VEOR Q9,  Q1, Q9
+	WORD	$0xF3444174	// VEOR Q10, Q2, Q10
+	WORD	$0xF3466176	// VEOR Q11, Q3, Q11
 
-	// OR-reduce
-	WORD	$0xF26881FA	// VORR Q12, Q12, Q13
-	WORD	$0xF26CC1FE	// VORR Q14, Q14, Q15
-	WORD	$0xF26881FC	// VORR Q12, Q12, Q14
+	WORD	$0xF26001F2	// VORR Q8,  Q8,  Q9
+	WORD	$0xF26441F6	// VORR Q10, Q10, Q11
+	WORD	$0xF26001F4	// VORR Q8,  Q8,  Q10
+	WORD	$0xF26001B1	// VORR d16, d16, d17
 
-	// Extract to scalar
-	WORD	$0xEC554B38	// VMOV R4, R5, d24
-	WORD	$0xEC576B39	// VMOV R6, R7, d25
-	ORR	R5, R4
-	ORR	R7, R6
-	ORR	R6, R4		// R4 = first half changed flag
+	// Issue first-half NEON→ARM transfer early to hide ~20-cycle Cortex-A9 latency
+	WORD	$0xEC554B30	// VMOV R4, R5, d16
 
-	// Conditional copy first half
-	CMP	$0, R4
-	BEQ	skip_first
-
-	SUB	$64, R0
-	WORD	$0xF400020D	// VST1.8 {d0,d1,d2,d3}, [R0]!
-	WORD	$0xF400420D	// VST1.8 {d4,d5,d6,d7}, [R0]!
-
-skip_first:
-	// Save first half changed flag
-	MOVW	R4, R11
+	// Dual-stream software prefetches (R0 and R1 are currently at block + 64)
+	WORD	$0xF5D1F1C0	// PLD [R1, #448]  — src block+4 byte 0
+	WORD	$0xF5D0F1C0	// PLD [R0, #448]  — dst block+4 byte 0
+	WORD	$0xF5D1F200	// PLD [R1, #512]  — src block+4 byte 64
+	WORD	$0xF5D0F200	// PLD [R0, #512]  — dst block+4 byte 64
+	WORD	$0xF5D1F0C0	// PLD [R1, #192]  — src block+2 byte 0
+	WORD	$0xF5D0F0C0	// PLD [R0, #192]  — dst block+2 byte 0
+	WORD	$0xF5D1F100	// PLD [R1, #256]  — src block+2 byte 64
+	WORD	$0xF5D0F100	// PLD [R0, #256]  — dst block+2 byte 64
 
 	// === Second half (bytes 64-127) ===
-
-	// Load 64 bytes from src with post-increment.
-	WORD	$0xF421020D	// VLD1.8 {d0,d1,d2,d3}, [R1]!
-	WORD	$0xF421420D	// VLD1.8 {d4,d5,d6,d7}, [R1]!
-
-	// Load 64 bytes from dst with post-increment.
+	WORD	$0xF461820D	// VLD1.8 {d24,d25,d26,d27}, [R1]!
+	WORD	$0xF461C20D	// VLD1.8 {d28,d29,d30,d31}, [R1]!
 	WORD	$0xF460020D	// VLD1.8 {d16,d17,d18,d19}, [R0]!
 	WORD	$0xF460420D	// VLD1.8 {d20,d21,d22,d23}, [R0]!
 
-	// XOR to find differences
-	WORD	$0xF3408170	// VEOR Q12, Q0, Q8
-	WORD	$0xF342A172	// VEOR Q13, Q1, Q9
-	WORD	$0xF344C174	// VEOR Q14, Q2, Q10
-	WORD	$0xF346E176	// VEOR Q15, Q3, Q11
+	WORD	$0xF34801F0	// VEOR Q8,  Q12, Q8
+	WORD	$0xF34A21F2	// VEOR Q9,  Q13, Q9
+	WORD	$0xF34C41F4	// VEOR Q10, Q14, Q10
+	WORD	$0xF34E61F6	// VEOR Q11, Q15, Q11
 
-	// OR-reduce
-	WORD	$0xF26881FA	// VORR Q12, Q12, Q13
-	WORD	$0xF26CC1FE	// VORR Q14, Q14, Q15
-	WORD	$0xF26881FC	// VORR Q12, Q12, Q14
+	WORD	$0xF26001F2	// VORR Q8,  Q8,  Q9
+	WORD	$0xF26441F6	// VORR Q10, Q10, Q11
+	WORD	$0xF26001F4	// VORR Q8,  Q8,  Q10
+	WORD	$0xF26001B1	// VORR d16, d16, d17
 
-	// Extract to scalar
-	WORD	$0xEC554B38	// VMOV R4, R5, d24
-	WORD	$0xEC576B39	// VMOV R6, R7, d25
-	ORR	R5, R4
-	ORR	R7, R6
-	ORR	R6, R4		// R4 = second half changed flag
+	// Issue second-half NEON→ARM transfer before checking first-half result
+	WORD	$0xEC576B30	// VMOV R6, R7, d16
 
+	// Conditional copy first half (R4, R5 have been ready for >20 instructions)
+	ORR.S	R5, R4, R4
+	BEQ	skip_first
+
+	SUB	$128, R0, R8
+	WORD	$0xF408020D	// VST1.8 {d0,d1,d2,d3}, [R8]!
+	WORD	$0xF408420D	// VST1.8 {d4,d5,d6,d7}, [R8]!
+
+skip_first:
 	// Conditional copy second half
-	CMP	$0, R4
+	ORR.S	R7, R6, R6
 	BEQ	skip_second
 
-	SUB	$64, R0
-	WORD	$0xF400020D	// VST1.8 {d0,d1,d2,d3}, [R0]!
-	WORD	$0xF400420D	// VST1.8 {d4,d5,d6,d7}, [R0]!
+	SUB	$64, R0, R8
+	WORD	$0xF448820D	// VST1.8 {d24,d25,d26,d27}, [R8]!
+	WORD	$0xF448C20D	// VST1.8 {d28,d29,d30,d31}, [R8]!
 
 skip_second:
-	// Set mask: combine both halves
-	ORR	R11, R4		// R4 = any change in 128B block
-	CMP	$0, R4
+	// Set mask byte: 1 if either half changed, 0 otherwise
+	ORR.S	R6, R4, R4
 	MOVW.EQ	$0, R8
 	MOVW.NE	$1, R8
 	MOVB	R8, (R2)
-
-	// Advance mask pointer
 	ADD	$1, R2
 
-	// Decrement block counter and loop
 	SUB.S	$1, R3
 	BNE	loop
 

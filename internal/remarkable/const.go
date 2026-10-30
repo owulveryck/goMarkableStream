@@ -2,7 +2,7 @@
 
 package remarkable
 
-const (
+var (
 	// Model defines the current device model being used
 	Model = Remarkable2
 

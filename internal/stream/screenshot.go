@@ -41,25 +41,76 @@ func (h *ScreenshotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	width := remarkable.Config.Width
 	height := remarkable.Config.Height
 
-	// Create RGBA image
-	img := image.NewRGBA(image.Rect(0, 0, width, height))
+	var img *image.RGBA
+	switch {
+	case remarkable.Model == remarkable.Remarkable1 || remarkable.Config.BytesPerPixel == 2 && !remarkable.Config.UseBGRA && width == 1408:
+		// reMarkable 1: RGB565 little-endian, 1408 row stride with 1404 visible columns
+		visWidth := width
+		if width == 1408 {
+			visWidth = 1404
+		}
+		img = image.NewRGBA(image.Rect(0, 0, visWidth, height))
+		for y := 0; y < height; y++ {
+			rowSrc := y * width * 2
+			rowDst := y * visWidth * 4
+			for x := 0; x < visWidth; x++ {
+				srcIdx := rowSrc + x*2
+				if srcIdx+1 >= len(imageData) {
+					break
+				}
+				lo := imageData[srcIdx]
+				hi := imageData[srcIdx+1]
+				r8 := (hi & 0xF8) | (hi >> 5)
+				g6 := ((hi & 0x07) << 3) | (lo >> 5)
+				g8 := (g6 << 2) | (g6 >> 4)
+				b5 := lo & 0x1F
+				b8 := (b5 << 3) | (b5 >> 2)
 
-	// Convert framebuffer to RGBA
-	// All devices use BGRA format (4 bytes per pixel)
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			srcIdx := (y*width + x) * 4
-			dstIdx := (y*width + x) * 4
-
-			// BGRA to RGBA: swap B and R channels
-			img.Pix[dstIdx+0] = imageData[srcIdx+2] // R <- B
-			img.Pix[dstIdx+1] = imageData[srcIdx+1] // G <- G
-			img.Pix[dstIdx+2] = imageData[srcIdx+0] // B <- R
-			img.Pix[dstIdx+3] = 255                 // A (fully opaque)
+				dstIdx := rowDst + x*4
+				img.Pix[dstIdx+0] = r8
+				img.Pix[dstIdx+1] = g8
+				img.Pix[dstIdx+2] = b8
+				img.Pix[dstIdx+3] = 255
+			}
+		}
+	case remarkable.Config.BytesPerPixel == remarkable.BytesPerPixelGray16:
+		// Legacy RM2 pre-3.24: 16-bit grayscale (2 bytes/pixel)
+		img = image.NewRGBA(image.Rect(0, 0, width, height))
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				srcIdx := (y*width + x) * 2
+				if srcIdx >= len(imageData) {
+					break
+				}
+				v := imageData[srcIdx] * 17 // 4-bit gray (0..15) → 0..255
+				if imageData[srcIdx] > 15 {
+					v = imageData[srcIdx]
+				}
+				dstIdx := (y*width + x) * 4
+				img.Pix[dstIdx+0] = v
+				img.Pix[dstIdx+1] = v
+				img.Pix[dstIdx+2] = v
+				img.Pix[dstIdx+3] = 255
+			}
+		}
+	default:
+		// RM2 (3.24+) and Paper Pro: BGRA32 (4 bytes/pixel)
+		img = image.NewRGBA(image.Rect(0, 0, width, height))
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				srcIdx := (y*width + x) * 4
+				if srcIdx+3 >= len(imageData) {
+					break
+				}
+				dstIdx := (y*width + x) * 4
+				img.Pix[dstIdx+0] = imageData[srcIdx+2] // R <- B
+				img.Pix[dstIdx+1] = imageData[srcIdx+1] // G <- G
+				img.Pix[dstIdx+2] = imageData[srcIdx+0] // B <- R
+				img.Pix[dstIdx+3] = 255                 // A (fully opaque)
+			}
 		}
 	}
 
-	// Generate filename with timestamp
 	filename := "remarkable_" + time.Now().Format("20060102_150405") + ".png"
 
 	w.Header().Set("Content-Type", "image/png")

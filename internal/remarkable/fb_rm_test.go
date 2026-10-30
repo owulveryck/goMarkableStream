@@ -8,11 +8,14 @@ import (
 )
 
 // TestFramebufferReaderImplementsInterfaces verifies that FramebufferReader
-// implements both io.ReaderAt and io.Closer interfaces.
+// and MmapFramebufferReader implement the expected interfaces.
 func TestFramebufferReaderImplementsInterfaces(t *testing.T) {
-	// This test will compile only if FramebufferReader implements the interfaces
+	// This test will compile only if the readers implement the interfaces
 	var _ io.ReaderAt = (*FramebufferReader)(nil)
 	var _ io.Closer = (*FramebufferReader)(nil)
+	var _ io.ReaderAt = (*MmapFramebufferReader)(nil)
+	var _ io.Closer = (*MmapFramebufferReader)(nil)
+	var _ DirectFramebuffer = (*MmapFramebufferReader)(nil)
 }
 
 // TestGetFileAndPointerReturnsCloser verifies that GetFileAndPointer returns

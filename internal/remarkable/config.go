@@ -1,5 +1,12 @@
 package remarkable
 
+// DirectFramebuffer is implemented by framebuffer readers backed by a memory-mapped
+// region (such as /dev/fb0 mmap on the reMarkable 1), enabling zero-syscall,
+// zero-intermediate-buffer reads directly from the mapped framebuffer.
+type DirectFramebuffer interface {
+	Bytes() []byte
+}
+
 const (
 	// BytesPerPixelBGRA is the size in bytes for BGRA32 color format.
 	// Used by RM2 firmware 3.24+ and RMPP.

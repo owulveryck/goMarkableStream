@@ -32,6 +32,8 @@ type configuration struct {
 	Password       string  `envconfig:"SERVER_PASSWORD" default:"password"`
 	TLS            bool    `envconfig:"HTTPS" default:"true"`
 	DevMode        bool    `envconfig:"DEV_MODE" default:"false"`
+	RLECompression bool    `envconfig:"RLE_COMPRESSION" default:"false" description:"Use legacy RLE compression instead of Delta+Zstd (for reMarkable 1 only)"`
+	RM1RGB565      bool    `envconfig:"RM1_RGB565" default:"false" description:"Stream lossless 16-bit RGB565 Delta+Zstd instead of 1-byte Color8 Delta+Zstd (for reMarkable 1 only)"`
 	DeltaThreshold float64 `envconfig:"DELTA_THRESHOLD" default:"0.30" description:"Change ratio threshold (0.0-1.0) above which full frame is sent"`
 	Debug          bool    `envconfig:"DEBUG" default:"false" description:"Enable debug logging"`
 

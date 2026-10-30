@@ -37,7 +37,8 @@ function attemptStreamReconnect() {
 	reconnectTimeout = setTimeout(() => {
 		// Just replace the worker - don't send terminate
 		// The old worker will be garbage collected
-		streamWorker = new Worker('worker_stream_processing.js');
+		const wVer = (typeof workerVersion !== 'undefined' ? workerVersion : ((typeof AssetVersion !== 'undefined' && AssetVersion) ? '?v=' + AssetVersion : ''));
+		streamWorker = new Worker('worker_stream_processing.js' + wVer);
 		// Reset isReconnecting so next error can trigger another attempt
 		isReconnecting = false;
 		initStreamWorker();
@@ -116,12 +117,17 @@ function initStreamWorker() {
 			attemptStreamReconnect();
 		}
 	};
+	const isOverlay = typeof getQueryParam === 'function' ? !!getQueryParam('present') : false;
 	streamWorker.postMessage({
 		type: 'init',
 		width: screenWidth,
 		height: screenHeight,
 		rate: rate,
+		withColor: withColor,
+		useRLE: UseRLE,
+		bytesPerPixel: BytesPerPixel,
 		authToken: typeof getAuthToken === 'function' ? getAuthToken() : null,
+		isOverlay: isOverlay,
 	});
 }
 
@@ -131,12 +137,17 @@ initStreamWorker();
 
 // Determine the WebSocket protocol based on the current window protocol
 const eventURL = `/events`;
+// For rM1, invert portrait flag for rmview event handling
+let effectivePortrait = portrait;
+if (DeviceModel === 'Remarkable1') {
+	effectivePortrait = !portrait;
+}
 // Send the OffscreenCanvas to the worker for initialization
 eventWorker.postMessage({
 	type: 'init',
 	width: screenWidth,
 	height: screenHeight,
-	portrait: portrait,
+	portrait: effectivePortrait,
 	eventURL: eventURL,
     maxXValue: MaxXValue,
     maxYValue: MaxYValue,

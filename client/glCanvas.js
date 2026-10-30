@@ -8,7 +8,8 @@ let trailEnabled = true;  // Toggle for trail feature
 const gl = canvas.getContext('webgl', {
     antialias: true,
     preserveDrawingBuffer: true,  // Important for proper rendering
-    alpha: true                   // Enable transparency
+    alpha: true,                  // Enable transparency
+    premultipliedAlpha: false     // Prevent super-luminous white blowout on transparent/anti-aliased pixels
 });
 
 // Check for anisotropic filtering extension
@@ -117,7 +118,7 @@ void main(void) {
 
         if (distance < 8.0) {
             float fade = 1.0 - smoothstep(6.0, 8.0, distance);
-            finalColor = vec4(LASER_COLOR, fade);
+            finalColor = mix(finalColor, vec4(LASER_COLOR, 1.0), fade);
         }
     }
 
@@ -217,6 +218,15 @@ gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
 const textureCoordinates = getTextureCoordinates();
 
 function getTextureCoordinates() {
+    if (typeof DeviceModel !== 'undefined' && DeviceModel === 'Remarkable1') {
+        // Mirrored horizontally for RM1
+        return [
+			0.0, 1.0,
+			1.0, 1.0,
+			0.0, 0.0,
+			1.0, 0.0,
+		];
+    }
     if (TextureFlipped) {
         // Paper Pro style or RM2 firmware 3.24+ (portrait orientation)
         return [
@@ -270,12 +280,12 @@ function drawScene(gl, programInfo, positionBuffer, textureCoordBuffer, texture)
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 	}
 	
-	// Set background color
-	gl.clearColor(0.98, 0.98, 0.98, 0.25);
+	// Set background color matching Ark theme --bg-base (#fcfbf8 = 0.988, 0.984, 0.973)
+	gl.clearColor(0.988, 0.984, 0.973, 1.0);
 	
-	// Enable alpha blending for transparency
+	// Enable alpha blending for overlay and laser
 	gl.enable(gl.BLEND);
-	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 	
 	// Setup depth buffer
 	gl.clearDepth(1.0);
@@ -336,7 +346,11 @@ function updateTexture(newRawData, shouldRotate, scaleFactor) {
 
 	// Set rotation
 	const uRotationMatrixLocation = gl.getUniformLocation(shaderProgram, 'uRotationMatrix');
-	const rotationMatrix = shouldRotate ? makeRotationZMatrix(90) : makeRotationZMatrix(0);
+	let angle = shouldRotate ? 90 : 0;
+	if (typeof DeviceModel !== 'undefined' && DeviceModel === 'Remarkable1') {
+		angle = (angle + 180) % 360;
+	}
+	const rotationMatrix = makeRotationZMatrix(angle);
 	gl.uniformMatrix4fv(uRotationMatrixLocation, false, rotationMatrix);
 
 	// Set scaling
@@ -349,7 +363,11 @@ function updateTexture(newRawData, shouldRotate, scaleFactor) {
 // Redraw scene with current texture (for rotation changes without new frame data)
 function redrawScene(shouldRotate, scaleFactor) {
     const uRotationMatrixLocation = gl.getUniformLocation(shaderProgram, 'uRotationMatrix');
-    const rotationMatrix = shouldRotate ? makeRotationZMatrix(90) : makeRotationZMatrix(0);
+	let angle = shouldRotate ? 90 : 0;
+	if (typeof DeviceModel !== 'undefined' && DeviceModel === 'Remarkable1') {
+		angle = (angle + 180) % 360;
+	}
+    const rotationMatrix = makeRotationZMatrix(angle);
     gl.uniformMatrix4fv(uRotationMatrixLocation, false, rotationMatrix);
 
     const uScaleFactorLocation = gl.getUniformLocation(shaderProgram, 'uScaleFactor');

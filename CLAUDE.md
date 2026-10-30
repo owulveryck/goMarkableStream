@@ -9,6 +9,12 @@ goMarkableStream is a Go application that streams reMarkable tablet screens to w
 ## Build Commands
 
 ```bash
+# Build for reMarkable 1 (ARM, GOARM=7) - standard
+make build-remarkable-1
+
+# Build for reMarkable 1 with tracing support
+make build-remarkable-1-trace
+
 # Build for reMarkable 2 (ARM, GOARM=7) - standard
 make build-remarkable-2
 
@@ -58,8 +64,9 @@ go test ./...
 - Platform detection via `arm`/`arm64`/`!linux` tags
 
 ### Device Differences
-- **RM2**: 1872x1404, 16-bit grayscale, ARM (GOARM=7)
-- **Paper Pro**: 2160x1620, 32-bit BGRA, ARM64
+- **RM1**: 1408x1872 (1404 visible width + 4px stride), 16-bit RGB565 via `mmap` `/dev/fb0`, single-core Cortex-A9 ARMv7 + NEON (`GOARM=7`), Compare-Before-Convert 1-byte Color8 Delta + Zstd by default
+- **RM2**: 1404x1872 (32-bit BGRA on firmware 3.24+; 1872x1404 16-bit grayscale on legacy firmware), dual-core Cortex-A7 ARMv7 + NEON (`GOARM=7`)
+- **Paper Pro**: 1632x2154 (visible 1620x2160), 32-bit BGRA, ARM64
 
 ### Configuration
 All settings via environment variables with `RK_` prefix (uses `envconfig`). Key variables:
@@ -67,6 +74,8 @@ All settings via environment variables with `RK_` prefix (uses `envconfig`). Key
 - `RK_SERVER_USERNAME`/`RK_SERVER_PASSWORD` (default `admin`/`password`)
 - `RK_HTTPS` (default `true`)
 - `RK_DELTA_THRESHOLD` (default `0.30`, range 0.0-1.0)
+- `RK_RM1_RGB565` (default `false`, lossless 16-bit RGB565 Delta + Zstd on RM1)
+- `RK_RLE_COMPRESSION` (default `false`, legacy full-frame RLE fallback on RM1)
 - `RK_TAILSCALE_*` for Tailscale options
 
 ### HTTP Endpoints

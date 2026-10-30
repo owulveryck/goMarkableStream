@@ -1,3 +1,5 @@
+//go:build !arm || nosimd
+
 package delta
 
 import "unsafe"

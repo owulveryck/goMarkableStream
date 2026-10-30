@@ -16,6 +16,13 @@ let lastSentX = -1;
 let lastSentY = -1;
 const MIN_DELTA = 2; // minimum pixel change to trigger update
 
+// RM1 state tracking (adapted from rmview)
+let rm1NewX = false;
+let rm1NewY = false;
+let rm1RawX = 0;
+let rm1RawY = 0;
+const RM1_PRESSURE_THRESHOLD = 1000;
+
 onmessage = (event) => {
 	const data = event.data;
 
@@ -33,7 +40,6 @@ onmessage = (event) => {
 			break;
 		case 'portrait':
 			portrait = event.data.portrait;
-			// Handle the error, maybe show a user-friendly message or take some corrective action
 			break;
 		case 'terminate':
 			console.log("terminating worker");
@@ -54,68 +60,155 @@ async function initiateEventsListener() {
 	draw = true;
 	eventSource.onmessage = (event) => {
 		const message = JSON.parse(event.data);
-		if (message.Type === 3) {
-			if (message.Code === 24) {
-				draw = false;
-				postMessage({ type: 'clear' });
-				//						clearLaser();
-			} else if (message.Code === 25) {
+
+		if (deviceModel === "Remarkable1") {
+			// RM1 event handling adapted from rmview (bordaigorl/rmview):
+			// 1. Proximity handling (EV_KEY = 1, BTN_TOOL_PEN = 320)
+			if (message.Type === 1 && message.Code === 320) {
+				if (message.Value === 0) {
+					// Pen lifted far away from tablet (onPenFar)
+					draw = false;
+					postMessage({ type: 'clear' });
+				} else {
+					// Pen entered proximity (onPenNear)
+					draw = true;
+				}
+				return;
+			}
+
+			// 2. Pressure handling (EV_ABS = 3, ABS_PRESSURE = 24)
+			if (message.Type === 3 && message.Code === 24) {
+				if (message.Value > RM1_PRESSURE_THRESHOLD) {
+					// Pen pressing on screen (drawing) -> hide laser
+					draw = false;
+					postMessage({ type: 'clear' });
+				} else {
+					// Pen hovering -> show laser
+					draw = true;
+				}
+				return;
+			} else if (message.Type === 3 && message.Code === 25) { // ABS_DISTANCE
 				draw = true;
-
-			}
-		}
-		if (message.Type === 3) {
-			// Device-specific coordinate transformations
-			// RM2 (landscape native): Code 0=Y-axis, Code 1=X-axis
-			// RMPP (portrait native): Code 0=X-axis, Code 1=Y-axis
-			if (deviceModel === "RemarkablePaperPro") {
-				// RMPP transformations
-				if (portrait) {
-					// this is landscape
-					if (message.Code === 0) {
-						latestY = scaleValue(message.Value, maxXValue, height);
-					} else if (message.Code === 1) {
-						latestX = width - scaleValue(message.Value, maxYValue, width);
-					}
-				} else {
-					// this is portrait
-					if (message.Code === 0) {
-						latestX = scaleValue(message.Value, maxXValue, width);
-					} else if (message.Code === 1) {
-						latestY = scaleValue(message.Value, maxYValue, height);
-					}
-				}
-			} else {
-				// RM2 transformations (keep existing working logic)
-				if (portrait) {
-					if (message.Code === 0) {
-						latestX = scaleValue(message.Value, maxYValue, width);
-					} else if (message.Code === 1) {
-						latestY = scaleValue(message.Value, maxXValue, height);
-					}
-				} else {
-					if (message.Code === 0) {
-						latestY = height - scaleValue(message.Value, maxYValue, height);
-					} else if (message.Code === 1) {
-						latestX = scaleValue(message.Value, maxXValue, width);
-					}
-				}
 			}
 
-			if (draw) {
-				// Existing throttling logic remains unchanged
-				const dx = Math.abs(latestX - lastSentX);
-				const dy = Math.abs(latestY - lastSentY);
-				if (dx < MIN_DELTA && dy < MIN_DELTA) return;
+			// 3. Coordinate decoding and paired update (EV_ABS = 3)
+			if (message.Type === 3) {
+				if (message.Code === 1) { // e_code_stylus_xpos = 1
+					rm1RawX = message.Value;
+					rm1NewX = true;
+				} else if (message.Code === 0) { // e_code_stylus_ypos = 0
+					rm1RawY = message.Value;
+					rm1NewY = true;
+				}
 
-				if (!pendingUpdate) {
-					pendingUpdate = true;
-					setTimeout(() => {
-						postMessage({ type: 'update', X: latestX, Y: latestY });
-						lastSentX = latestX;
-						lastSentY = latestY;
-						pendingUpdate = false;
-					}, 16);
+				// Only transform and emit coordinates when both X and Y have been updated,
+				// exactly as in rmview's `if new_x and new_y:`
+				if (rm1NewX && rm1NewY) {
+					rm1NewX = false;
+					rm1NewY = false;
+
+					// rmview movePen transformation:
+					// In native tablet coordinates:
+					// y is inverted (maxYValue - rawY)
+					const yInverted = maxYValue - rm1RawY;
+					const ratioWidth = width / maxXValue;
+					const ratioHeight = height / maxYValue;
+					const scaling = ratioWidth > ratioHeight ? ratioWidth : ratioHeight;
+					const nativeX = scaling * (rm1RawX - (maxXValue - width / scaling) / 2);
+					const nativeY = scaling * (yInverted - (maxYValue - height / scaling) / 2);
+
+					if (portrait) {
+						// Native portrait mode (effectivePortrait = true when unrotated)
+						latestX = nativeX;
+						latestY = nativeY;
+					} else {
+						// Landscape mode (rotated 90° clockwise)
+						latestX = (1 - nativeY / height) * width;
+						latestY = (nativeX / width) * height;
+					}
+
+					if (draw) {
+						const dx = Math.abs(latestX - lastSentX);
+						const dy = Math.abs(latestY - lastSentY);
+						if (dx < MIN_DELTA && dy < MIN_DELTA) return;
+
+						if (!pendingUpdate) {
+							pendingUpdate = true;
+							setTimeout(() => {
+								postMessage({ type: 'update', X: latestX, Y: latestY });
+								lastSentX = latestX;
+								lastSentY = latestY;
+								pendingUpdate = false;
+							}, 16);
+						}
+					}
+				}
+			}
+		} else {
+			// Existing RM2 and RMPP logic kept completely intact
+			if (message.Type === 3) {
+				if (message.Code === 24) {
+					draw = false;
+					postMessage({ type: 'clear' });
+					//						clearLaser();
+				} else if (message.Code === 25) {
+					draw = true;
+
+				}
+			}
+			if (message.Type === 3) {
+				// Device-specific coordinate transformations
+				// RM2 (landscape native): Code 0=Y-axis, Code 1=X-axis
+				// RMPP (portrait native): Code 0=X-axis, Code 1=Y-axis
+				if (deviceModel === "RemarkablePaperPro") {
+					// RMPP transformations
+					if (portrait) {
+						// this is landscape
+						if (message.Code === 0) {
+							latestY = scaleValue(message.Value, maxXValue, height);
+						} else if (message.Code === 1) {
+							latestX = width - scaleValue(message.Value, maxYValue, width);
+						}
+					} else {
+						// this is portrait
+						if (message.Code === 0) {
+							latestX = scaleValue(message.Value, maxXValue, width);
+						} else if (message.Code === 1) {
+							latestY = scaleValue(message.Value, maxYValue, height);
+						}
+					}
+				} else {
+					// RM2 transformations (keep existing working logic)
+					if (portrait) {
+						if (message.Code === 0) {
+							latestX = scaleValue(message.Value, maxYValue, width);
+						} else if (message.Code === 1) {
+							latestY = scaleValue(message.Value, maxXValue, height);
+						}
+					} else {
+						if (message.Code === 0) {
+							latestY = height - scaleValue(message.Value, maxYValue, height);
+						} else if (message.Code === 1) {
+							latestX = scaleValue(message.Value, maxXValue, width);
+						}
+					}
+				}
+
+				if (draw) {
+					// Existing throttling logic remains unchanged
+					const dx = Math.abs(latestX - lastSentX);
+					const dy = Math.abs(latestY - lastSentY);
+					if (dx < MIN_DELTA && dy < MIN_DELTA) return;
+
+					if (!pendingUpdate) {
+						pendingUpdate = true;
+						setTimeout(() => {
+							postMessage({ type: 'update', X: latestX, Y: latestY });
+							lastSentX = latestX;
+							lastSentY = latestY;
+							pendingUpdate = false;
+						}, 16);
+					}
 				}
 			}
 		}
