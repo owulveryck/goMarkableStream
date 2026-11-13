@@ -40,6 +40,28 @@ function getQueryParam(name) {
 	return urlParams.get(name);
 }
 
+// safePresentationURL returns the 'present' URL only if it is an absolute
+// http(s) URL. Anything else (javascript:, data:, blob:...) would run in this
+// page's origin once assigned to the iframe and could steal the JWT from
+// localStorage, so it is rejected.
+function safePresentationURL(raw) {
+	if (!raw) {
+		return null;
+	}
+	let url;
+	try {
+		url = new URL(raw);
+	} catch (e) {
+		console.warn('Ignoring invalid presentation URL');
+		return null;
+	}
+	if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+		console.warn('Ignoring presentation URL with disallowed scheme:', url.protocol);
+		return null;
+	}
+	return url.href;
+}
+
 function getBoolQueryParam(param, defaultValue = false) {
     value = getQueryParam(param);
 
@@ -62,7 +84,7 @@ window.onload = async function() {
 
 	// Function to get the value of a query parameter by name
 	// Get the 'present' parameter from the URL
-	const presentURL = getQueryParam('present');
+	const presentURL = safePresentationURL(getQueryParam('present'));
 
 	// Set the iframe source if the URL is available
 	if (presentURL) {

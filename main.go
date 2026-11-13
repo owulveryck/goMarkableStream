@@ -148,6 +148,14 @@ func main() {
 		panic(err)
 	}
 
+	if usingDefaultCredentials(&c) {
+		if c.TailscaleEnabled && c.TailscaleFunnel {
+			log.Fatal("Refusing to start: RK_TAILSCALE_FUNNEL exposes the server on the internet, " +
+				"set RK_SERVER_PASSWORD to a non-default value first")
+		}
+		log.Println("WARNING: RK_SERVER_PASSWORD is the default; anyone on your network can log in. Set a strong password.")
+	}
+
 	dbg.Enabled = c.Debug
 
 	// Initialize JWT manager if enabled

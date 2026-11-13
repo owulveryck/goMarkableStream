@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"crypto/subtle"
 	"fmt"
 	"net/http"
 	"strings"
@@ -37,6 +39,45 @@ func isPublicPath(path string) bool {
 	return false
 }
 
+// authRoleKey is the context key under which AuthMiddleware stores the role
+// of the authenticated caller.
+type authRoleKey struct{}
+
+// requestRole returns the role of the caller. Requests that did not go through
+// AuthMiddleware (the -unsafe mode, where authentication is disabled on
+// purpose) are treated as admin.
+func requestRole(r *http.Request) string {
+	if role, ok := r.Context().Value(authRoleKey{}).(string); ok {
+		return role
+	}
+	return jwtutil.RoleAdmin
+}
+
+// authorizeToken validates a JWT and returns the role it grants.
+// Funnel tokens are only honoured while the credentials they were issued for
+// are still the active ones: disabling Funnel, or rotating its credentials,
+// revokes every token handed out to temporary viewers.
+func authorizeToken(jwtMgr *jwtutil.Manager, raw string) (string, bool) {
+	if jwtMgr == nil || raw == "" {
+		return "", false
+	}
+	token, err := jwtMgr.ValidateToken(raw)
+	if err != nil {
+		return "", false
+	}
+	switch token.Claims.Role {
+	case jwtutil.RoleAdmin:
+		return jwtutil.RoleAdmin, true
+	case jwtutil.RoleFunnel:
+		if funnelCreds != nil && funnelCreds.IsCurrent(token.Claims.FunnelGen) {
+			return jwtutil.RoleFunnel, true
+		}
+	}
+	// Tokens without a known role (including those issued before roles
+	// existed, which could belong to Funnel viewers) are refused.
+	return "", false
+}
+
 // AuthMiddleware validates JWT tokens for protected endpoints.
 // Public paths (login, main page, static assets) are allowed without authentication.
 // For SSE endpoints, also checks the token query parameter.
@@ -48,24 +89,16 @@ func AuthMiddleware(next http.Handler, jwtMgr *jwtutil.Manager) http.Handler {
 			return
 		}
 
-		// Check for Bearer token in Authorization header
-		authHeader := r.Header.Get("Authorization")
-		if token, found := strings.CutPrefix(authHeader, "Bearer "); found {
-			if jwtMgr != nil {
-				if _, err := jwtMgr.ValidateToken(token); err == nil {
-					next.ServeHTTP(w, r)
-					return
-				}
-			}
+		// Bearer token in Authorization header, or token query parameter
+		// (EventSource and fetch-streaming cannot always set headers).
+		raw, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+		role, ok := authorizeToken(jwtMgr, raw)
+		if !ok {
+			role, ok = authorizeToken(jwtMgr, r.URL.Query().Get("token"))
 		}
-
-		// Check for token query parameter (for SSE endpoints)
-		tokenParam := r.URL.Query().Get("token")
-		if tokenParam != "" && jwtMgr != nil {
-			if _, err := jwtMgr.ValidateToken(tokenParam); err == nil {
-				next.ServeHTTP(w, r)
-				return
-			}
+		if ok {
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), authRoleKey{}, role)))
+			return
 		}
 
 		// Authentication failed
@@ -74,17 +107,31 @@ func AuthMiddleware(next http.Handler, jwtMgr *jwtutil.Manager) http.Handler {
 	})
 }
 
-// checkCredentials validates the username and password against configuration.
+// defaultPassword is the out-of-the-box RK_SERVER_PASSWORD.
+const defaultPassword = "password"
+
+// usingDefaultCredentials reports whether the owner password is still the
+// shipped default (or empty), which must never be reachable from the internet.
+func usingDefaultCredentials(cfg *configuration) bool {
+	return cfg.Password == "" || cfg.Password == defaultPassword
+}
+
+// checkCredentials validates the username and password against configuration
+// and returns the role to grant. For Funnel credentials it also returns the
+// credential generation to embed in the token.
 // Used by the /login endpoint.
-// Checks both main credentials and temporary funnel credentials if active.
-func checkCredentials(username, password string) bool {
-	// Check main credentials first
-	if username == c.Username && password == c.Password {
-		return true
+func checkCredentials(username, password string) (role string, funnelGen uint64, ok bool) {
+	// Compare in constant time, and always evaluate both fields, so response
+	// timing does not reveal how much of a guess was right.
+	userOK := subtle.ConstantTimeCompare([]byte(username), []byte(c.Username)) == 1
+	passOK := subtle.ConstantTimeCompare([]byte(password), []byte(c.Password)) == 1
+	if userOK && passOK {
+		return jwtutil.RoleAdmin, 0, true
 	}
-	// Check temporary funnel credentials if active
-	if funnelCreds != nil && funnelCreds.Validate(username, password) {
-		return true
+	if funnelCreds != nil {
+		if gen, ok := funnelCreds.ValidateGen(username, password); ok {
+			return jwtutil.RoleFunnel, gen, true
+		}
 	}
-	return false
+	return "", 0, false
 }

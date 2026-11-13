@@ -218,7 +218,7 @@ This is the recommended way to update goMarkableStream on your device.
 Configure the application via environment variables:
 - `RK_SERVER_BIND_ADDR`: (String, default: `:2001`) Server bind address.
 - `RK_SERVER_USERNAME`: (String, default: `admin`) Username for server access.
-- `RK_SERVER_PASSWORD`: (String, default: `password`) Password for server access.
+- `RK_SERVER_PASSWORD`: (String, default: `password`) Password for server access. Change it: Funnel refuses to start while it is the default, and `/login` locks out clients after repeated failures.
 - `RK_HTTPS`: (True/False, default: `true`) Enable or disable HTTPS.
 - `RK_DEV_MODE`: (True/False, default: `false`) Enable or disable developer mode.
 - `RK_DELTA_THRESHOLD`: (Float, default: `0.30`) Change ratio threshold (0.0-1.0) above which a full frame is sent instead of delta.
@@ -238,7 +238,7 @@ Tailscale allows secure remote access to your reMarkable tablet from anywhere on
 - `RK_TAILSCALE_STATE_DIR`: (String, default: `/home/root/.tailscale/gomarkablestream`) State directory for Tailscale.
 - `RK_TAILSCALE_AUTHKEY`: (String, default: empty) Auth key for headless setup. If unset, Tailscale will display a login URL in the console for interactive authentication.
 - `RK_TAILSCALE_EPHEMERAL`: (True/False, default: `false`) Register as ephemeral node (removed when disconnected). **Recommended for most users.** When enabled, a random suffix is appended to the hostname (e.g., `gomarkablestream-a1b2c3`) to avoid naming conflicts if multiple instances are started.
-- `RK_TAILSCALE_FUNNEL`: (True/False, default: `false`) Enable public internet access via Tailscale Funnel.
+- `RK_TAILSCALE_FUNNEL`: (True/False, default: `false`) Enable public internet access via Tailscale Funnel. Requires a non-default `RK_SERVER_PASSWORD`. Temporary Funnel viewers can watch the stream but cannot manage Funnel, and their sessions are revoked when Funnel is disabled.
 - `RK_TAILSCALE_USE_TLS`: (True/False, default: `false`) Use Tailscale's automatic TLS certificates.
 - `RK_TAILSCALE_VERBOSE`: (True/False, default: `false`) Verbose Tailscale logging.
 

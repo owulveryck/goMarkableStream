@@ -22,7 +22,20 @@ type Claims struct {
 	IssuedAt  int64  `json:"iat"`           // Issued at (Unix timestamp)
 	ExpiresAt int64  `json:"exp"`           // Expiration time (Unix timestamp)
 	TokenID   string `json:"jti,omitempty"` // Unique token ID
+	// Role scopes what the bearer may do (see RoleAdmin, RoleFunnel).
+	Role string `json:"role,omitempty"`
+	// FunnelGen ties a RoleFunnel token to the temporary credentials it was
+	// issued for, so tokens die with those credentials.
+	FunnelGen uint64 `json:"fgen,omitempty"`
 }
+
+const (
+	// RoleAdmin is granted to the configured owner credentials.
+	RoleAdmin = "admin"
+	// RoleFunnel is granted to temporary Funnel viewers: they may watch the
+	// stream but not manage the device.
+	RoleFunnel = "funnel"
+)
 
 // Token represents a validated JWT with its claims.
 type Token struct {
@@ -69,8 +82,14 @@ func generateTokenID() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-// CreateToken creates a new signed JWT token.
+// CreateToken creates a new signed JWT token with the admin role.
 func CreateToken(subject string, lifetime time.Duration, secret []byte) (string, error) {
+	return CreateScopedToken(subject, RoleAdmin, 0, lifetime, secret)
+}
+
+// CreateScopedToken creates a new signed JWT token carrying a role and, for
+// RoleFunnel tokens, the generation of the credentials it was issued for.
+func CreateScopedToken(subject, role string, funnelGen uint64, lifetime time.Duration, secret []byte) (string, error) {
 	now := time.Now()
 
 	tokenID, err := generateTokenID()
@@ -83,6 +102,8 @@ func CreateToken(subject string, lifetime time.Duration, secret []byte) (string,
 		IssuedAt:  now.Unix(),
 		ExpiresAt: now.Add(lifetime).Unix(),
 		TokenID:   tokenID,
+		Role:      role,
+		FunnelGen: funnelGen,
 	}
 
 	return SignToken(claims, secret)

@@ -22,65 +22,48 @@ type subscriber struct {
 // PubSub is a structure to hold publisher and subscribers to events
 type PubSub struct {
 	subscribers map[chan events.InputEventFromSource]subscriber
-	mu          sync.RWMutex // Use RWMutex for better read concurrency
-	slicePool   sync.Pool    // Pool for subscriber slice allocations
+	mu          sync.RWMutex
 }
 
 // NewPubSub creates a new pubsub
 func NewPubSub() *PubSub {
 	return &PubSub{
 		subscribers: make(map[chan events.InputEventFromSource]subscriber),
-		slicePool: sync.Pool{
-			New: func() any {
-				// Pre-allocate slice with small capacity
-				// Will grow as needed
-				s := make([]chan events.InputEventFromSource, 0, 8)
-				return &s
-			},
-		},
 	}
 }
 
-// Publish an event to all subscribers
+// Publish an event to all subscribers.
+//
+// Sends happen while holding the read lock: Unsubscribe closes the channel
+// under the write lock, so a send can never race with that close (sending on
+// a closed channel panics, and Publish runs in the input scanner goroutine
+// where nothing would recover it). Holding the lock is cheap because every
+// send is non-blocking: a slow subscriber just drops the event.
 func (ps *PubSub) Publish(event events.InputEventFromSource) {
 	span := trace.BeginSpan("pubsub_publish")
 
-	// Get slice from pool
-	subscribersPtr := ps.slicePool.Get().(*[]chan events.InputEventFromSource)
-	subscribers := (*subscribersPtr)[:0] // Reset to zero length, keep capacity
-
-	// Copy subscriber list under read lock, applying filters
+	delivered := 0
 	ps.mu.RLock()
 	for ch, sub := range ps.subscribers {
-		// Apply filter - cache filter values to avoid pointer dereferences
 		if sub.filter.Source != nil && *sub.filter.Source != event.Source {
-			continue // Skip this subscriber
+			continue
 		}
 		if sub.filter.Type != nil && *sub.filter.Type != event.Type {
-			continue // Skip this subscriber
+			continue
 		}
-		subscribers = append(subscribers, ch)
-	}
-	ps.mu.RUnlock()
-
-	// Send to matching subscribers without holding lock
-	for _, ch := range subscribers {
 		select {
 		case ch <- event:
-			// Successfully sent
+			delivered++
 		default:
 			// Channel full - subscriber is slow, drop event
 		}
 	}
-
-	// Return slice to pool
-	*subscribersPtr = subscribers
-	ps.slicePool.Put(subscribersPtr)
+	ps.mu.RUnlock()
 
 	trace.EndSpan(span, map[string]any{
 		"event_type":   event.Type,
 		"event_source": event.Source,
-		"subscribers":  len(subscribers),
+		"subscribers":  delivered,
 	})
 }
 

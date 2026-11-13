@@ -19,6 +19,12 @@ import (
 
 var (
 	defaultRate time.Duration = 200
+	// minRate and maxRate bound the client-supplied 'rate' (in milliseconds).
+	// Without a bound, a huge value overflows time.Duration into a negative
+	// interval (time.NewTicker panics) and a tiny one makes the background
+	// reader hammer the framebuffer every fraction of a millisecond.
+	minRate time.Duration = 50
+	maxRate time.Duration = 1000
 	// pressureThreshold defines the minimum pressure value to consider the pen as "touching"
 	// Values below this are considered "hovering" and should not trigger frame streaming
 	pressureThreshold int32 = 100
@@ -100,8 +106,8 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		rate = time.Duration(rateInt)
 	}
-	if rate < 1 {
-		http.Error(w, "rate value is too low", http.StatusBadRequest)
+	if rate < minRate || rate > maxRate {
+		http.Error(w, "rate must be between 50 and 1000 (ms)", http.StatusBadRequest)
 		return
 	}
 	debug.Log("Stream: rate=%dms", rate)

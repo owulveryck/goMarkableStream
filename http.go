@@ -12,6 +12,7 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 	godebug "runtime/debug"
+	"strconv"
 	"strings"
 
 	"github.com/owulveryck/goMarkableStream/internal/delta"
@@ -91,10 +92,18 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 			return
 		}
 
+		isAdmin := requestRole(r) == jwtutil.RoleAdmin
+
 		if r.Method == "POST" {
+			// Temporary Funnel viewers may watch, not manage the device.
+			if !isAdmin {
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
+			}
 			var req struct {
 				Enable bool `json:"enable"`
 			}
+			r.Body = http.MaxBytesReader(w, r.Body, 4096)
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				log.Printf("Funnel toggle: failed to decode request: %v", err)
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -102,6 +111,14 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 			}
 
 			log.Printf("Funnel toggle: requested enable=%v", req.Enable)
+
+			// Funnel publishes the login page on the internet: refuse while
+			// the owner password is still the well-known default.
+			if req.Enable && usingDefaultCredentials(&c) {
+				log.Println("Funnel toggle: refused, RK_SERVER_PASSWORD is still the default")
+				http.Error(w, "Set RK_SERVER_PASSWORD to a non-default value before enabling Funnel", http.StatusConflict)
+				return
+			}
 
 			// Cancel active streams before toggling listener
 			stream.CancelActiveStreams()
@@ -153,8 +170,10 @@ func setMuxer(eventPublisher *pubsub.PubSub, tm *TailscaleManager, restartCh cha
 			"url":       url,
 		}
 
-		// Include temporary credentials if Funnel is enabled and credentials are active
-		if enabled && funnelCreds != nil {
+		// Include temporary credentials if Funnel is enabled and credentials are active.
+		// Only the owner gets them: handing them to a temporary viewer would let
+		// that viewer outlive a credential rotation.
+		if enabled && isAdmin && funnelCreds != nil {
 			username, password, active := funnelCreds.GetCredentials()
 			if active {
 				response["tempCredentials"] = map[string]string{
@@ -206,6 +225,7 @@ func parseIndexTemplate(templatePath string) (*template.Template, error) {
 
 // handleLogin handles the /login endpoint for JWT authentication.
 func handleLogin(jwtMgr *jwtutil.Manager) http.HandlerFunc {
+	limiter := newLoginLimiter()
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -218,7 +238,17 @@ func handleLogin(jwtMgr *jwtutil.Manager) http.HandlerFunc {
 			return
 		}
 
-		// Parse request body
+		ip := clientIP(r)
+		if wait, ok := limiter.allow(ip); !ok {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Retry-After", strconv.Itoa(int(wait.Seconds())+1))
+			w.WriteHeader(http.StatusTooManyRequests)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Too many login attempts, try again later"})
+			return
+		}
+
+		// Parse request body (credentials are tiny; cap what we read)
+		r.Body = http.MaxBytesReader(w, r.Body, 4096)
 		var req struct {
 			Username string `json:"username"`
 			Password string `json:"password"`
@@ -231,15 +261,20 @@ func handleLogin(jwtMgr *jwtutil.Manager) http.HandlerFunc {
 		}
 
 		// Validate credentials
-		if !checkCredentials(req.Username, req.Password) {
+		role, funnelGen, ok := checkCredentials(req.Username, req.Password)
+		if !ok {
+			limiter.failure(ip)
+			log.Printf("Login: failed attempt from %s", ip)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
 			json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
 			return
 		}
 
+		limiter.success(ip)
+
 		// Create JWT token
-		token, err := jwtMgr.CreateToken(req.Username)
+		token, err := jwtMgr.CreateScopedToken(req.Username, role, funnelGen)
 		if err != nil {
 			log.Printf("Failed to create JWT token: %v", err)
 			w.Header().Set("Content-Type", "application/json")
