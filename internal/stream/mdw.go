@@ -52,8 +52,8 @@ func CancelActiveStreams() {
 // ThrottlingMiddleware to allow new connections only if there are no active writers or if max writers is exceeded.
 func ThrottlingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		debug.Log("Throttle: connection from %s, activeWriters=%d", r.RemoteAddr, activeWriters)
 		mu.Lock()
+		debug.Log("Throttle: connection from %s, activeWriters=%d", r.RemoteAddr, activeWriters)
 		if activeWriters >= maxWriters {
 			mu.Unlock()
 			debug.Log("Throttle: too many requests, rejecting (%s)", r.RemoteAddr)
@@ -73,6 +73,20 @@ func ThrottlingMiddleware(next http.Handler) http.Handler {
 		debug.Log("Throttle: proceeding with request (%s)", r.RemoteAddr)
 		mu.Unlock()
 
+		// Release the slot in a defer: if the handler panics (net/http recovers
+		// it per connection), a non-deferred decrement would leave activeWriters
+		// stuck at maxWriters and every later stream would get 429 forever.
+		defer func() {
+			mu.Lock()
+			activeWriters--
+			debug.Log("Throttle: request completed, activeWriters=%d (%s)", activeWriters, r.RemoteAddr)
+			if activeWriters == 0 && onIdleCallback != nil {
+				onIdleCallback()
+			}
+			cond.Broadcast() // Notify waiting goroutines
+			mu.Unlock()
+		}()
+
 		// Create merged context: cancels if client disconnects OR server cancels
 		mergedCtx, mergedCancel := context.WithCancel(r.Context())
 		defer mergedCancel()
@@ -91,14 +105,5 @@ func ThrottlingMiddleware(next http.Handler) http.Handler {
 		r = r.WithContext(mergedCtx)
 
 		next.ServeHTTP(w, r) // Serve the request
-
-		mu.Lock()
-		activeWriters--
-		debug.Log("Throttle: request completed, activeWriters=%d (%s)", activeWriters, r.RemoteAddr)
-		if activeWriters == 0 && onIdleCallback != nil {
-			onIdleCallback()
-		}
-		cond.Broadcast() // Notify waiting goroutines
-		mu.Unlock()
 	})
 }

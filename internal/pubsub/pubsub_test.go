@@ -1,6 +1,7 @@
 package pubsub
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -323,4 +324,32 @@ func TestEventFiltering(t *testing.T) {
 	ps.Unsubscribe(chTouch)
 	ps.Unsubscribe(chAbs)
 	ps.Unsubscribe(chPenAbs)
+}
+
+// TestPublishConcurrentUnsubscribe guards against sending on a channel that
+// Unsubscribe closed concurrently, which used to panic and kill the process.
+func TestPublishConcurrentUnsubscribe(t *testing.T) {
+	ps := NewPubSub()
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
+	for range 4 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+					ps.Publish(events.InputEventFromSource{Source: events.Pen})
+				}
+			}
+		}()
+	}
+	deadline := time.Now().Add(500 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		ps.Unsubscribe(ps.Subscribe("race"))
+	}
+	close(stop)
+	wg.Wait()
 }

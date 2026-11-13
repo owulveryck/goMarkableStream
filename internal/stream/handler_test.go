@@ -156,7 +156,7 @@ func TestStreamHandler_SecondConnectionRejected(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		h.ServeHTTP(first, httptest.NewRequest(http.MethodGet, "/stream?rate=5", nil).WithContext(ctx))
+		h.ServeHTTP(first, httptest.NewRequest(http.MethodGet, "/stream?rate=50", nil).WithContext(ctx))
 	}()
 
 	select {
@@ -311,5 +311,38 @@ func TestStreamHandler_fetchAndSendDelta(t *testing.T) {
 				t.Errorf("StreamHandler.fetchAndSendDelta() = %v, want %v", gotW, tt.wantW)
 			}
 		})
+	}
+}
+
+// TestThrottlingMiddleware_ReleasesSlotOnPanic checks that a panicking handler
+// does not leave the single streaming slot taken forever.
+func TestThrottlingMiddleware_ReleasesSlotOnPanic(t *testing.T) {
+	panicking := ThrottlingMiddleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic("boom")
+	}))
+	func() {
+		defer func() { _ = recover() }()
+		panicking.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/stream", nil))
+	}()
+
+	rec := httptest.NewRecorder()
+	ThrottlingMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/stream", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("after a panic: status %d, want %d", rec.Code, http.StatusOK)
+	}
+}
+
+// TestStreamHandler_RejectsOutOfRangeRate covers the overflow that used to make
+// time.NewTicker panic, and rates fast enough to saturate the device.
+func TestStreamHandler_RejectsOutOfRangeRate(t *testing.T) {
+	h := NewStreamHandler(&countingReaderAt{}, 0, pubsub.NewPubSub(), 0.30)
+	for _, rate := range []string{"0", "1", "49", "1001", "9300000000000", "-5"} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/stream?rate="+rate, nil))
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("rate=%s: status %d, want %d", rate, rec.Code, http.StatusBadRequest)
+		}
 	}
 }

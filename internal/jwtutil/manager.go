@@ -74,6 +74,14 @@ func (m *Manager) CreateToken(subject string) (string, error) {
 	return CreateToken(subject, m.config.TokenLifetime, m.secret)
 }
 
+// CreateScopedToken creates a JWT token for subject with the given role.
+// funnelGen is only meaningful for RoleFunnel tokens.
+func (m *Manager) CreateScopedToken(subject, role string, funnelGen uint64) (string, error) {
+	m.secretMu.RLock()
+	defer m.secretMu.RUnlock()
+	return CreateScopedToken(subject, role, funnelGen, m.config.TokenLifetime, m.secret)
+}
+
 // ValidateToken validates a JWT token and returns the parsed token.
 func (m *Manager) ValidateToken(tokenString string) (*Token, error) {
 	m.secretMu.RLock()
